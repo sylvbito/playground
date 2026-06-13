@@ -8,7 +8,7 @@
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 body{
   font-family:-apple-system,BlinkMacSystemFont,'SF Pro','Helvetica Neue',Arial,sans-serif;
-  background:#0a0a12;
+  background:#0f0f1a;
   color:#e8e8ee;
   overflow:hidden;
   height:100vh;
@@ -16,7 +16,6 @@ body{
   -webkit-user-select:none;
 }
 
-/* ─── Content rendered normally, refracted by the filter ─── */
 #content{
   position:fixed;inset:0;
   display:flex;
@@ -24,7 +23,6 @@ body{
   align-items:center;
   justify-content:center;
   padding:2rem;
-  /* Filter applied dynamically via JS */
 }
 #content h1{
   font-size:clamp(2rem,6vw,4.5rem);
@@ -41,26 +39,19 @@ body{
 #content p{
   max-width:520px;
   text-align:center;
-  font-size:1.05rem;
+  font-size:1rem;
   line-height:1.7;
-  color:rgba(255,255,255,0.45);
+  color:rgba(255,255,255,0.4);
   margin-bottom:2rem;
 }
 .shape-grid{
   display:grid;
   grid-template-columns:repeat(3,1fr);
   gap:1rem;
-  max-width:400px;
+  max-width:380px;
   width:100%;
 }
-.shape{
-  aspect-ratio:1;
-  border-radius:16px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:2rem;
-}
+.shape{aspect-ratio:1;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:2rem}
 .shape-1{background:linear-gradient(135deg,#667eea,#764ba2)}
 .shape-2{background:linear-gradient(135deg,#f093fb,#f5576c)}
 .shape-3{background:linear-gradient(135deg,#4facfe,#00f2fe)}
@@ -68,125 +59,58 @@ body{
 .shape-5{background:linear-gradient(135deg,#fa709a,#fee140)}
 .shape-6{background:linear-gradient(135deg,#a18cd1,#fbc2eb)}
 
-/* ─── Glass lens ring (visual indicator only) ─── */
 #lens{
-  position:fixed;
-  pointer-events:none;
-  z-index:10;
+  position:fixed;pointer-events:none;z-index:10;
   width:260px;height:260px;
   margin-left:-130px;margin-top:-130px;
   border-radius:50%;
-  border:2px solid rgba(255,255,255,0.08);
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.04) inset,
-    0 8px 32px rgba(0,0,0,0.3);
-  transition:
-    width 0.3s cubic-bezier(0.34,1.56,0.64,1),
-    height 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  border:1.5px solid rgba(255,255,255,0.08);
+  box-shadow:0 0 0 1px rgba(255,255,255,0.03) inset,0 8px 40px rgba(0,0,0,0.5);
+  transition:width 0.3s cubic-bezier(0.34,1.56,0.64,1),height 0.3s cubic-bezier(0.34,1.56,0.64,1);
 }
 #lens::after{
-  content:'';
-  position:absolute;
-  top:4px;left:15%;right:15%;
-  height:40%;
+  content:'';position:absolute;
+  top:3px;left:20%;right:20%;height:30%;
   border-radius:50%;
-  background:linear-gradient(180deg,rgba(255,255,255,0.12),transparent);
-  pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,0.08),transparent);
 }
 
-/* ─── Controls ─── */
 .controls{
-  position:fixed;
-  bottom:2rem;
-  left:50%;
-  transform:translateX(-50%);
-  display:flex;
-  gap:1.5rem;
-  align-items:center;
-  z-index:20;
-  background:rgba(10,10,18,0.7);
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
-  padding:0.75rem 1.5rem;
-  border-radius:100px;
-  border:1px solid rgba(255,255,255,0.06);
-  font-size:0.8rem;
+  position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+  display:flex;gap:1.25rem;align-items:center;z-index:20;
+  background:rgba(15,15,26,0.8);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  padding:0.65rem 1.25rem;border-radius:100px;
+  border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;
 }
-.controls label{
-  display:flex;
-  align-items:center;
-  gap:0.5rem;
-  color:rgba(255,255,255,0.5);
-}
-.controls input[type="range"]{
-  width:80px;
-  accent-color:#8ec5fc;
-  background:transparent;
-}
-.controls .value{
-  min-width:2em;
-  text-align:right;
-  color:rgba(255,255,255,0.3);
-  font-variant-numeric:tabular-nums;
-}
-.controls .hint{
-  display:block;
-  width:100%;
-  text-align:center;
-  font-size:0.7rem;
-  color:rgba(255,255,255,0.2);
-}
+.controls label{display:flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.4)}
+.controls input[type="range"]{width:72px;accent-color:#8ec5fc;background:transparent}
+.controls .val{min-width:2em;text-align:right;color:rgba(255,255,255,0.2);font-variant-numeric:tabular-nums}
 
-/* ─── Drag handle ─── */
-#drag-area{
-  position:fixed;inset:0;
-  z-index:5;
-  cursor:grab;
-}
+#drag-area{position:fixed;inset:0;z-index:5;cursor:grab}
 #drag-area:active{cursor:grabbing}
 
-/* ─── Attribution ─── */
 .attribution{
-  position:fixed;
-  top:1.5rem;
-  left:1.5rem;
-  z-index:20;
-  font-size:0.7rem;
-  color:rgba(255,255,255,0.2);
-  letter-spacing:1px;
-  text-transform:uppercase;
+  position:fixed;top:1.25rem;left:1.25rem;z-index:20;
+  font-size:0.65rem;color:rgba(255,255,255,0.12);letter-spacing:1px;text-transform:uppercase;
 }
-.attribution a{
-  color:rgba(255,255,255,0.3);
-  text-decoration:none;
-}
-.attribution a:hover{color:rgba(255,255,255,0.6)}
+.attribution a{color:rgba(255,255,255,0.2);text-decoration:none}
+.attribution a:hover{color:rgba(255,255,255,0.45)}
 
-@media(prefers-reduced-motion:reduce){
-  #lens{display:none}
-  .controls{display:none}
-  #drag-area{cursor:default}
-}
+@media(prefers-reduced-motion:reduce){#lens{display:none}.controls{display:none}#drag-area{cursor:default}}
 @media(max-width:640px){
   #lens{width:180px;height:180px;margin-left:-90px;margin-top:-90px}
-  .controls{gap:0.75rem;padding:0.5rem 1rem;flex-wrap:wrap;width:90vw;justify-content:center;border-radius:16px}
+  .controls{gap:0.5rem;padding:0.5rem 0.75rem;flex-wrap:wrap;width:94vw;justify-content:center;border-radius:16px}
+  .controls input[type="range"]{width:50px}
 }
 </style>
 </head>
 <body>
+<div class="attribution"><a href="https://aave.design/design/building-glass-for-the-web" target="_blank">← Aave Glass technique</a></div>
 
-<div class="attribution">
-  <a href="https://aave.design/design/building-glass-for-the-web" target="_blank">← Aave Glass technique</a>
-</div>
-
-<!-- Rich content — this gets refracted by the SVG filter -->
 <div id="content">
   <h1>Refraction</h1>
-  <p>
-    Drag the glass lens over the content. The SVG <code>feDisplacementMap</code>
-    filter bends the content's own pixels — text stays selectable, links
-    stay clickable.
-  </p>
+  <p>Drag the lens. The SVG <code>feDisplacementMap</code> bends the content's own pixels — selectable, clickable, live DOM underneath.</p>
   <div class="shape-grid">
     <div class="shape shape-1">◆</div>
     <div class="shape shape-2">●</div>
@@ -197,254 +121,116 @@ body{
   </div>
 </div>
 
-<!-- SVG filter (invisible, referenced by content's CSS filter) -->
-<svg style="position:fixed;width:0;height:0" aria-hidden="true">
-  <defs id="svg-defs"></defs>
-</svg>
-
-<!-- Glass lens ring -->
+<svg style="position:fixed;width:0;height:0" aria-hidden="true"><defs id="svg-defs"></defs></svg>
 <div id="lens"></div>
-
-<!-- Drag surface -->
 <div id="drag-area"></div>
 
-<!-- Controls -->
 <div class="controls">
-  <label>
-    Bend
-    <input type="range" id="scaleCtrl" min="5" max="80" value="30">
-    <span class="value" id="scaleVal">30</span>
-  </label>
-  <label>
-    Size
-    <input type="range" id="sizeCtrl" min="100" max="400" value="260">
-    <span class="value" id="sizeVal">260</span>
-  </label>
-  <label>
-    Fringe
-    <input type="range" id="fringeCtrl" min="0" max="8" value="2" step="0.5">
-    <span class="value" id="fringeVal">2</span>
-  </label>
+  <label>Bend <input type="range" id="bend" min="5" max="80" value="30"><span class="val" id="bendV">30</span></label>
+  <label>Size <input type="range" id="size" min="100" max="400" value="260"><span class="val" id="sizeV">260</span></label>
+  <label>Fringe <input type="range" id="fringe" min="0" max="6" value="2" step="0.5"><span class="val" id="fringeV">2</span></label>
 </div>
 
 <script>
 (function(){
   'use strict';
 
-  const content = document.getElementById('content');
-  const lens = document.getElementById('lens');
-  const svgDefs = document.getElementById('svg-defs');
+  const $ = id => document.getElementById(id);
+  const content = $('content'), lens = $('lens'), defs = $('svg-defs');
 
-  const scaleCtrl = document.getElementById('scaleCtrl');
-  const sizeCtrl = document.getElementById('sizeCtrl');
-  const fringeCtrl = document.getElementById('fringeCtrl');
-  const scaleVal = document.getElementById('scaleVal');
-  const sizeVal = document.getElementById('sizeVal');
-  const fringeVal = document.getElementById('fringeVal');
+  let cx = window.innerWidth/2, cy = window.innerHeight/2, r = 130;
+  const MAP = 128;
 
-  let lensX = window.innerWidth / 2;
-  let lensY = window.innerHeight / 2;
-  let lensSize = 260;
-  let isDragging = false;
-
-  // ─── Generate displacement map for a circle ───
-  function generateMap(size, scale) {
-    const mapSize = 128;
-    const canvas = document.createElement('canvas');
-    canvas.width = mapSize;
-    canvas.height = mapSize;
-    const ctx = canvas.getContext('2d');
-    const imgData = ctx.createImageData(mapSize, mapSize);
-    const data = imgData.data;
-    const half = mapSize / 2;
-    const radius = half - 2;
-
-    for (let y = 0; y < mapSize; y++) {
-      for (let x = 0; x < mapSize; x++) {
-        const i = (y * mapSize + x) * 4;
-        const dx = (x - half) / radius;
-        const dy = (y - half) / radius;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        let disp = 0;
-        if (dist < 1) {
-          // Smooth falloff: 0 at center, peaks near edge
-          disp = Math.sin(dist * Math.PI) * 0.5;
-        }
-
-        const val = Math.min(255, Math.max(0, Math.round(128 + disp * scale)));
-        data[i]     = val;
-        data[i + 1] = val;
-        data[i + 2] = 128;
-        data[i + 3] = 255;
+  // ─── Generate displacement map (128×128, circular gradient) ───
+  // Red/green channels encode X/Y displacement. Neutral (128) = no movement.
+  // Displacement peaks near the lens edge, falls to 0 at center and outside.
+  function genMap(amount) {
+    const c = document.createElement('canvas'); c.width = MAP; c.height = MAP;
+    const ctx = c.getContext('2d'), img = ctx.createImageData(MAP, MAP), d = img.data;
+    const half = MAP/2, rad = half - 1, r2 = rad * rad;
+    for (let y = 0; y < MAP; y++) {
+      for (let x = 0; x < MAP; x++) {
+        const i = (y * MAP + x) * 4;
+        const dx = x - half, dy = y - half;
+        const dist = Math.sqrt(dx*dx + dy*dy) / rad;
+        let v = 128;
+        if (dist < 1) v = 128 + Math.sin(dist * Math.PI) * amount;
+        d[i] = d[i+1] = Math.min(255, Math.max(0, Math.round(v)));
+        d[i+2] = 128; d[i+3] = 255;
       }
     }
-    ctx.putImageData(imgData, 0, 0);
-    return canvas.toDataURL();
+    ctx.putImageData(img, 0, 0);
+    return c.toDataURL();
   }
 
-  // ─── Build SVG filter positioned at the lens ───
-  function buildFilter(scale, fringe, size) {
-    const id = 'glass-f-' + Date.now();
-    const mapDataUrl = generateMap(size, scale);
+  function buildFilter(scale, fringe) {
+    const id = 'gf' + Date.now();
+    const map = genMap(Math.min(scale, 80));
 
-    // Position the map so the lens area aligns with #lens
-    // The map covers the lens region; feOffset shifts it to match lens position
-    // Since the filter applies to the whole content, we offset the map
-    // to sit at the lens's current position (relative to content bounds)
-    const rect = content.getBoundingClientRect();
-    const mx = lensX - rect.left - size / 2;
-    const my = lensY - rect.top - size / 2;
+    let fringeCode = '';
+    if (fringe > 0) {
+      fringeCode = `
+  <feOffset in="d" dx="${fringe}" dy="0" result="ro"/>
+  <feOffset in="d" dx="${-fringe}" dy="0" result="bo"/>
+  <feColorMatrix in="ro" type="matrix" values="1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.4 0" result="rc"/>
+  <feColorMatrix in="bo" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0.4 0" result="bc"/>
+  <feBlend in="rc" in2="bc" mode="screen" result="ch"/>
+  <feBlend in="ch" in2="d" mode="screen"/>`;
+    }
 
-    // Normalize offset as percentage of the map's intrinsic size
-    // feImage renders at 128x128 (the map canvas size)
-    // We position it at (mx, my) in the filter's coordinate space
-    // The filter uses objectBoundingBox by default, so coordinates
-    // are relative to the element. We need to use userSpaceOnUse or
-    // work with percentages. Let's use absolute positioning.
-    // Actually, for feImage, x/y are in the filter's coordinate system.
-    // For objectBoundingBox (default), values are 0-1.
-    // Let's use userSpaceOnUse for pixel-accurate positioning.
+    // Position the 128x128 map to cover the lens area in viewport coords.
+    // Content is position:fixed;inset:0 so its origin = viewport origin.
+    const d = r * 2;
+    const x = cx - r;
+    const y = cy - r;
 
-    const filter = `
-<filter id="${id}" x="0" y="0" width="100%" height="100%" filterUnits="userSpaceOnUse">
-  <!-- The displacement map (neutral outside the circle) -->
-  <feImage href="${mapDataUrl}" x="${mx}" y="${my}" width="${size}" height="${size}" result="map" preserveAspectRatio="xMidYMid meet"/>
-
-  <!-- Displace the content -->
-  <feDisplacementMap
-    in="SourceGraphic"
-    in2="map"
-    scale="${scale}"
-    xChannelSelector="R"
-    yChannelSelector="G"
-    result="displaced"/>
-
-  <!-- Chromatic fringe: red offset right, blue offset left -->
-  <feOffset in="displaced" dx="${fringe}" dy="0" result="red-shift"/>
-  <feOffset in="displaced" dx="${-fringe}" dy="0" result="blue-shift"/>
-  <feColorMatrix in="red-shift" type="matrix" values="
-    1 0 0 0 0
-    0 0 0 0 0
-    0 0 0 0 0
-    0 0 0 0.5 0" result="red-ch"/>
-  <feColorMatrix in="blue-shift" type="matrix" values="
-    0 0 0 0 0
-    0 0 0 0 0
-    0 0 1 0 0
-    0 0 0 0.5 0" result="blue-ch"/>
-  <feBlend in="red-ch" in2="blue-ch" mode="screen" result="chroma"/>
-  <feBlend in="chroma" in2="displaced" mode="screen"/>
+    defs.innerHTML = `<filter id="${id}" filterUnits="userSpaceOnUse" x="0" y="0" width="100%" height="100%">
+  <feImage href="${map}" x="${x}" y="${y}" width="${d}" height="${d}" preserveAspectRatio="xMidYMid meet" result="m"/>
+  <feDisplacementMap in="SourceGraphic" in2="m" scale="${scale}" xChannelSelector="R" yChannelSelector="G" result="d"/>${fringeCode}
 </filter>`;
-
-    svgDefs.innerHTML = filter;
     return id;
   }
 
-  // ─── Apply ───
-  let updateTimer;
-  function apply() {
-    clearTimeout(updateTimer);
-    updateTimer = setTimeout(() => {
-      const scale = parseInt(scaleCtrl.value);
-      const fringe = parseFloat(fringeCtrl.value);
-      const size = parseInt(sizeCtrl.value);
-      const id = buildFilter(scale, fringe, size);
+  let pending = null;
+  function update() {
+    if (pending) cancelAnimationFrame(pending);
+    pending = requestAnimationFrame(() => {
+      const id = buildFilter(+$('bend').value, +$('fringe').value);
       content.style.filter = `url(#${id})`;
-      content.style.willChange = 'filter';
-    }, 16); // ~1 frame
+      pending = null;
+    });
   }
 
-  // ─── Move lens ───
-  function moveLens(x, y) {
-    lensX = x;
-    lensY = y;
-    lens.style.left = x + 'px';
-    lens.style.top = y + 'px';
-    apply();
+  function move(x, y) {
+    cx = Math.max(r, Math.min(x, window.innerWidth - r));
+    cy = Math.max(r, Math.min(y, window.innerHeight - r));
+    lens.style.left = cx + 'px'; lens.style.top = cy + 'px';
+    update();
   }
 
-  // ─── Set size ───
-  function setSize(size) {
-    lensSize = size;
-    lens.style.width = size + 'px';
-    lens.style.height = size + 'px';
-    lens.style.marginLeft = (-size / 2) + 'px';
-    lens.style.marginTop = (-size / 2) + 'px';
-    apply();
+  function setSize(s) {
+    r = s / 2;
+    lens.style.width = lens.style.height = s + 'px';
+    lens.style.marginLeft = lens.style.marginTop = (-r) + 'px';
+    update();
   }
 
-  // ─── Drag handling ───
-  const dragArea = document.getElementById('drag-area');
+  let drag = false;
+  $('drag-area').addEventListener('mousedown', e => { drag = true; move(e.clientX, e.clientY); });
+  document.addEventListener('mousemove', e => { if (drag) move(e.clientX, e.clientY); });
+  document.addEventListener('mouseup', () => { drag = false; });
+  $('drag-area').addEventListener('touchstart', e => { drag = true; const t = e.touches[0]; move(t.clientX, t.clientY); }, {passive:true});
+  document.addEventListener('touchmove', e => { if (drag) { const t = e.touches[0]; move(t.clientX, t.clientY); }}, {passive:true});
+  document.addEventListener('touchend', () => { drag = false; });
 
-  dragArea.addEventListener('mousedown', (e) => {
-    isDragging = true;
-    moveLens(e.clientX, e.clientY);
-  });
+  $('bend').addEventListener('input', function(){ $('bendV').textContent = this.value; update(); });
+  $('size').addEventListener('input', function(){ $('sizeV').textContent = this.value; setSize(+this.value); });
+  $('fringe').addEventListener('input', function(){ $('fringeV').textContent = this.value; update(); });
 
-  document.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
-    moveLens(e.clientX, e.clientY);
-  });
+  let rt;
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => move(cx, cy), 150); });
 
-  document.addEventListener('mouseup', () => {
-    isDragging = false;
-  });
-
-  // Touch
-  dragArea.addEventListener('touchstart', (e) => {
-    isDragging = true;
-    const t = e.touches[0];
-    moveLens(t.clientX, t.clientY);
-  }, { passive: true });
-
-  document.addEventListener('touchmove', (e) => {
-    if (!isDragging) return;
-    const t = e.touches[0];
-    moveLens(t.clientX, t.clientY);
-  }, { passive: true });
-
-  document.addEventListener('touchend', () => {
-    isDragging = false;
-  });
-
-  // ─── Controls ───
-  scaleCtrl.addEventListener('input', () => {
-    scaleVal.textContent = scaleCtrl.value;
-    apply();
-  });
-  sizeCtrl.addEventListener('input', () => {
-    sizeVal.textContent = sizeCtrl.value;
-    setSize(parseInt(sizeCtrl.value));
-  });
-  fringeCtrl.addEventListener('input', () => {
-    fringeVal.textContent = fringeCtrl.value;
-    apply();
-  });
-
-  // ─── Resize ───
-  let resizeTimer;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      lensX = Math.min(lensX, window.innerWidth);
-      lensY = Math.min(lensY, window.innerHeight);
-      moveLens(lensX, lensY);
-    }, 200);
-  });
-
-  // ─── Init ───
-  function init() {
-    moveLens(window.innerWidth / 2, window.innerHeight / 2);
-    setSize(260);
-  }
-
-  // Need content to layout first
-  if (document.readyState === 'complete') {
-    init();
-  } else {
-    window.addEventListener('load', init);
-  }
+  (function init() { setSize(260); move(window.innerWidth/2, window.innerHeight/2); })();
 })();
 </script>
 </body>
