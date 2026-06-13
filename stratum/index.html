@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stratum</title>
+  <script>p5.disableFriendlyErrors = true;</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.3/p5.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #050508;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+    canvas { display: block; }
+    #title {
+      position: fixed;
+      bottom: 28px;
+      right: 32px;
+      color: rgba(255,255,255,0.08);
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      font-weight: 300;
+      user-select: none;
+      pointer-events: none;
+      transition: opacity 2s ease;
+    }
+    #seed-label {
+      position: fixed;
+      bottom: 28px;
+      left: 32px;
+      color: rgba(255,255,255,0.07);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      font-family: 'SF Mono', 'SFMono-Regular', 'Cascadia Code', 'Consolas', monospace;
+      user-select: none;
+      pointer-events: none;
+    }
+    #palette-label {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.06);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 300;
+      user-select: none;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="title">Stratum</div>
+  <div id="seed-label"></div>
+  <div id="palette-label"></div>
+  <script>
+// ═══════════════════════════════════════════════════════════════
+//  STRATUM  —  Generative Atmospheric Ambient
+// ═══════════════════════════════════════════════════════════════
+
+const CONFIG = {
+  seed: Math.floor(Math.random() * 99999),
+  paletteIdx: 0,
+  strataCount: 6,
+  gradStep: 2,
+  particleCount: 180,
+  orbCount: 10,
+  flowRes: 16,
+  warpScale: 0.003,
+  warpStrength: 55,
+  warpTimeSpeed: 0.015,
+  particleMaxSpeed: 1.5,
+  trailFadeAlpha: 5,
+  mouseRadius: 120,
+  mouseForce: 0.8,
+};
+
+// ─── Palettes ─────────────────────────────────────────────────
+// Each palette: 6 colors from dark (top atmosphere) to light (bottom depth)
+
+const PALETTES = [
+  { // Nocturne — deep violet to warm gold
+    name: 'Nocturne',
+    colors: [
+      [10, 8, 20],   // near-black violet
+      [22, 14, 52],  // deep violet
+      [55, 30, 100], // mid purple
+      [120, 68, 155],// muted lavender
+      [200, 105, 140],// rose
+      [240, 190, 110]// warm gold
+    ]
+  },
+  { // Abyss — deep ocean to ice
+    name: 'Abyss',
+    colors: [
+      [4, 8, 20],
+      [8, 28, 60],
+      [16, 58, 110],
+      [28, 80, 145],
+      [80, 170, 210],
+      [180, 225, 240]
+    ]
+  },
+  { // Ember — charcoal to gold
+    name: 'Ember',
+    colors: [
+      [10, 6, 6],
+      [40, 12, 12],
+      [88, 24, 22],
+      [158, 64, 32],
+      [208, 132, 55],
+      [240, 200, 90]
+    ]
+  },
+  { // Virid — forest to cream
+    name: 'Virid',
+    colors: [
+      [8, 16, 6],
+      [14, 38, 16],
+      [36, 82, 34],
+      [72, 138, 56],
+      [128, 186, 96],
+      [200, 220, 165]
+    ]
+  },
+  { // Aurora — teal to coral
+    name: 'Aurora',
+    colors: [
+      [6, 12, 20],
+      [8, 40, 50],
+      [20, 90, 95],
+      [60, 155, 140],
+      [140, 180, 100],
+      [230, 140, 120]
+    ]
+  },
+  { // Monolith — greyscale with blue shift
+    name: 'Monolith',
+    colors: [
+      [8, 10, 16],
+      [24, 28, 40],
+      [50, 55, 72],
+      [88, 92, 110],
+      [140, 142, 155],
+      [200, 200, 210]
+    ]
+  }
+];
+
+let palette, palColors;
+let particles = [];
+let orbs = [];
+let flowField = [];
+let trailBuf, bgBuf;
+let mouseSpring = { x: -9999, y: -9999 };
+let strata = [];
+let grainBuf;
+let vignetteBuf = null;
+let currentTime = 0;
+
+// ═══ Noise Helpers ═══════════════════════════════════════════
+
+function fbm(x, y, octaves = 4, lacunarity = 2.0, gain = 0.5) {
+  let val = 0, amp = 1, freq = 1, sum = 0;
+  for (let i = 0; i < octaves; i++) {
+    val += noise(x * freq, y * freq) * amp;
+    sum += amp;
+    amp *= gain;
+    freq *= lacunarity;
+  }
+  return val / sum;
+}
+
+function domainWarp(x, y, t) {
+  let qx = fbm(x + 0.0, y + 0.0, 4);
+  let qy = fbm(x + 5.2, y + 1.3, 4);
+  let rx = fbm(x + 1.5 * qx + 1.7, y + 1.5 * qy + 9.2, 3);
+  let ry = fbm(x + 1.5 * qx + 8.3, y + 1.5 * qy + 2.8, 3);
+  return fbm(x + 0.6 * rx + t, y + 0.6 * ry + t * 0.7, 3);
+}
+
+// ═══ Flow Field ══════════════════════════════════════════════
+
+function buildFlowField(t) {
+  let cols = ceil(width / CONFIG.flowRes) + 1;
+  let rows = ceil(height / CONFIG.flowRes) + 1;
+  flowField = new Array(cols * rows);
+  let scale = 0.008;
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      let angle = noise(i * scale, j * scale, t * 0.015) * TWO_PI * 2.5;
+      flowField[i + j * cols] = p5.Vector.fromAngle(angle).setMag(0.8);
+    }
+  }
+}
+
+function lookupFlow(x, y) {
+  let col = floor(x / CONFIG.flowRes);
+  let row = floor(y / CONFIG.flowRes);
+  let cols = ceil(width / CONFIG.flowRes) + 1;
+  col = constrain(col, 0, cols - 1);
+  row = constrain(row, 0, ceil(height / CONFIG.flowRes));
+  return flowField[col + row * cols];
+}
+
+// ═══ Particles ═══════════════════════════════════════════════
+
+class Particle {
+  constructor() {
+    this.reset();
+  }
+
+  reset() {
+    this.pos = createVector(random(width), random(height));
+    this.vel = p5.Vector.random2D().mult(random(0.3, 0.8));
+    this.acc = createVector(0, 0);
+    this.prev = this.pos.copy();
+    this.size = random(1.0, 3.5);
+    this.hueOffset = random(0, 1);
+    this.life = random(0.3, 1.0);
+    this.speed = random(0.6, 1.0);
+  }
+
+  follow() {
+    let force = lookupFlow(this.pos.x, this.pos.y);
+    if (force) {
+      force.mult(0.4 * this.speed);
+      this.acc.add(force);
+    }
+  }
+
+  avoidMouse() {
+    if (mouseSpring.x < 0) return;
+    let dx = this.pos.x - mouseSpring.x;
+    let dy = this.pos.y - mouseSpring.y;
+    let distSq = dx * dx + dy * dy;
+    let radiusSq = CONFIG.mouseRadius * CONFIG.mouseRadius;
+    if (distSq < radiusSq && distSq > 1) {
+      let dist = sqrt(distSq);
+      let force = (radiusSq - distSq) / radiusSq;
+      let fx = (dx / dist) * force * CONFIG.mouseForce;
+      let fy = (dy / dist) * force * CONFIG.mouseForce;
+      this.acc.add(fx, fy);
+    }
+  }
+
+  update() {
+    this.prev.set(this.pos);
+    this.vel.add(this.acc);
+    this.vel.limit(CONFIG.particleMaxSpeed * this.speed);
+    this.pos.add(this.vel);
+    this.acc.mult(0);
+
+    // Subtle life oscillation
+    this.life = 0.6 + 0.4 * sin(currentTime * 0.003 + this.hueOffset * TWO_PI);
+
+    // Wrap edges
+    if (this.pos.x < -10) { this.pos.x = width + 10; this.prev.set(this.pos); }
+    if (this.pos.x > width + 10) { this.pos.x = -10; this.prev.set(this.pos); }
+    if (this.pos.y < -10) { this.pos.y = height + 10; this.prev.set(this.pos); }
+    if (this.pos.y > height + 10) { this.pos.y = -10; this.prev.set(this.pos); }
+  }
+
+  sampleColor() {
+    let yNorm = this.pos.y / height;
+    let palIdx = constrain(floor(yNorm * (palColors.length - 1)), 0, palColors.length - 2);
+    let frac = (yNorm * (palColors.length - 1)) - palIdx;
+    return [
+      lerp(palColors[palIdx][0], palColors[palIdx + 1][0], frac),
+      lerp(palColors[palIdx][1], palColors[palIdx + 1][1], frac),
+      lerp(palColors[palIdx][2], palColors[palIdx + 1][2], frac),
+    ];
+  }
+
+  display(buf) {
+    let t = this.life;
+    let alpha = t * 150;
+    let size = this.size * (0.6 + 0.4 * t);
+    let c = this.sampleColor();
+    buf.stroke(c[0], c[1], c[2], alpha * 0.35);
+    buf.strokeWeight(size * 0.6);
+    buf.line(this.prev.x, this.prev.y, this.pos.x, this.pos.y);
+  }
+
+  displayGlow() {
+    let t = this.life;
+    let alpha = t * 120;
+    let size = this.size * (0.6 + 0.4 * t);
+    let c = this.sampleColor();
+    noStroke();
+    fill(c[0], c[1], c[2], alpha);
+    circle(this.pos.x, this.pos.y, size);
+  }
+}
+
+// ═══ Orbs ════════════════════════════════════════════════════
+
+class Orb {
+  constructor() {
+    this.reset();
+  }
+
+  reset() {
+    this.x = random(width);
+    this.y = random(height);
+    this.radius = random(60, 200);
+    this.baseRadius = this.radius;
+    this.driftX = random(-0.15, 0.15);
+    this.driftY = random(-0.08, 0.08);
+    this.phase = random(TWO_PI);
+    this.speed = random(0.004, 0.012);
+    this.alpha = random(3, 10);
+    // Sample color from palette based on y position
+    let yNorm = this.y / height;
+    let palIdx = constrain(floor(yNorm * (palColors.length - 1)), 0, palColors.length - 2);
+    let frac = (yNorm * (palColors.length - 1)) - palIdx;
+    this.c = [];
+    for (let i = 0; i < 3; i++) {
+      this.c[i] = lerp(palColors[palIdx][i], palColors[palIdx + 1][i], frac);
+    }
+  }
+
+  update() {
+    this.x += this.driftX + sin(currentTime * this.speed + this.phase) * 0.3;
+    this.y += this.driftY + cos(currentTime * this.speed * 0.7 + this.phase) * 0.2;
+    this.radius = this.baseRadius + sin(currentTime * this.speed * 0.5 + this.phase) * this.baseRadius * 0.15;
+
+    // Wrap
+    if (this.x < -this.radius) this.x = width + this.radius;
+    if (this.x > width + this.radius) this.x = -this.radius;
+    if (this.y < -this.radius) this.y = height + this.radius;
+    if (this.y > height + this.radius) this.y = -this.radius;
+  }
+
+  display() {
+    let pulse = 0.5 + 0.5 * sin(currentTime * this.speed + this.phase);
+    noStroke();
+    fill(this.c[0], this.c[1], this.c[2], this.alpha * pulse);
+    circle(this.x, this.y, this.radius * 2);
+  }
+}
+
+// ═══ Strata Rendering ════════════════════════════════════════
+
+class Stratum {
+  constructor(index, total) {
+    this.index = index;
+    this.topPct = index / total;
+    this.bottomPct = (index + 1) / total + 0.02;
+    this.c1 = palColors[index];
+    this.c2 = palColors[min(index + 1, palColors.length - 1)];
+    this.alpha = map(index, 0, total - 1, 40, 65);
+  }
+
+  render(t) {
+    let step = CONFIG.gradStep;
+    let scale = CONFIG.warpScale;
+    let strength = CONFIG.warpStrength;
+    let topY = this.topPct * height;
+    let botY = this.bottomPct * height;
+
+    noStroke();
+    beginShape();
+
+    // Top edge: L→R
+    for (let x = 0; x <= width; x += step) {
+      let warp = domainWarp(x * scale, topY * 0.002, t) - 0.5;
+      let y = topY + warp * strength;
+      vertex(x, y);
+    }
+
+    // Right edge down
+    vertex(width, botY);
+
+    // Bottom edge: R→L
+    for (let x = width; x >= 0; x -= step) {
+      let warp = domainWarp(x * scale, botY * 0.002 + 100, t) - 0.5;
+      let y = botY + warp * strength;
+      vertex(x, y);
+    }
+
+    // Left edge up
+    vertex(0, topY);
+
+    endShape(CLOSE);
+  }
+}
+
+// ═══ Setup ═══════════════════════════════════════════════════
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  colorMode(RGB, 255);
+  pixelDensity(1);
+  noCursor();
+
+  // Re-seed
+  randomSeed(CONFIG.seed);
+  noiseSeed(CONFIG.seed);
+
+  applyPalette(0);
+
+  // Offscreen buffers
+  trailBuf = createGraphics(width, height);
+  bgBuf = createGraphics(width, height);
+
+  // Vignette (computed once)
+  buildVignette();
+
+  // Strata
+  buildStrata();
+
+  // Particles
+  for (let i = 0; i < CONFIG.particleCount; i++) {
+    particles.push(new Particle());
+  }
+
+  // Orbs
+  for (let i = 0; i < CONFIG.orbCount; i++) {
+    orbs.push(new Orb());
+  }
+
+  // Update UI
+  document.getElementById('seed-label').textContent = '✦ ' + String(CONFIG.seed).padStart(5, '0');
+  document.getElementById('palette-label').textContent = PALETTES[CONFIG.paletteIdx].name;
+}
+
+function applyPalette(idx) {
+  CONFIG.paletteIdx = idx;
+  palette = PALETTES[idx];
+  palColors = palette.colors;
+  // Rebuild strata if they exist
+  if (strata.length > 0) buildStrata();
+}
+
+function buildStrata() {
+  strata = [];
+  for (let i = 0; i < CONFIG.strataCount; i++) {
+    strata.push(new Stratum(i, CONFIG.strataCount));
+  }
+  // Update orbs if they exist
+  if (orbs.length > 0) {
+    for (let o of orbs) o.reset();
+  }
+}
+
+// ═══ Draw ════════════════════════════════════════════════════
+
+function draw() {
+  currentTime = millis() * 0.001;
+
+  // ─── Background ───
+  clearGradient();
+  image(bgBuf, 0, 0);
+
+  // ─── Strata ───
+  let t = currentTime * CONFIG.warpTimeSpeed;
+  for (let s of strata) {
+    fill(s.c1[0], s.c1[1], s.c1[2], s.alpha);
+    s.render(t);
+  }
+
+  // ─── Trail buffer ───
+  trailBuf.push();
+  // Fade previous trails
+  trailBuf.noStroke();
+  trailBuf.fill(5, 5, 8, CONFIG.trailFadeAlpha);
+  trailBuf.rect(0, 0, width, height);
+
+  // Draw particle trails
+  blendMode(ADD);
+  trailBuf.blendMode(ADD);
+  for (let p of particles) {
+    p.follow();
+    p.avoidMouse();
+    p.update();
+    p.display(trailBuf);
+  }
+  trailBuf.blendMode(BLEND);
+  trailBuf.pop();
+
+  // Composite trails
+  image(trailBuf, 0, 0);
+  blendMode(BLEND);
+
+  // ─── Orbs ───
+  for (let o of orbs) {
+    o.update();
+    o.display();
+  }
+
+  // ─── Particle glow dots ───
+  for (let p of particles) {
+    p.displayGlow();
+  }
+
+  // ─── Vignette overlay ───
+  image(vignetteBuf, 0, 0);
+
+  // ─── Flow field update ───
+  if (frameCount % 2 === 0) {
+    buildFlowField(currentTime);
+  }
+
+  // ─── Update palette label on change ───
+  // (handled in keyPressed)
+
+  // Show seed momentarily on first frame
+  if (frameCount === 1) {
+    let sLabel = document.getElementById('seed-label');
+    sLabel.style.opacity = '1';
+    setTimeout(() => { sLabel.style.opacity = '0.3'; }, 3000);
+  }
+}
+
+// ─── Background with vertical gradient ───
+
+function clearGradient() {
+  bgBuf.noStroke();
+  let segments = 200;
+  let h = height / segments;
+  for (let i = 0; i <= segments; i++) {
+    let t = i / segments;
+    let palIdx = constrain(floor(t * (palColors.length - 1)), 0, palColors.length - 2);
+    let frac = (t * (palColors.length - 1)) - palIdx;
+    let c = [];
+    for (let j = 0; j < 3; j++) {
+      c[j] = lerp(palColors[palIdx][j], palColors[palIdx + 1][j], frac);
+    }
+    bgBuf.fill(c[0], c[1], c[2], 255);
+    bgBuf.rect(0, i * h, width, h + 1);
+  }
+}
+
+// ─── Vignette (rendered once to buffer) ───
+
+function buildVignette() {
+  if (vignetteBuf) vignetteBuf.remove();
+  vignetteBuf = createGraphics(width, height);
+  vignetteBuf.loadPixels();
+  let px = vignetteBuf.pixels;
+  let cx = width / 2, cy = height / 2;
+  let maxDist = dist(0, 0, cx, cy);
+  for (let i = 0; i < px.length; i += 4) {
+    let x = (i / 4) % width;
+    let y = floor((i / 4) / width);
+    let d = dist(x, y, cx, cy) / maxDist;
+    let factor = 1.0 - smoothstep(constrain((d - 0.5) / (1 - 0.5), 0, 1)) * 0.35;
+    px[i] = 0;
+    px[i + 1] = 0;
+    px[i + 2] = 0;
+    px[i + 3] = (1 - factor) * 255;
+  }
+  vignetteBuf.updatePixels();
+}
+
+function smoothstep(t) {
+  return t * t * (3 - 2 * t);
+}
+
+// ═══ Interaction ═════════════════════════════════════════════
+
+function mouseMoved() {
+  mouseSpring.x = mouseX;
+  mouseSpring.y = mouseY;
+}
+
+function mouseDragged() {
+  mouseSpring.x = mouseX;
+  mouseSpring.y = mouseY;
+  // Spawn a few particles at drag location
+  for (let i = 0; i < 3; i++) {
+    let p = new Particle();
+    p.pos.set(mouseX + random(-20, 20), mouseY + random(-20, 20));
+    p.vel = p5.Vector.random2D().mult(random(0.5, 1.5));
+    particles.push(p);
+  }
+  if (particles.length > 500) {
+    particles.splice(0, particles.length - 500);
+  }
+}
+
+function mouseExited() {
+  mouseSpring.x = -9999;
+  mouseSpring.y = -9999;
+}
+
+function keyPressed() {
+  if (key === ' ') {
+    // New seed
+    CONFIG.seed = Math.floor(Math.random() * 99999);
+    randomSeed(CONFIG.seed);
+    noiseSeed(CONFIG.seed);
+    document.getElementById('seed-label').textContent = '✦ ' + String(CONFIG.seed).padStart(5, '0');
+    // Reset particles
+    for (let p of particles) p.reset();
+    // Reset orbs
+    for (let o of orbs) o.reset();
+    // Clear trails
+    trailBuf.background(0, 0, 0, 0);
+  }
+  if (key >= '1' && key <= '6') {
+    let idx = parseInt(key) - 1;
+    if (idx < PALETTES.length) {
+      applyPalette(idx);
+      buildStrata();
+      bgBuf.background(0, 0, 0, 0);
+      document.getElementById('palette-label').textContent = PALETTES[idx].name;
+      // Flash the label
+      let label = document.getElementById('palette-label');
+      label.style.opacity = '1';
+      label.style.transition = 'opacity 0.3s';
+      setTimeout(() => { label.style.opacity = '0.06'; }, 2000);
+    }
+  }
+  if (key === 's' || key === 'S') {
+    saveCanvas('stratum-' + CONFIG.seed, 'png');
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  trailBuf = createGraphics(width, height);
+  bgBuf = createGraphics(width, height);
+  buildVignette();
+}
+  </script>
+</body>
+</html>
