@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cascade Glass</title>
+<style>
+/* ═══════════════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{
+  scroll-behavior:smooth;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro','Helvetica Neue',Helvetica,Arial,sans-serif;
+  background:#08080e;
+  color:#e8e8ee;
+  line-height:1.6;
+  overflow-x:hidden;
+}
+
+/* ═══════════════════════════════════════════════
+   AMBIENT GRADIENT BACKDROP (OKLCH-based)
+   ═══════════════════════════════════════════════ */
+.ambient{
+  position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 20%, oklch(0.45 0.18 290 / 0.25) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 80% at 80% 30%, oklch(0.40 0.14 220 / 0.20) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 50% 80%, oklch(0.35 0.12 180 / 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 30% 70%, oklch(0.50 0.16 30 / 0.10) 0%, transparent 50%);
+  transition:opacity 1.5s ease;
+}
+
+/* ═══════════════════════════════════════════════
+   AMBIENT MORPHING BLOBS (noise animation layer)
+   ═══════════════════════════════════════════════ */
+.blob-bg{
+  position:fixed;inset:0;z-index:0;
+  overflow:hidden;
+  pointer-events:none;
+}
+.blob{
+  position:absolute;
+  border-radius:50%;
+  filter:blur(80px);
+  opacity:0.5;
+  mix-blend-mode:screen;
+}
+.blob-1{
+  width:600px;height:600px;
+  background:oklch(0.55 0.20 290 / 0.15);
+  top:-10%;left:-10%;
+  animation:blob-drift-1 25s ease-in-out infinite;
+}
+.blob-2{
+  width:500px;height:500px;
+  background:oklch(0.50 0.18 220 / 0.12);
+  bottom:-15%;right:-5%;
+  animation:blob-drift-2 30s ease-in-out infinite;
+}
+.blob-3{
+  width:400px;height:400px;
+  background:oklch(0.50 0.15 180 / 0.10);
+  top:40%;left:55%;
+  animation:blob-drift-3 20s ease-in-out infinite;
+}
+
+@keyframes blob-drift-1{
+  0%,100%{transform:translate(0,0) scale(1)}  /* violet */
+  33%{transform:translate(120px,-80px) scale(1.2)}
+  66%{transform:translate(-60px,100px) scale(0.9)}
+}
+@keyframes blob-drift-2{
+  0%,100%{transform:translate(0,0) scale(1)}  /* blue */
+  33%{transform:translate(-80px,-120px) scale(1.15)}
+  66%{transform:translate(100px,60px) scale(0.85)}
+}
+@keyframes blob-drift-3{
+  0%,100%{transform:translate(0,0) scale(1)}  /* teal */
+  33%{transform:translate(60px,80px) scale(1.1)}
+  66%{transform:translate(-100px,-40px) scale(0.95)}
+}
+
+/* ═══════════════════════════════════════════════
+   NOISE OVERLAY
+   ═══════════════════════════════════════════════ */
+.noise-overlay{
+  position:fixed;inset:0;z-index:1;
+  opacity:0.035;
+  pointer-events:none;
+  mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat:repeat;
+  background-size:256px 256px;
+}
+
+/* ═══════════════════════════════════════════════
+   HERO
+   ═══════════════════════════════════════════════ */
+.hero{
+  position:relative;z-index:2;
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  padding:2rem;
+}
+.hero h1{
+  font-size:clamp(2.5rem,6vw,5rem);
+  font-weight:700;
+  letter-spacing:-0.03em;
+  line-height:1.1;
+  background:linear-gradient(
+    135deg,
+    oklch(0.85 0.05 300),
+    oklch(0.90 0.04 240),
+    oklch(0.85 0.05 180)
+  );
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  margin-bottom:1rem;
+}
+.hero p{
+  max-width:480px;
+  color:rgba(255,255,255,0.5);
+  font-size:1.1rem;
+  line-height:1.7;
+}
+.scroll-hint{
+  position:absolute;bottom:3rem;
+  left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;
+  gap:0.5rem;
+  color:rgba(255,255,255,0.2);
+  font-size:0.75rem;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  animation:hint-pulse 3s ease-in-out infinite;
+}
+.scroll-hint .arrow{
+  width:1px;height:2rem;
+  background:linear-gradient(to bottom,rgba(255,255,255,0.2),transparent);
+  animation:hint-arrow 2s ease-in-out infinite;
+}
+@keyframes hint-pulse{
+  0%,100%{opacity:0.4}
+  50%{opacity:0.8}
+}
+@keyframes hint-arrow{
+  0%,100%{transform:translateY(0);opacity:0.4}
+  50%{transform:translateY(6px);opacity:0.8}
+}
+
+/* ═══════════════════════════════════════════════
+   GLASS CARD
+   ═══════════════════════════════════════════════ */
+.cards-section{
+  position:relative;z-index:2;
+  padding:4rem 1.5rem 8rem;
+  max-width:700px;
+  margin:0 auto;
+}
+.card{
+  position:relative;
+  margin-bottom:6rem;
+  padding:2.5rem 2rem;
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,0.08);
+  /* Multi-layer glass — Apple Liquid Glass technique */
+  background:rgba(20,20,35,0.35);
+  -webkit-backdrop-filter:blur(24px) brightness(1.15) saturate(1.2);
+  backdrop-filter:blur(24px) brightness(1.15) saturate(1.2);
+  box-shadow:
+    0 4px 32px rgba(0,0,0,0.3),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  /* Scroll-triggered reveal — initial state */
+  opacity:0;
+  transform:translateY(40px) scale(0.97);
+  transition:
+    opacity 0.8s cubic-bezier(0.22,1,0.36,1),
+    transform 0.8s cubic-bezier(0.22,1,0.36,1);
+}
+.card.revealed{
+  opacity:1;
+  transform:translateY(0) scale(1);
+}
+/* Stagger delay for nested elements */
+.card-content > *{
+  opacity:0;
+  transform:translateY(12px);
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s cubic-bezier(0.22,1,0.36,1);
+  transition-delay:0s;
+}
+.card.revealed .card-content > *{
+  opacity:1;
+  transform:translateY(0);
+}
+.card.revealed .card-content > *:nth-child(1){transition-delay:0.1s}
+.card.revealed .card-content > *:nth-child(2){transition-delay:0.2s}
+.card.revealed .card-content > *:nth-child(3){transition-delay:0.3s}
+.card.revealed .card-content > *:nth-child(4){transition-delay:0.4s}
+.card.revealed .card-content > *:nth-child(5){transition-delay:0.5s}
+
+/* Accent glow per card */
+.card::before{
+  content:'';
+  position:absolute;
+  inset:-1px;
+  border-radius:inherit;
+  padding:1px;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  mask-composite:exclude;
+  pointer-events:none;
+  transition:opacity 0.8s ease;
+  opacity:0;
+}
+.card.revealed::before{opacity:1}
+.card-accent-violet::before{background:linear-gradient(135deg,oklch(0.65 0.18 290/0.4),oklch(0.65 0.18 290/0.05))}
+.card-accent-blue::before{background:linear-gradient(135deg,oklch(0.60 0.16 240/0.4),oklch(0.60 0.16 240/0.05))}
+.card-accent-teal::before{background:linear-gradient(135deg,oklch(0.65 0.14 180/0.4),oklch(0.65 0.14 180/0.05))}
+.card-accent-rose::before{background:linear-gradient(135deg,oklch(0.65 0.16 10/0.4),oklch(0.65 0.16 10/0.05))}
+.card-accent-gold::before{background:linear-gradient(135deg,oklch(0.70 0.14 85/0.4),oklch(0.70 0.14 85/0.05))}
+
+/* Glossy highlight top edge */
+.card::after{
+  content:'';
+  position:absolute;
+  top:0;left:10%;right:10%;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.10),transparent);
+  opacity:0;
+  transition:opacity 0.8s ease;
+  transition-delay:0.1s;
+}
+.card.revealed::after{opacity:1}
+
+/* Card content */
+.card-number{
+  display:inline-block;
+  font-size:0.7rem;
+  font-weight:600;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:rgba(255,255,255,0.2);
+  margin-bottom:0.75rem;
+}
+.card h2{
+  font-size:1.5rem;
+  font-weight:600;
+  letter-spacing:-0.02em;
+  margin-bottom:0.75rem;
+  line-height:1.3;
+}
+.card p{
+  color:rgba(255,255,255,0.6);
+  font-size:0.95rem;
+  line-height:1.7;
+}
+.card .tag{
+  display:inline-block;
+  margin-top:1rem;
+  padding:0.3rem 0.75rem;
+  border-radius:100px;
+  font-size:0.7rem;
+  font-weight:500;
+  letter-spacing:0.5px;
+  text-transform:uppercase;
+}
+.tag-violet{background:oklch(0.65 0.18 290/0.15);color:oklch(0.75 0.12 290)}
+.tag-blue{background:oklch(0.60 0.16 240/0.15);color:oklch(0.70 0.12 240)}
+.tag-teal{background:oklch(0.65 0.14 180/0.15);color:oklch(0.75 0.10 180)}
+.tag-rose{background:oklch(0.65 0.16 10/0.15);color:oklch(0.75 0.12 10)}
+.tag-gold{background:oklch(0.70 0.14 85/0.15);color:oklch(0.80 0.10 85)}
+
+/* Glass demo preview squares */
+.glass-demo{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:0.75rem;
+  margin-top:1.5rem;
+}
+.glass-swatch{
+  aspect-ratio:1;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.06);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:1.5rem;
+  position:relative;
+  overflow:hidden;
+}
+.glass-swatch::before{
+  content:'';
+  position:absolute;inset:0;
+  backdrop-filter:blur(8px) brightness(0.8);
+  -webkit-backdrop-filter:blur(8px) brightness(0.8);
+  border-radius:inherit;
+}
+.glass-swatch span{
+  position:relative;z-index:1;
+  mix-blend-mode:overlay;
+  color:#fff;
+  font-weight:600;
+}
+.glass-swatch-1{background:linear-gradient(135deg,#667eea,#764ba2)}
+.glass-swatch-2{background:linear-gradient(135deg,#f093fb,#f5576c)}
+.glass-swatch-3{background:linear-gradient(135deg,#4facfe,#00f2fe)}
+
+/* ═══════════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════════ */
+.footer-note{
+  position:relative;z-index:2;
+  text-align:center;
+  padding:3rem 1.5rem 5rem;
+  color:rgba(255,255,255,0.15);
+  font-size:0.8rem;
+  letter-spacing:1px;
+}
+
+/* ═══════════════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════════════ */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:#08080e}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.15)}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════ */
+@media(max-width:480px){
+  .card{padding:1.75rem 1.25rem;margin-bottom:4rem}
+  .card h2{font-size:1.25rem}
+  .glass-demo{grid-template-columns:repeat(3,1fr);gap:0.5rem}
+}
+
+/* ═══════════════════════════════════════════════
+   REDUCED MOTION
+   ═══════════════════════════════════════════════ */
+@media(prefers-reduced-motion:reduce){
+  .blob{animation:none !important}
+  .card,.card-content>*{transition:none !important;opacity:1;transform:none}
+  .scroll-hint{animation:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Ambient gradient backdrop -->
+<div class="ambient"></div>
+
+<!-- Morphing blobs -->
+<div class="blob-bg" aria-hidden="true">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<!-- Noise overlay -->
+<div class="noise-overlay" aria-hidden="true"></div>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <h1>Cascade Glass</h1>
+  <p>
+    Liquid glass meets scroll-triggered reveals — a production-ready pattern
+    combining Apple-inspired glassmorphism with perceptual colour and
+    declarative scroll entrance animations.
+  </p>
+  <div class="scroll-hint">
+    <span>Scroll</span>
+    <div class="arrow"></div>
+  </div>
+</section>
+
+<!-- ═══ CARDS ═══ -->
+<section class="cards-section">
+
+  <article class="card card-accent-violet" data-reveal>
+    <div class="card-content">
+      <span class="card-number">01</span>
+      <h2>Liquid Glass</h2>
+      <p>
+        Inspired by Apple's Liquid Glass design language, each card uses
+        multi-layer <code>backdrop-filter</code> with <code>blur</code>,
+        <code>brightness</code>, and <code>saturate</code> transforms to
+        create depth and material presence.
+      </p>
+      <span class="tag tag-violet">Backdrop-filter</span>
+    </div>
+  </article>
+
+  <article class="card card-accent-blue" data-reveal>
+    <div class="card-content">
+      <span class="card-number">02</span>
+      <h2>Scroll-Triggered Reveal</h2>
+      <p>
+        Cards cascade into view as you scroll — a declarative replacement
+        for manual IntersectionObserver wiring. The upcoming
+        <code>animation-trigger</code> CSS API (Chrome 145+)
+        will make this a one-liner. Today, we use a lightweight observer
+        that mirrors the same mental model.
+      </p>
+      <span class="tag tag-blue">animation-trigger</span>
+    </div>
+  </article>
+
+  <article class="card card-accent-teal" data-reveal>
+    <div class="card-content">
+      <span class="card-number">03</span>
+      <h2>Perceptual Colour</h2>
+      <p>
+        Every gradient and accent on this page is authored in
+        <code>oklch()</code> — a perceptually uniform colour space that
+        ensures balanced lightness and consistent hue across the entire
+        palette, avoiding the muddy transitions of sRGB.
+      </p>
+      <span class="tag tag-teal">OKLCH</span>
+    </div>
+  </article>
+
+  <article class="card card-accent-rose" data-reveal>
+    <div class="card-content">
+      <span class="card-number">04</span>
+      <h2>Layered Depth</h2>
+      <p>
+        The glass effect is assembled from four layers: an ambient OKLCH
+        gradient backdrop, morphing blur blobs for organic movement, a
+        noise overlay for tactile texture, and the glass panels
+        themselves with their inset highlights and gradient borders.
+      </p>
+      <span class="tag tag-rose">Compositing</span>
+    </div>
+  </article>
+
+  <article class="card card-accent-gold" data-reveal>
+    <div class="card-content">
+      <span class="card-number">05</span>
+      <h2>Production Ready</h2>
+      <p>
+        Self-contained, zero dependencies, responsive down to mobile,
+        respects <code>prefers-reduced-motion</code>, and uses CSS custom
+        properties throughout. Drop this pattern into any hero section,
+        landing page, or presentation site.
+      </p>
+      <span class="tag tag-gold">Ship it</span>
+      <!-- Glass swatches -->
+      <div class="glass-demo">
+        <div class="glass-swatch glass-swatch-1"><span>◆</span></div>
+        <div class="glass-swatch glass-swatch-2"><span>●</span></div>
+        <div class="glass-swatch glass-swatch-3"><span>■</span></div>
+      </div>
+    </div>
+  </article>
+
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<div class="footer-note">
+  Nightly build &middot; Jun 14, 2026
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   SCROLL-TRIGGERED REVEAL
+   Lightweight IntersectionObserver polyfill for
+   the future CSS animation-trigger API.
+   ═══════════════════════════════════════════════ */
+(function(){
+  'use strict';
+
+  const cards = document.querySelectorAll('[data-reveal]');
+  if (!cards.length) return;
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('revealed');
+        observer.unobserve(entry.target); // one-shot
+      }
+    });
+  }, {
+    threshold: 0.15,
+    rootMargin: '0px 0px -40px 0px'
+  });
+
+  cards.forEach((card) => observer.observe(card));
+})();
+</script>
+
+</body>
+</html>
