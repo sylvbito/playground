@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auroral Lenses</title>
+  <script>p5.disableFriendlyErrors = true;</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.3/p5.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #070714;
+    }
+    canvas {
+      display: block;
+    }
+    #info {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.2);
+      font: 12px/1.4 system-ui, -apple-system, sans-serif;
+      text-align: center;
+      pointer-events: none;
+      letter-spacing: 0.5px;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+<div id="info">Auroral Lenses · Space = new seed · S = save PNG · drag to interact</div>
+<script>
+// === Configuration ===
+const CONFIG = {
+  seed: Math.floor(Math.random() * 99999),
+  numLenses: 6,
+  auroraScale: 0.002,
+  auroraSpeed: 0.00015,
+  lensDriftSpeed: 0.00012,
+  lightAngle: 0,
+  lightOrbitSpeed: 0.0008,
+  magnify: 1.15,
+  chromaStrength: 3,
+  blurRadius: 4,
+};
+
+// === Color Palette (raw HSB — converted in setup) ===
+const PALETTE = {
+  bg: { h: 240, s: 30, b: 8 },
+  aurora: [
+    { h: 165, s: 80, b: 75 },   // teal
+    { h: 255, s: 60, b: 65 },   // amethyst
+    { h: 350, s: 65, b: 80 },   // rose
+    { h: 40,  s: 70, b: 85 },   // gold
+    { h: 190, s: 75, b: 70 },   // cyan
+  ],
+  accent: { h: 260, s: 50, b: 55 },
+};
+
+// === Global State ===
+let bgBuf, lensBuf, glowBuf;
+let lenses = [];
+let mouseForce = { x: 0, y: 0 };
+let targetMouse = { x: 0, y: 0 };
+
+// ============================================================
+// LENS CLASS
+// ============================================================
+class GlassLens {
+  constructor(x, y) {
+    this.targetX = x;
+    this.targetY = y;
+    this.x = x;
+    this.y = y;
+    this.baseR = random(80, 220);
+    this.r = this.baseR;
+    this.targetR = this.baseR;
+    this.pulsePhase = random(TWO_PI);
+    this.pulseSpeed = random(0.005, 0.02);
+    this.pulseAmp = random(0.04, 0.12);
+    this.driftX = random(-0.5, 0.5);
+    this.driftY = random(-0.5, 0.5);
+    this.driftPhase = random(1000);
+    this.wobblePhase = random(TWO_PI);
+    this.wobbleAmp = random(5, 15);
+    this.phase = random(TWO_PI);
+    this.colorShift = random(360);
+    this.chromaAmp = random(1.5, 4);
+    this.speed = random(0.2, 0.6);
+    this.opacity = random(0.15, 0.35);
+    this.edgeWidth = random(1, 3);
+  }
+
+  update(time) {
+    // Pulse
+    this.targetR = this.baseR * (1 + Math.sin(time * 0.6 + this.pulsePhase) * this.pulseAmp);
+
+    // Drift target
+    let dx = Math.sin(time * 0.3 + this.driftPhase) * this.driftX * 80;
+    let dy = Math.cos(time * 0.4 + this.driftPhase + 1.3) * this.driftY * 80;
+    this.targetX = width / 2 + dx;
+    this.targetY = height / 2 + dy;
+
+    // Ease toward target
+    this.x += (this.targetX - this.x) * 0.008;
+    this.y += (this.targetY - this.y) * 0.008;
+    this.r += (this.targetR - this.r) * 0.04;
+
+    // Mouse influence
+    let md = dist(this.x, this.y, mouseForce.x, mouseForce.y);
+    if (md < 300) {
+      let strength = (1 - md / 300) * 0.3;
+      this.x += (this.x - mouseForce.x) * strength;
+      this.y += (this.y - mouseForce.y) * strength;
+    }
+  }
+
+  // Generate blob shape vertices
+  getVertices(numPoints = 64) {
+    let pts = [];
+    for (let i = 0; i < numPoints; i++) {
+      let a = TWO_PI * i / numPoints;
+      let noiseVal = noise(
+        Math.cos(a) * 2 + this.phase + 10,
+        Math.sin(a) * 2 + this.phase + 20
+      );
+      let rOffset = (noiseVal - 0.5) * this.r * 0.25;
+      let rr = this.r + rOffset;
+      pts.push({
+        x: this.x + Math.cos(a) * rr,
+        y: this.y + Math.sin(a) * rr,
+      });
+    }
+    return pts;
+  }
+}
+
+// ============================================================
+// SETUP
+// ============================================================
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  colorMode(HSB, 360, 100, 100, 100);
+
+  bgBuf = createGraphics(width, height);
+  lensBuf = createGraphics(width, height);
+  glowBuf = createGraphics(width, height);
+
+  initScene();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  bgBuf.remove();
+  lensBuf.remove();
+  glowBuf.remove();
+  bgBuf = createGraphics(width, height);
+  lensBuf = createGraphics(width, height);
+  glowBuf = createGraphics(width, height);
+  initScene();
+}
+
+function initScene() {
+  randomSeed(CONFIG.seed);
+  noiseSeed(CONFIG.seed);
+
+  lenses = [];
+  for (let i = 0; i < CONFIG.numLenses; i++) {
+    let angle = TWO_PI * i / CONFIG.numLenses + random(-0.3, 0.3);
+    let dist = random(120, 280);
+    let x = width / 2 + cos(angle) * dist;
+    let y = height / 2 + sin(angle) * dist;
+    lenses.push(new GlassLens(x, y));
+  }
+}
+
+// ============================================================
+// AURORA BACKGROUND
+// ============================================================
+function renderAurora(time) {
+  bgBuf.colorMode(HSB, 360, 100, 100, 100);
+  bgBuf.clear();
+
+  // Domain-warped fbm for aurora
+  bgBuf.loadPixels();
+  let w = width;
+  let h = height;
+  let s = CONFIG.auroraScale;
+  let t = time * CONFIG.auroraSpeed;
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let idx = 4 * (y * w + x);
+
+      // First warp pass
+      let qx = fbm(x * s, y * s + t * 0.5, 3);
+      let qy = fbm(x * s + 5.2, y * s + 1.3 + t * 0.3, 3);
+
+      // Second warp pass (domain warp)
+      let rx = x * s + 1.5 * qx + t;
+      let ry = y * s + 1.5 * qy + t * 0.7;
+
+      let n = fbm(rx, ry, 4, 2.0, 0.5);
+
+      // Vertical gradient for depth
+      let vPos = y / h;
+      let vMask = 1 - Math.abs(vPos - 0.5) * 1.6;
+      vMask = Math.max(0, vMask);
+
+      // Create aurora curtain effect
+      let curtain = noise(x * s * 2, y * s * 0.5 + t * 0.8);
+      curtain = (curtain - 0.3) * 1.5;
+      curtain = Math.max(0, Math.min(1, curtain));
+
+      // Combine
+      let val = n * vMask * (0.3 + 0.7 * curtain);
+      val = Math.max(0, Math.min(1, val));
+
+      // Map to palette
+      let hue, sat, bri;
+      if (val < 0.15) {
+        // Deep space base
+        let hn = noise(x * s * 3, y * s * 3, t * 0.2);
+        hue = 240 + (hn - 0.5) * 20;
+        sat = 20 + hn * 20;
+        bri = 5 + val * 15;
+      } else {
+        // Aurora colors
+        let paletteN = noise(x * s, y * s * 0.7, t * 0.2);
+        let palIdx = (paletteN * PALETTE.aurora.length) % PALETTE.aurora.length;
+        let palColor = PALETTE.aurora[Math.floor(palIdx)];
+        hue = palColor.h + (noise(x * s * 2, y * s * 2, t * 0.3) - 0.5) * 30;
+        sat = palColor.s * (0.6 + 0.4 * val);
+        bri = palColor.b * (0.3 + 0.7 * val);
+      }
+
+      // HSB → RGB conversion for pixel array
+      let h2 = (hue % 360) / 60;
+      let sv = constrain(sat, 0, 100) / 100;
+      let v2 = constrain(bri, 0, 100) / 100;
+      let i2 = Math.floor(h2);
+      let f2 = h2 - i2;
+      let p2 = v2 * (1 - sv);
+      let q2 = v2 * (1 - sv * f2);
+      let t2 = v2 * (1 - sv * (1 - f2));
+      let pr, pg, pb;
+      switch (i2 % 6) {
+        case 0: pr = v2; pg = t2; pb = p2; break;
+        case 1: pr = q2; pg = v2; pb = p2; break;
+        case 2: pr = p2; pg = v2; pb = t2; break;
+        case 3: pr = p2; pg = q2; pb = v2; break;
+        case 4: pr = t2; pg = p2; pb = v2; break;
+        case 5: pr = v2; pg = p2; pb = q2; break;
+      }
+      bgBuf.pixels[idx] = Math.round(pr * 255);
+      bgBuf.pixels[idx + 1] = Math.round(pg * 255);
+      bgBuf.pixels[idx + 2] = Math.round(pb * 255);
+      bgBuf.pixels[idx + 3] = 255;
+    }
+  }
+  bgBuf.updatePixels();
+}
+
+function fbm(x, y, octaves = 4, lacunarity = 2.0, gain = 0.5) {
+  let value = 0;
+  let amplitude = 1.0;
+  let frequency = 1.0;
+  let maxValue = 0;
+  for (let i = 0; i < octaves; i++) {
+    value += noise(x * frequency, y * frequency) * amplitude;
+    maxValue += amplitude;
+    amplitude *= gain;
+    frequency *= lacunarity;
+  }
+  return value / maxValue;
+}
+
+// ============================================================
+// LENS RENDERING
+// ============================================================
+function renderLenses() {
+  lensBuf.clear();
+  lensBuf.colorMode(HSB, 360, 100, 100, 100);
+
+  for (let lens of lenses) {
+    drawGlassLens(lens);
+  }
+}
+
+function drawGlassLens(lens) {
+  let pts = lens.getVertices(64);
+  let cx = lens.x, cy = lens.y;
+  let r = lens.r;
+
+  // --- Step 1: Refracted background inside lens ---
+  lensBuf.push();
+  lensBuf.noStroke();
+
+  // Clip to lens shape using native Canvas API
+  lensBuf.drawingContext.save();
+  lensBuf.beginShape();
+  for (let p of pts) lensBuf.vertex(p.x, p.y);
+  lensBuf.endShape(CLOSE);
+  lensBuf.drawingContext.clip();
+
+  // Draw magnified background inside lens
+  let mag = CONFIG.magnify;
+  let srcW = r * 2 / mag;
+  let srcH = r * 2 / mag;
+  let srcX = cx - srcW / 2;
+  let srcY = cy - srcH / 2;
+
+  lensBuf.image(
+    bgBuf,
+    cx - r, cy - r, r * 2, r * 2,
+    srcX, srcY, srcW, srcH
+  );
+
+  // Add subtle blur for refractive softness
+  lensBuf.filter(BLUR, CONFIG.blurRadius * 0.3);
+
+  lensBuf.drawingContext.restore();
+
+  // --- Step 2: Edge glow ---
+  lensBuf.push();
+  blendMode(ADD);
+  lensBuf.noFill();
+  lensBuf.strokeWeight(lens.edgeWidth);
+
+  // Chromatic fringe at edges (red/blue offset)
+  let chromaAmp = lens.chromaAmp * CONFIG.chromaStrength;
+  let lightAngle = CONFIG.lightAngle;
+
+  // Red fringe (toward light source)
+  lensBuf.stroke(0, 80, 80, 30);
+  lensBuf.beginShape();
+  let redOffset = chromaAmp * 0.5;
+  for (let p of pts) {
+    let dx = p.x - cx;
+    let dy = p.y - cy;
+    let angle = Math.atan2(dy, dx);
+    lensBuf.vertex(
+      p.x + Math.cos(angle + lightAngle) * redOffset,
+      p.y + Math.sin(angle + lightAngle) * redOffset
+    );
+  }
+  lensBuf.endShape(CLOSE);
+
+  // Blue fringe (away from light source)
+  lensBuf.stroke(220, 70, 70, 30);
+  lensBuf.beginShape();
+  let blueOffset = chromaAmp * 0.5;
+  for (let p of pts) {
+    let dx = p.x - cx;
+    let dy = p.y - cy;
+    let angle = Math.atan2(dy, dx);
+    lensBuf.vertex(
+      p.x + Math.cos(angle + lightAngle + PI) * blueOffset,
+      p.y + Math.sin(angle + lightAngle + PI) * blueOffset
+    );
+  }
+  lensBuf.endShape(CLOSE);
+
+  lensBuf.pop();
+
+  // --- Step 3: Soft inner glow ---
+  lensBuf.push();
+  lensBuf.drawingContext.shadowBlur = 40;
+  lensBuf.drawingContext.shadowColor = 'rgba(120, 80, 255, 0.15)';
+  lensBuf.noStroke();
+  // Inner gradient
+  for (let i = 0; i < 5; i++) {
+    let t = i / 5;
+    let cr = r * (1 - t * 0.85);
+    let a = 8 * (1 - t);
+    let h = (260 + i * 20) % 360;
+    lensBuf.fill(h, 30, 60, a);
+    lensBuf.beginShape();
+    for (let j = 0; j < 32; j++) {
+      let a2 = TWO_PI * j / 32;
+      let nv = noise(Math.cos(a2) * 1.5 + lens.phase + 10, Math.sin(a2) * 1.5 + lens.phase + 20);
+      let rr = cr + (nv - 0.5) * cr * 0.15;
+      lensBuf.vertex(cx + Math.cos(a2) * rr, cy + Math.sin(a2) * rr);
+    }
+    lensBuf.endShape(CLOSE);
+  }
+  lensBuf.pop();
+
+  // --- Step 4: Specular highlight ---
+  lensBuf.push();
+  blendMode(ADD);
+  lensBuf.noStroke();
+
+  // Calculate highlight position (opposite to light source)
+  let hlAngle = lightAngle + PI;
+  let hlDist = r * 0.35;
+  let hlx = cx + Math.cos(hlAngle) * hlDist;
+  let hly = cy + Math.sin(hlAngle) * hlDist;
+
+  // Specular spot
+  let specSize = r * 0.25;
+  for (let i = 8; i >= 0; i--) {
+    let t = i / 8;
+    let cr = specSize * (1 - t * 0.9);
+    let alpha = 60 * (1 - t) * (1 - t);
+    lensBuf.fill(45, 30, 95, alpha);
+    lensBuf.ellipse(hlx, hly, cr);
+  }
+
+  // Secondary specular (smaller, offset)
+  let hl2x = cx + Math.cos(hlAngle + 0.8) * hlDist * 0.6;
+  let hl2y = cy + Math.sin(hlAngle + 0.8) * hlDist * 0.6;
+  for (let i = 5; i >= 0; i--) {
+    let t = i / 5;
+    let cr = specSize * 0.3 * (1 - t * 0.9);
+    let alpha = 30 * (1 - t);
+    lensBuf.fill(45, 20, 100, alpha);
+    lensBuf.ellipse(hl2x, hl2y, cr);
+  }
+
+  lensBuf.pop();
+
+  // --- Step 5: Rim light ---
+  lensBuf.push();
+  blendMode(ADD);
+  lensBuf.noFill();
+  lensBuf.strokeWeight(1.5);
+  lensBuf.stroke(45, 30, 90, 20);
+  lensBuf.beginShape();
+  for (let p of pts) {
+    let dx = p.x - cx;
+    let dy = p.y - cy;
+    let angle = Math.atan2(dy, dx);
+    let rimBrightness = Math.max(0, Math.cos(angle - lightAngle));
+    let offset = 2 + rimBrightness * 4;
+    lensBuf.vertex(
+      p.x + Math.cos(angle) * offset,
+      p.y + Math.sin(angle) * offset
+    );
+  }
+  lensBuf.endShape(CLOSE);
+  lensBuf.pop();
+
+  // Reset blend mode for main buffer
+  blendMode(BLEND);
+  lensBuf.blendMode(BLEND);
+}
+
+// ============================================================
+// MOUSE & TOUCH EVENTS
+// ============================================================
+function mouseMoved() {
+  targetMouse.x = mouseX;
+  targetMouse.y = mouseY;
+  return false;
+}
+
+function touchMoved() {
+  targetMouse.x = mouseX;
+  targetMouse.y = mouseY;
+  return false;
+}
+
+// ============================================================
+// VIGNETTE
+// ============================================================
+function renderVignette() {
+  glowBuf.clear();
+  glowBuf.noStroke();
+
+  // Edge darkening
+  let cx = width / 2, cy = height / 2;
+  let maxD = dist(0, 0, cx, cy);
+  glowBuf.loadPixels();
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let idx = 4 * (y * width + x);
+      let d = dist(x, y, cx, cy) / maxD;
+      let v = smoothstep(Math.max(0, (d - 0.5) / 0.5));
+      let alpha = v * 180;
+      glowBuf.pixels[idx] = 240;
+      glowBuf.pixels[idx + 1] = 30;
+      glowBuf.pixels[idx + 2] = 5;
+      glowBuf.pixels[idx + 3] = alpha;
+    }
+  }
+  glowBuf.updatePixels();
+}
+
+function smoothstep(t) {
+  return t * t * (3 - 2 * t);
+}
+
+// ============================================================
+// DRAW LOOP
+// ============================================================
+let time = 0;
+
+function draw() {
+  // Clear canvas each frame
+  background(0, 0, 5);
+  time += 1;
+  let t = time;
+
+  // Update light angle
+  CONFIG.lightAngle += CONFIG.lightOrbitSpeed;
+
+  // Update mouse force (smooth follow)
+  mouseForce.x += (targetMouse.x - mouseForce.x) * 0.1;
+  mouseForce.y += (targetMouse.y - mouseForce.y) * 0.1;
+
+  // Update lenses
+  for (let lens of lenses) {
+    lens.update(t);
+  }
+
+  // Render aurora background
+  renderAurora(t);
+
+  // Render glass lenses
+  renderLenses();
+
+  // Composite
+  image(bgBuf, 0, 0);
+  image(lensBuf, 0, 0);
+
+  // Vignette overlay
+  blendMode(MULTIPLY);
+  image(glowBuf, 0, 0);
+  blendMode(BLEND);
+
+  // Film grain
+  applyGrain(6);
+}
+
+function applyGrain(amount) {
+  loadPixels();
+  for (let i = 0; i < pixels.length; i += 4) {
+    let grain = (Math.random() - 0.5) * amount;
+    pixels[i] = constrain(pixels[i] + grain, 0, 255);
+    pixels[i + 1] = constrain(pixels[i + 1] + grain, 0, 255);
+    pixels[i + 2] = constrain(pixels[i + 2] + grain, 0, 255);
+  }
+  updatePixels();
+}
+
+// ============================================================
+// EVENT HANDLERS
+// ============================================================
+function mouseMoved() {
+  targetMouse.x = mouseX;
+  targetMouse.y = mouseY;
+}
+
+function mouseDragged() {
+  targetMouse.x = mouseX;
+  targetMouse.y = mouseY;
+}
+
+function keyPressed() {
+  if (key === 's' || key === 'S') {
+    saveCanvas('auroral-lenses', 'png');
+  }
+  if (key === ' ') {
+    CONFIG.seed = Math.floor(Math.random() * 99999);
+    initScene();
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playground — sylvbito</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #0a0a0f;
+      color: #e4e4ed;
+      padding: 3rem 1.5rem;
+      max-width: 720px;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    h1 { font-size: 1.8rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 0.5rem; }
+    p { color: #888; font-size: 0.95rem; line-height: 1.6; margin-bottom: 2.5rem; }
+    .builds { display: flex; flex-direction: column; gap: 0.75rem; flex: 1; }
+    .build {
+      background: #14141f;
+      border: 1px solid #1e1e2e;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      text-decoration: none;
+      color: #e4e4ed;
+      transition: all 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .build:hover { border-color: #3e3e5e; background: #1a1a2a; }
+    .build-name { font-weight: 500; font-size: 1rem; }
+    .build-date { font-size: 0.8rem; color: #666; }
+    .empty {
+      text-align: center;
+      padding: 4rem 0;
+      color: #555;
+      font-size: 0.9rem;
+    }
+    footer { margin-top: 2rem; font-size: 0.8rem; color: #444; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>Playground</h1>
+  <p>Nightly creative builds — generative art, design experiments, and interactive web craft.</p>
+  <div class="builds">
+    <a class="build" href="/playground/auroral-lenses/">
+      <span class="build-name">Auroral Lenses</span>
+      <span class="build-date">2026-06-13</span>
+    </a>
+  </div>
+  <footer>Built nightly by Hermes</footer>
+</body>
+</html>
