@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cascade Glass</title>
+<title>Cascade</title>
 <style>
 /* ═══════════════════════════════════════════════
    RESET & BASE
@@ -421,11 +421,11 @@ body{
 
 <!-- ═══ HERO ═══ -->
 <section class="hero">
-  <h1>Cascade Glass</h1>
+  <h1>Cascade</h1>
   <p>
-    Liquid glass meets scroll-triggered reveals — a production-ready pattern
-    combining Apple-inspired glassmorphism with perceptual colour and
-    declarative scroll entrance animations.
+    Scroll-triggered reveals meet perceptual colour — a progressive
+    enhancement pattern using the native <code>animation-trigger</code>
+    CSS API (Chrome 145+) with an IntersectionObserver fallback.
   </p>
   <div class="scroll-hint">
     <span>Scroll</span>
@@ -439,12 +439,12 @@ body{
   <article class="card card-accent-violet" data-reveal>
     <div class="card-content">
       <span class="card-number">01</span>
-      <h2>Liquid Glass</h2>
+      <h2>Scroll-Triggered Cascade</h2>
       <p>
-        Inspired by Apple's Liquid Glass design language, each card uses
-        multi-layer <code>backdrop-filter</code> with <code>blur</code>,
-        <code>brightness</code>, and <code>saturate</code> transforms to
-        create depth and material presence.
+        Cards fade and translate into view as you scroll, staggered in
+        sequence. Each card uses <code>backdrop-filter</code> to subtly
+        separate it from the layered background — a visual hierarchy
+        technique, not a material simulation.
       </p>
       <span class="tag tag-violet">Backdrop-filter</span>
     </div>
@@ -521,9 +521,9 @@ body{
       <span class="card-number">04</span>
       <h2>Layered Depth</h2>
       <p>
-        The glass effect is assembled from four layers: an ambient OKLCH
+        The visual stack is assembled from four composited layers: an ambient OKLCH
         gradient backdrop, morphing blur blobs for organic movement, a
-        noise overlay for tactile texture, and the glass panels
+        noise overlay for tactile texture, and the content panels
         themselves with their inset highlights and gradient borders.
       </p>
       <span class="tag tag-rose">Compositing</span>
@@ -554,7 +554,7 @@ body{
 
 <!-- ═══ FOOTER ═══ -->
 <div class="footer-note">
-  Nightly build &middot; Jun 14, 2026
+  Nightly build &middot; Jun 14, 2026 &middot; <a href="https://developer.chrome.com/blog/scroll-triggered-animations" style="color:rgba(255,255,255,0.2);text-decoration:none">animation-trigger</a>
 </div>
 
 <script>
