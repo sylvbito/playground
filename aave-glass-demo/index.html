@@ -2,29 +2,40 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aave Glass — Displacement Map Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Aave Glass — Refractive Lens Demo</title>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-body{
-  font-family:-apple-system,BlinkMacSystemFont,'SF Pro','Helvetica Neue',Arial,sans-serif;
-  background:#0f0f1a;
-  color:#e8e8ee;
-  overflow:hidden;
-  height:100vh;
-  user-select:none;
-  -webkit-user-select:none;
+:root{
+  --bg:#0a0a14;
+  --text:#e8e8f0;
+  --muted:rgba(255,255,255,0.35);
+  --accent:#8ec5fc;
 }
 
-#content{
-  position:fixed;inset:0;
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  overflow:hidden;
+  height:100vh;
+  height:100dvh;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* ─── Content layers ─── */
+.content-inner{
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
   padding:2rem;
+  width:100%;
+  height:100%;
 }
-#content h1{
+.content-inner h1{
   font-size:clamp(2rem,6vw,4.5rem);
   font-weight:700;
   letter-spacing:-0.03em;
@@ -36,99 +47,168 @@ body{
   margin-bottom:0.75rem;
   text-align:center;
 }
-#content p{
+.content-inner p{
   max-width:520px;
   text-align:center;
   font-size:1rem;
   line-height:1.7;
-  color:rgba(255,255,255,0.4);
+  color:var(--muted);
   margin-bottom:2rem;
 }
-.shape-grid{
+
+#content{
+  position:fixed;inset:0;z-index:1;
+}
+
+/* ─── Grid ─── */
+.grid{
   display:grid;
   grid-template-columns:repeat(3,1fr);
   gap:1rem;
   max-width:380px;
   width:100%;
 }
-.shape{aspect-ratio:1;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:2rem}
-.shape-1{background:linear-gradient(135deg,#667eea,#764ba2)}
-.shape-2{background:linear-gradient(135deg,#f093fb,#f5576c)}
-.shape-3{background:linear-gradient(135deg,#4facfe,#00f2fe)}
-.shape-4{background:linear-gradient(135deg,#43e97b,#38f9d7)}
-.shape-5{background:linear-gradient(135deg,#fa709a,#fee140)}
-.shape-6{background:linear-gradient(135deg,#a18cd1,#fbc2eb)}
+.card{
+  aspect-ratio:1;
+  border-radius:18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:2.2rem;
+  transition:transform 0.2s ease;
+}
+.card:hover{transform:scale(1.05)}
+.c1{background:linear-gradient(135deg,#667eea,#764ba2)}
+.c2{background:linear-gradient(135deg,#f093fb,#f5576c)}
+.c3{background:linear-gradient(135deg,#4facfe,#00f2fe)}
+.c4{background:linear-gradient(135deg,#43e97b,#38f9d7)}
+.c5{background:linear-gradient(135deg,#fa709a,#fee140)}
+.c6{background:linear-gradient(135deg,#a18cd1,#fbc2eb)}
 
-#lens{
-  position:fixed;pointer-events:none;z-index:10;
-  width:260px;height:260px;
-  margin-left:-130px;margin-top:-130px;
+/* ─── Lens overlay ─── */
+#lens-overlay{
+  position:fixed;
+  pointer-events:none;
+  z-index:10;
   border-radius:50%;
-  border:1.5px solid rgba(255,255,255,0.08);
-  box-shadow:0 0 0 1px rgba(255,255,255,0.03) inset,0 8px 40px rgba(0,0,0,0.5);
-  transition:width 0.3s cubic-bezier(0.34,1.56,0.64,1),height 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  overflow:hidden;
+  clip-path:circle(50% at 50% 50%);
+  -webkit-clip-path:circle(50% at 50% 50%);
+  border:1.5px solid rgba(255,255,255,0.1);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04) inset,
+    0 4px 30px rgba(0,0,0,0.5),
+    0 1px 3px rgba(0,0,0,0.3);
+  transition:width 0.25s cubic-bezier(0.34,1.56,0.64,1),height 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  transform:translate(-50%,-50%);
+  will-change:left,top,width,height;
 }
-#lens::after{
-  content:'';position:absolute;
-  top:3px;left:20%;right:20%;height:30%;
+#lens-overlay::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
   border-radius:50%;
-  background:linear-gradient(180deg,rgba(255,255,255,0.08),transparent);
+  background:radial-gradient(ellipse 50% 25% at 50% 18%,rgba(255,255,255,0.08),transparent 70%),
+             radial-gradient(ellipse 30% 15% at 50% 85%,rgba(255,255,255,0.03),transparent 70%);
 }
 
-.controls{
-  position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
-  display:flex;gap:1.25rem;align-items:center;z-index:20;
-  background:rgba(15,15,26,0.8);backdrop-filter:blur(16px);
-  -webkit-backdrop-filter:blur(16px);
-  padding:0.65rem 1.25rem;border-radius:100px;
-  border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;
+#lens-inner{
+  position:absolute;
+  width:100vw;
+  height:100vh;
+  will-change:left,top;
 }
-.controls label{display:flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.4)}
-.controls input[type="range"]{width:72px;accent-color:#8ec5fc;background:transparent}
-.controls .val{min-width:2em;text-align:right;color:rgba(255,255,255,0.2);font-variant-numeric:tabular-nums}
 
-#drag-area{position:fixed;inset:0;z-index:5;cursor:grab}
+/* ─── Drag area ─── */
+#drag-area{
+  position:fixed;inset:0;z-index:5;
+  cursor:grab;
+  touch-action:none;
+}
 #drag-area:active{cursor:grabbing}
 
-.attribution{
-  position:fixed;top:1.25rem;left:1.25rem;z-index:20;
-  font-size:0.65rem;color:rgba(255,255,255,0.12);letter-spacing:1px;text-transform:uppercase;
+/* ─── Controls ─── */
+.controls{
+  position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+  display:flex;gap:1rem;align-items:center;z-index:20;
+  background:rgba(10,10,20,0.75);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  padding:0.6rem 1.2rem;border-radius:100px;
+  border:1px solid rgba(255,255,255,0.06);
+  font-size:0.78rem;
 }
-.attribution a{color:rgba(255,255,255,0.2);text-decoration:none}
-.attribution a:hover{color:rgba(255,255,255,0.45)}
+.controls label{
+  display:flex;align-items:center;gap:0.4rem;
+  color:var(--muted);
+  white-space:nowrap;
+}
+.controls input[type="range"]{
+  width:70px;
+  accent-color:var(--accent);
+  background:transparent;
+  cursor:pointer;
+}
+.controls .val{
+  min-width:2em;text-align:right;
+  color:rgba(255,255,255,0.25);
+  font-variant-numeric:tabular-nums;
+}
 
-@media(prefers-reduced-motion:reduce){#lens{display:none}.controls{display:none}#drag-area{cursor:default}}
+/* ─── Attribution ─── */
+.attr{
+  position:fixed;top:1.25rem;left:1.25rem;z-index:20;
+  font-size:0.6rem;color:rgba(255,255,255,0.1);
+  letter-spacing:1px;text-transform:uppercase;
+}
+.attr a{color:rgba(255,255,255,0.18);text-decoration:none}
+.attr a:hover{color:rgba(255,255,255,0.4)}
+
+@media(prefers-reduced-motion:reduce){
+  #lens-overlay{display:none}
+  .controls{display:none}
+  #drag-area{cursor:default}
+}
 @media(max-width:640px){
-  #lens{width:180px;height:180px;margin-left:-90px;margin-top:-90px}
-  .controls{gap:0.5rem;padding:0.5rem 0.75rem;flex-wrap:wrap;width:94vw;justify-content:center;border-radius:16px}
-  .controls input[type="range"]{width:50px}
+  .controls{gap:0.4rem;padding:0.5rem 0.7rem;flex-wrap:wrap;width:96vw;justify-content:center;border-radius:16px}
+  .controls input[type="range"]{width:48px}
+  .controls label{font-size:0.7rem}
 }
 </style>
 </head>
 <body>
-<div class="attribution"><a href="https://aave.design/design/building-glass-for-the-web" target="_blank">← Aave Glass technique</a></div>
+
+<div class="attr"><a href="https://aave.design/design/building-glass-for-the-web" target="_blank">← Aave Glass technique</a></div>
 
 <div id="content">
-  <h1>Refraction</h1>
-  <p>Drag the lens. The SVG <code>feDisplacementMap</code> bends the content's own pixels — selectable, clickable, live DOM underneath.</p>
-  <div class="shape-grid">
-    <div class="shape shape-1">◆</div>
-    <div class="shape shape-2">●</div>
-    <div class="shape shape-3">■</div>
-    <div class="shape shape-4">▲</div>
-    <div class="shape shape-5">★</div>
-    <div class="shape shape-6">⬟</div>
+  <div class="content-inner">
+    <h1>Refraction</h1>
+    <p>Drag the lens. The SVG <code style="color:rgba(255,255,255,0.5)">feDisplacementMap</code> bends the content's own pixels — selectable, clickable, live DOM underneath.</p>
+    <div class="grid">
+      <div class="card c1">◆</div>
+      <div class="card c2">●</div>
+      <div class="card c3">■</div>
+      <div class="card c4">▲</div>
+      <div class="card c5">★</div>
+      <div class="card c6">⬟</div>
+    </div>
   </div>
 </div>
 
-<svg style="position:fixed;width:0;height:0" aria-hidden="true"><defs id="svg-defs"></defs></svg>
-<div id="lens"></div>
+<div id="lens-overlay">
+  <div id="lens-inner"><!-- clone injected via JS --></div>
+</div>
+
+<canvas id="map-canvas" style="display:none"></canvas>
+
+<svg style="position:fixed;width:0;height:0" aria-hidden="true">
+  <defs id="svg-defs"></defs>
+</svg>
+
 <div id="drag-area"></div>
 
 <div class="controls">
-  <label>Bend <input type="range" id="bend" min="5" max="80" value="30"><span class="val" id="bendV">30</span></label>
-  <label>Size <input type="range" id="size" min="100" max="400" value="260"><span class="val" id="sizeV">260</span></label>
-  <label>Fringe <input type="range" id="fringe" min="0" max="6" value="2" step="0.5"><span class="val" id="fringeV">2</span></label>
+  <label>Bend <input type="range" id="bend" min="5" max="100" value="50" aria-label="Refraction strength"><span class="val" id="bendV">50</span></label>
+  <label>Size <input type="range" id="size" min="100" max="400" value="240" aria-label="Lens size"><span class="val" id="sizeV">240</span></label>
+  <label>Fringe <input type="range" id="fringe" min="0" max="8" value="2" step="0.5" aria-label="Chromatic fringe"><span class="val" id="fringeV">2</span></label>
 </div>
 
 <script>
@@ -136,101 +216,191 @@ body{
   'use strict';
 
   const $ = id => document.getElementById(id);
-  const content = $('content'), lens = $('lens'), defs = $('svg-defs');
+  const contentInner = document.querySelector('#content .content-inner');
+  const lensOverlay = $('lens-overlay');
+  const lensInner = $('lens-inner');
+  const mapCanvas = $('map-canvas');
+  const svgDefs = $('svg-defs');
 
-  let cx = window.innerWidth/2, cy = window.innerHeight/2, r = 130;
-  const MAP = 128;
+  // ─── State ───
+  let cx = window.innerWidth / 2;
+  let cy = window.innerHeight / 2;
+  let lensRadius = 120;
+  let bendStrength = 50;
+  let fringeAmount = 2;
+  let isDragging = false;
+  let filterDirty = true;  // true when filter must be rebuilt
+  let positionDirty = true; // true when lens position must update
+  let rafId = null;
 
-  // ─── Generate displacement map (128×128, circular gradient) ───
-  // Red/green channels encode X/Y displacement. Neutral (128) = no movement.
-  // Displacement peaks near the lens edge, falls to 0 at center and outside.
-  function genMap(amount) {
-    const c = document.createElement('canvas'); c.width = MAP; c.height = MAP;
-    const ctx = c.getContext('2d'), img = ctx.createImageData(MAP, MAP), d = img.data;
-    const half = MAP/2, rad = half - 1, r2 = rad * rad;
-    for (let y = 0; y < MAP; y++) {
-      for (let x = 0; x < MAP; x++) {
-        const i = (y * MAP + x) * 4;
-        const dx = x - half, dy = y - half;
-        const dist = Math.sqrt(dx*dx + dy*dy) / rad;
-        let v = 128;
-        if (dist < 1) v = 128 + Math.sin(dist * Math.PI) * amount;
-        d[i] = d[i+1] = Math.min(255, Math.max(0, Math.round(v)));
-        d[i+2] = 128; d[i+3] = 255;
+  const MAP_SIZE = 256;
+  const MAP_AMPLITUDE = 80; // Fixed amplitude for map shape (gives good range)
+
+  // ─── Clone content ───
+  function cloneContent() {
+    lensInner.innerHTML = '';
+    const clone = contentInner.cloneNode(true);
+    lensInner.appendChild(clone);
+  }
+
+  // ─── Generate fixed displacement map ───
+  function genMap() {
+    mapCanvas.width = MAP_SIZE;
+    mapCanvas.height = MAP_SIZE;
+    const ctx = mapCanvas.getContext('2d');
+    const imageData = ctx.createImageData(MAP_SIZE, MAP_SIZE);
+    const data = imageData.data;
+    const half = MAP_SIZE / 2;
+    const sr = half - 1;
+    const sr2 = sr * sr;
+
+    for (let y = 0; y < MAP_SIZE; y++) {
+      for (let x = 0; x < MAP_SIZE; x++) {
+        const dx = x - half;
+        const dy = y - half;
+        const dist2 = dx * dx + dy * dy;
+        const idx = (y * MAP_SIZE + x) * 4;
+
+        if (dist2 < sr2 && dist2 > 0.01) {
+          const dist = Math.sqrt(dist2);
+          const norm = dist / sr;
+          // Sinusoidal: peaks at mid-radius, zero at center and edge
+          const magnitude = Math.sin(norm * Math.PI) * MAP_AMPLITUDE;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          data[idx]     = Math.round(128 + nx * magnitude);
+          data[idx + 1] = Math.round(128 + ny * magnitude);
+        } else {
+          data[idx]     = 128;
+          data[idx + 1] = 128;
+        }
+        data[idx + 2] = 128;
+        data[idx + 3] = 255;
       }
     }
-    ctx.putImageData(img, 0, 0);
-    return c.toDataURL();
+    ctx.putImageData(imageData, 0, 0);
   }
 
-  function buildFilter(scale, fringe) {
-    const id = 'gf' + Date.now();
-    const map = genMap(Math.min(scale, 80));
+  // ─── Build SVG filter ───
+  function buildFilter() {
+    genMap();
+    const mapURL = mapCanvas.toDataURL('image/png');
 
-    let fringeCode = '';
-    if (fringe > 0) {
-      fringeCode = `
-  <feOffset in="d" dx="${fringe}" dy="0" result="ro"/>
-  <feOffset in="d" dx="${-fringe}" dy="0" result="bo"/>
-  <feColorMatrix in="ro" type="matrix" values="1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.4 0" result="rc"/>
-  <feColorMatrix in="bo" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0.4 0" result="bc"/>
-  <feBlend in="rc" in2="bc" mode="screen" result="ch"/>
-  <feBlend in="ch" in2="d" mode="screen"/>`;
+    let html = `<filter id="glass" filterUnits="objectBoundingBox" x="0%" y="0%" width="100%" height="100%">
+  <feImage href="${mapURL}" result="map" preserveAspectRatio="none"/>
+  <feDisplacementMap in="SourceGraphic" in2="map" scale="${bendStrength}" xChannelSelector="R" yChannelSelector="G" result="d"/>`;
+
+    if (fringeAmount > 0) {
+      html += `
+  <feOffset in="d" dx="${fringeAmount}"  dy="0" result="ro"/>
+  <feOffset in="d" dx="${-fringeAmount}" dy="0" result="bo"/>
+  <feColorMatrix in="ro" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.5 0" result="rc"/>
+  <feColorMatrix in="bo" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 0.5 0" result="bc"/>
+  <feColorMatrix in="d"  type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 0.5 0" result="gc"/>
+  <feBlend in="rc" in2="gc" mode="screen" result="rg"/>
+  <feBlend in="rg" in2="bc" mode="screen"/>`;
     }
 
-    // Position the 128x128 map to cover the lens area in viewport coords.
-    // Content is position:fixed;inset:0 so its origin = viewport origin.
-    const d = r * 2;
-    const x = cx - r;
-    const y = cy - r;
-
-    defs.innerHTML = `<filter id="${id}" filterUnits="userSpaceOnUse" x="0" y="0" width="100%" height="100%">
-  <feImage href="${map}" x="${x}" y="${y}" width="${d}" height="${d}" preserveAspectRatio="xMidYMid meet" result="m"/>
-  <feDisplacementMap in="SourceGraphic" in2="m" scale="${scale}" xChannelSelector="R" yChannelSelector="G" result="d"/>${fringeCode}
-</filter>`;
-    return id;
+    html += '\n</filter>';
+    svgDefs.innerHTML = html;
+    lensOverlay.style.filter = 'url(#glass)';
   }
 
-  let pending = null;
-  function update() {
-    if (pending) cancelAnimationFrame(pending);
-    pending = requestAnimationFrame(() => {
-      const id = buildFilter(+$('bend').value, +$('fringe').value);
-      content.style.filter = `url(#${id})`;
-      pending = null;
-    });
+  // ─── Position lens ───
+  function positionLens() {
+    const size = lensRadius * 2;
+    lensOverlay.style.left = cx + 'px';
+    lensOverlay.style.top = cy + 'px';
+    lensOverlay.style.width = size + 'px';
+    lensOverlay.style.height = size + 'px';
+
+    const ox = -(cx - lensRadius);
+    const oy = -(cy - lensRadius);
+    lensInner.style.left = ox + 'px';
+    lensInner.style.top = oy + 'px';
   }
 
+  // ─── Main loop ───
+  function frame() {
+    if (filterDirty) {
+      buildFilter();
+      filterDirty = false;
+    }
+    if (positionDirty) {
+      positionLens();
+      positionDirty = false;
+    }
+    rafId = null;
+  }
+
+  function scheduleFrame(opts = {}) {
+    if (opts.filter) filterDirty = true;
+    if (opts.position !== false) positionDirty = true;
+    if (!rafId) rafId = requestAnimationFrame(frame);
+  }
+
+  // ─── Move handler ───
   function move(x, y) {
+    const r = lensRadius;
     cx = Math.max(r, Math.min(x, window.innerWidth - r));
     cy = Math.max(r, Math.min(y, window.innerHeight - r));
-    lens.style.left = cx + 'px'; lens.style.top = cy + 'px';
-    update();
+    scheduleFrame({ filter: false });
   }
 
-  function setSize(s) {
-    r = s / 2;
-    lens.style.width = lens.style.height = s + 'px';
-    lens.style.marginLeft = lens.style.marginTop = (-r) + 'px';
-    update();
-  }
+  // ─── Events ───
+  const dragArea = $('drag-area');
 
-  let drag = false;
-  $('drag-area').addEventListener('mousedown', e => { drag = true; move(e.clientX, e.clientY); });
-  document.addEventListener('mousemove', e => { if (drag) move(e.clientX, e.clientY); });
-  document.addEventListener('mouseup', () => { drag = false; });
-  $('drag-area').addEventListener('touchstart', e => { drag = true; const t = e.touches[0]; move(t.clientX, t.clientY); }, {passive:true});
-  document.addEventListener('touchmove', e => { if (drag) { const t = e.touches[0]; move(t.clientX, t.clientY); }}, {passive:true});
-  document.addEventListener('touchend', () => { drag = false; });
+  dragArea.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    move(e.clientX, e.clientY);
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (isDragging) move(e.clientX, e.clientY);
+  });
+  document.addEventListener('mouseup', () => { isDragging = false; });
 
-  $('bend').addEventListener('input', function(){ $('bendV').textContent = this.value; update(); });
-  $('size').addEventListener('input', function(){ $('sizeV').textContent = this.value; setSize(+this.value); });
-  $('fringe').addEventListener('input', function(){ $('fringeV').textContent = this.value; update(); });
+  dragArea.addEventListener('touchstart', (e) => {
+    isDragging = true;
+    if (e.touches.length) move(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (isDragging && e.touches.length) move(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  document.addEventListener('touchend', () => { isDragging = false; });
+  document.addEventListener('touchcancel', () => { isDragging = false; });
 
+  // ─── Controls ───
+  $('bend').addEventListener('input', function() {
+    bendStrength = +this.value;
+    $('bendV').textContent = this.value;
+    scheduleFrame({ filter: true, position: false });
+  });
+  $('size').addEventListener('input', function() {
+    lensRadius = +this.value / 2;
+    $('sizeV').textContent = this.value;
+    scheduleFrame({ filter: false });
+  });
+  $('fringe').addEventListener('input', function() {
+    fringeAmount = +this.value;
+    $('fringeV').textContent = this.value;
+    scheduleFrame({ filter: true, position: false });
+  });
+
+  // ─── Resize ───
   let rt;
-  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => move(cx, cy), 150); });
+  window.addEventListener('resize', () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => {
+      cloneContent();
+      cx = Math.max(lensRadius, Math.min(cx, window.innerWidth - lensRadius));
+      cy = Math.max(lensRadius, Math.min(cy, window.innerHeight - lensRadius));
+      scheduleFrame({ filter: true });
+    }, 200);
+  });
 
-  (function init() { setSize(260); move(window.innerWidth/2, window.innerHeight/2); })();
+  // ─── Init ───
+  cloneContent();
+  scheduleFrame({ filter: true });
 })();
 </script>
 </body>
