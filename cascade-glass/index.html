@@ -28,10 +28,10 @@ body{
 .ambient{
   position:fixed;inset:0;z-index:0;
   background:
-    radial-gradient(ellipse 80% 60% at 20% 20%, oklch(0.45 0.18 290 / 0.25) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 80% at 80% 30%, oklch(0.40 0.14 220 / 0.20) 0%, transparent 60%),
-    radial-gradient(ellipse 70% 50% at 50% 80%, oklch(0.35 0.12 180 / 0.15) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 60% at 30% 70%, oklch(0.50 0.16 30 / 0.10) 0%, transparent 50%);
+    radial-gradient(ellipse 80% 60% at 20% 20%, oklch(0.55 0.22 290 / 0.50) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 80% at 80% 30%, oklch(0.50 0.18 220 / 0.45) 0%, transparent 65%),
+    radial-gradient(ellipse 70% 50% at 50% 80%, oklch(0.45 0.16 180 / 0.35) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 30% 70%, oklch(0.55 0.18 30 / 0.30) 0%, transparent 50%);
   transition:opacity 1.5s ease;
 }
 
@@ -46,25 +46,25 @@ body{
 .blob{
   position:absolute;
   border-radius:50%;
-  filter:blur(80px);
+  filter:blur(50px);
   opacity:0.5;
   mix-blend-mode:screen;
 }
 .blob-1{
   width:600px;height:600px;
-  background:oklch(0.55 0.20 290 / 0.15);
+  background:oklch(0.60 0.22 290 / 0.40);
   top:-10%;left:-10%;
   animation:blob-drift-1 25s ease-in-out infinite;
 }
 .blob-2{
   width:500px;height:500px;
-  background:oklch(0.50 0.18 220 / 0.12);
+  background:oklch(0.55 0.20 220 / 0.35);
   bottom:-15%;right:-5%;
   animation:blob-drift-2 30s ease-in-out infinite;
 }
 .blob-3{
   width:400px;height:400px;
-  background:oklch(0.50 0.15 180 / 0.10);
+  background:oklch(0.55 0.18 180 / 0.30);
   top:40%;left:55%;
   animation:blob-drift-3 20s ease-in-out infinite;
 }
@@ -90,7 +90,7 @@ body{
    ═══════════════════════════════════════════════ */
 .noise-overlay{
   position:fixed;inset:0;z-index:1;
-  opacity:0.035;
+  opacity:0.02;
   pointer-events:none;
   mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
@@ -406,10 +406,10 @@ body{
       <h2>Scroll-Triggered Reveal</h2>
       <p>
         Cards cascade into view as you scroll — a declarative replacement
-        for manual IntersectionObserver wiring. The upcoming
-        <code>animation-trigger</code> CSS API (Chrome 145+)
-        will make this a one-liner. Today, we use a lightweight observer
-        that mirrors the same mental model.
+        for manual IntersectionObserver wiring. The native
+        <code>animation-trigger</code> CSS API shipped in Chrome 145
+        and makes this a one-liner. Today's build uses a lightweight observer
+        that mirrors the same mental model for cross-browser support.
       </p>
       <span class="tag tag-blue">animation-trigger</span>
     </div>
