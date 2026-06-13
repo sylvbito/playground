@@ -274,6 +274,35 @@ body{
   letter-spacing:0.5px;
   text-transform:uppercase;
 }
+
+/* Code snippets inside cards */
+.code-block{
+  margin-top:1rem;
+  background:rgba(0,0,0,0.4);
+  border-radius:12px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,0.06);
+}
+.code-label{
+  padding:0.5rem 0.85rem;
+  font-size:0.65rem;
+  font-weight:600;
+  letter-spacing:0.5px;
+  text-transform:uppercase;
+  color:rgba(255,255,255,0.3);
+  background:rgba(255,255,255,0.04);
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.code-block pre{
+  padding:0.85rem;
+  font-family:'SF Mono','Fira Code','JetBrains Mono',monospace;
+  font-size:0.75rem;
+  line-height:1.5;
+  color:rgba(255,255,255,0.75);
+  overflow-x:auto;
+  white-space:pre;
+  -webkit-font-smoothing:auto;
+}
 .tag-violet{background:oklch(0.65 0.18 290/0.15);color:oklch(0.75 0.12 290)}
 .tag-blue{background:oklch(0.60 0.16 240/0.15);color:oklch(0.70 0.12 240)}
 .tag-teal{background:oklch(0.65 0.14 180/0.15);color:oklch(0.75 0.10 180)}
@@ -352,6 +381,27 @@ body{
   .card,.card-content>*{transition:none !important;opacity:1;transform:none}
   .scroll-hint{animation:none}
 }
+
+/* ═══════════════════════════════════════════════
+   NATIVE CSS SCROLL-TRIGGERED ANIMATIONS (Chrome 145+)
+   Progressive enhancement: supported browsers use
+   the declarative CSS API instead of IntersectionObserver.
+   ═══════════════════════════════════════════════ */
+@supports (animation-trigger: --x) {
+  [data-reveal]{
+    animation:card-reveal 0.85s cubic-bezier(0.22,1,0.36,1) both;
+    animation-trigger:--scroll play-forwards;
+    timeline-trigger-name:--scroll;
+    timeline-trigger-source:view();
+    timeline-trigger-range:entry 0% entry 100%;
+  }
+  @keyframes card-reveal{
+    from{opacity:0;transform:translateY(40px) scale(0.97)}
+    to{opacity:1;transform:translateY(0) scale(1)}
+  }
+  /* Override the transition-based initial hidden state */
+  [data-reveal]{opacity:inherit;transform:inherit}
+}
 </style>
 </head>
 <body>
@@ -405,12 +455,49 @@ body{
       <span class="card-number">02</span>
       <h2>Scroll-Triggered Reveal</h2>
       <p>
-        Cards cascade into view as you scroll — a declarative replacement
-        for manual IntersectionObserver wiring. The native
-        <code>animation-trigger</code> CSS API shipped in Chrome 145
-        and makes this a one-liner. Today's build uses a lightweight observer
-        that mirrors the same mental model for cross-browser support.
+        Cards cascade into view as you scroll. The native
+        <code>animation-trigger</code> CSS API (Chrome 145+)
+        makes this declarative — no JavaScript needed.
       </p>
+      <div class="code-block">
+        <div class="code-label">CSS — native approach</div>
+        <pre>.card {
+  animation: reveal 0.8s ease both;
+  animation-trigger: --scroll play-forwards;
+  timeline-trigger-name: --scroll;
+  timeline-trigger-source: view();
+  timeline-trigger-range: entry 0% entry 100%;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-label">JS — progressive enhancement fallback</div>
+        <pre>if (!CSS.supports('animation-trigger', '--x')) {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('revealed');
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.15 }
+  );
+  document.querySelectorAll('[data-reveal]')
+    .forEach((el) => observer.observe(el));
+}</pre>
+      </div>
       <span class="tag tag-blue">animation-trigger</span>
     </div>
   </article>
@@ -473,8 +560,9 @@ body{
 <script>
 /* ═══════════════════════════════════════════════
    SCROLL-TRIGGERED REVEAL
-   Lightweight IntersectionObserver polyfill for
-   the future CSS animation-trigger API.
+   Progressive enhancement: use CSS animation-trigger
+   when available (Chrome 145+), fall back to
+   IntersectionObserver for other browsers.
    ═══════════════════════════════════════════════ */
 (function(){
   'use strict';
@@ -482,11 +570,15 @@ body{
   const cards = document.querySelectorAll('[data-reveal]');
   if (!cards.length) return;
 
+  // If the browser supports animation-trigger, let CSS handle it
+  if (CSS.supports('animation-trigger', '--x')) return;
+
+  // Fallback: IntersectionObserver
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       if (entry.isIntersecting) {
         entry.target.classList.add('revealed');
-        observer.unobserve(entry.target); // one-shot
+        observer.unobserve(entry.target);
       }
     });
   }, {
