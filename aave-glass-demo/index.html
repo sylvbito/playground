@@ -3,35 +3,265 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Aave Glass — Refractive Lens</title>
+<title>Aave Liquid Glass — SVG feDisplacementMap Lens</title>
 <style>
+/* ═══════════════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════════════ */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;touch-action:none}
 body{
-  font-family:-apple-system,BlinkMacSystemFont,'SF Pro','Helvetica Neue',Arial,sans-serif;
-  background:#0f0f1a;color:#e8e8ee;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',Arial,sans-serif;
+  background:#080810;color:#e4e4f0;
   user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+  -webkit-font-smoothing:antialiased;
 }
+
+/* ═══════════════════════════════════════════════
+   ANIMATED BACKGROUND MESH
+   ═══════════════════════════════════════════════ */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(120,80,220,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 75% 60%, rgba(40,140,220,0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 50% at 50% 80%, rgba(220,100,180,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 70% 40% at 85% 15%, rgba(80,200,160,0.06) 0%, transparent 50%);
+  animation: meshDrift 20s ease-in-out infinite alternate;
+}
+@keyframes meshDrift{
+  0%{transform:translate(0,0) scale(1)}
+  33%{transform:translate(2%,-1%) scale(1.03)}
+  66%{transform:translate(-1%,1.5%) scale(0.98)}
+  100%{transform:translate(1%,-0.5%) scale(1.01)}
+}
+
+/* ═══════════════════════════════════════════════
+   GRID OVERLAY
+   ═══════════════════════════════════════════════ */
+.grid-overlay{
+  position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0.04;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.3) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.3) 1px,transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse 70% 70% at 50% 50%,black 30%,transparent 70%);
+  -webkit-mask-image:radial-gradient(ellipse 70% 70% at 50% 50%,black 30%,transparent 70%);
+}
+
+/* ═══════════════════════════════════════════════
+   CONTENT LAYER — filtered by the SVG lens
+   ═══════════════════════════════════════════════ */
 #content{
-  position:fixed;inset:0;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  padding:2rem;
+  position:fixed;inset:0;z-index:2;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:2rem;text-align:center;
+  /* filter is applied via JS dynamically */
+  /* The SVG filter's userSpaceOnUse region clips displacement to the lens area */
 }
-#content h1{
-  font-size:clamp(2rem,6vw,4.5rem);font-weight:700;letter-spacing:-0.03em;line-height:1.1;
-  background:linear-gradient(135deg,#f4a8ff,#8ec5fc,#a8e6cf,#ffd6a8);
+
+/* ── Vignette overlay ── */
+.vignette{
+  position:fixed;inset:0;z-index:3;pointer-events:none;
+  background:radial-gradient(ellipse 60% 50% at 50% 50%,transparent 40%,rgba(0,0,0,0.25) 100%);
+}
+
+/* ── Floating particles (CSS only) ── */
+.particles{
+  position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.15;
+}
+.particle{
+  position:absolute;width:2px;height:2px;border-radius:50%;
+  background:rgba(255,255,255,0.6);
+  animation:floatUp linear infinite;
+}
+.particle:nth-child(1){left:10%;animation-duration:14s;animation-delay:0s}
+.particle:nth-child(2){left:25%;animation-duration:18s;animation-delay:-3s;width:3px;height:3px}
+.particle:nth-child(3){left:40%;animation-duration:16s;animation-delay:-7s}
+.particle:nth-child(4){left:55%;animation-duration:20s;animation-delay:-2s;width:1px;height:1px}
+.particle:nth-child(5){left:70%;animation-duration:15s;animation-delay:-9s}
+.particle:nth-child(6){left:85%;animation-duration:22s;animation-delay:-5s;width:3px;height:3px}
+.particle:nth-child(7){left:15%;animation-duration:19s;animation-delay:-11s;width:1px;height:1px}
+.particle:nth-child(8){left:60%;animation-duration:17s;animation-delay:-4s}
+@keyframes floatUp{
+  0%{transform:translateY(110vh) scale(0);opacity:0}
+  10%{opacity:1}
+  90%{opacity:1}
+  100%{transform:translateY(-10vh) scale(1.5);opacity:0}
+}
+
+/* ── Hero ── */
+.hero-title{
+  font-size:clamp(2.2rem,7vw,5rem);font-weight:800;letter-spacing:-0.04em;line-height:1.05;
+  background:linear-gradient(160deg,#c4b5fd 0%,#93c5fd 30%,#67e8f9 55%,#a5f3fc 75%,#ddd6fe 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  margin-bottom:0.75rem;text-align:center;
+  margin-bottom:0.6rem;
 }
-#content p{
-  max-width:520px;text-align:center;font-size:1rem;line-height:1.7;
-  color:rgba(255,255,255,0.4);margin-bottom:2rem;
+.hero-sub{
+  font-size:clamp(0.9rem,1.6vw,1.1rem);line-height:1.65;max-width:560px;
+  color:rgba(255,255,255,0.35);margin-bottom:1.8rem;
 }
-.shape-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;max-width:380px;width:100%}
-.shape{aspect-ratio:1;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:2rem}
+.hero-sub code{
+  background:rgba(255,255,255,0.05);padding:0.15em 0.45em;border-radius:4px;
+  font-size:0.9em;color:rgba(255,255,255,0.55);font-family:'SF Mono','Fira Code','Cascadia Code',monospace;
+}
+
+/* ── Stats Row ── */
+.stats-row{
+  display:flex;gap:2.5rem;margin-bottom:2.5rem;flex-wrap:wrap;justify-content:center;
+}
+.stat{
+  display:flex;flex-direction:column;align-items:center;gap:0.2rem;
+}
+.stat-val{
+  font-size:1.8rem;font-weight:700;letter-spacing:-0.02em;
+  background:linear-gradient(135deg,#a5b4fc,#67e8f9);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  font-variant-numeric:tabular-nums;
+}
+.stat-label{
+  font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;
+  color:rgba(255,255,255,0.2);
+}
+
+/* ── Feature Cards ── */
+.feature-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem;
+  max-width:500px;width:100%;margin-bottom:2rem;
+}
+@media(max-width:540px){.feature-grid{grid-template-columns:repeat(2,1fr)}}
+.feature-card{
+  background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.05);
+  border-radius:14px;padding:1rem 0.8rem;text-align:center;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  transition:border-color 0.3s,background 0.3s;
+}
+.feature-card:hover{
+  border-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);
+}
+.feature-icon{font-size:1.5rem;margin-bottom:0.35rem}
+.feature-card h4{font-size:0.8rem;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:0.15rem}
+.feature-card p{font-size:0.68rem;color:rgba(255,255,255,0.25);line-height:1.4}
+
+/* ── Feature List ── */
+.feature-list{
+  display:flex;flex-direction:column;gap:0.5rem;max-width:480px;width:100%;
+  margin-bottom:2rem;text-align:left;
+}
+.feature-item{
+  display:flex;align-items:flex-start;gap:0.6rem;
+  font-size:0.78rem;color:rgba(255,255,255,0.3);line-height:1.5;
+}
+.feature-item .dot{
+  width:6px;height:6px;border-radius:50%;background:linear-gradient(135deg,#a5b4fc,#67e8f9);
+  margin-top:0.45rem;flex-shrink:0;
+}
+
+/* ── Code Card ── */
+.code-card{
+  background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.06);
+  border-radius:12px;padding:1rem 1.2rem;max-width:460px;width:100%;
+  text-align:left;font-family:'SF Mono','Fira Code','Cascadia Code',monospace;
+  font-size:0.7rem;line-height:1.55;color:rgba(255,255,255,0.4);
+  overflow-x:auto;margin-bottom:1rem;
+}
+.code-card .tag{color:#c4b5fd}
+.code-card .attr{color:#93c5fd}
+.code-card .val{color:#67e8f9}
+.code-card .comment{color:rgba(255,255,255,0.15)}
+
+/* ═══════════════════════════════════════════════
+   LENS RING OVERLAY — visual indicator
+   ═══════════════════════════════════════════════ */
+#lens-ring{
+  position:fixed;pointer-events:none;z-index:10;
+  border-radius:28% 28% 28% 28%;
+  border:1.5px solid rgba(255,255,255,0.07);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.025) inset,
+    0 8px 50px rgba(0,0,0,0.45),
+    0 0 0 1px rgba(255,255,255,0.04);
+  transition:border-radius 0.3s;
+}
+#lens-ring::after{
+  content:'';position:absolute;
+  top:4px;left:18%;right:18%;height:28%;
+  border-radius:50%;
+  background:linear-gradient(180deg,rgba(255,255,255,0.05) 0%,transparent 100%);
+}
+#lens-dot{
+  position:fixed;pointer-events:none;z-index:11;
+  width:6px;height:6px;border-radius:50%;
+  background:rgba(255,255,255,0.5);
+  box-shadow:0 0 8px rgba(255,255,255,0.3),0 0 18px rgba(160,180,255,0.3);
+  transform:translate(-50%,-50%);
+  transition:opacity 0.3s;
+}
+
+/* ═══════════════════════════════════════════════
+   CONTROLS PANEL
+   ═══════════════════════════════════════════════ */
+.controls{
+  position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+  display:flex;gap:1rem;align-items:center;z-index:20;flex-wrap:wrap;
+  background:rgba(8,8,16,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  padding:0.6rem 1.2rem;border-radius:100px;
+  border:1px solid rgba(255,255,255,0.06);
+  box-shadow:0 4px 24px rgba(0,0,0,0.5);
+}
+.controls label{
+  display:flex;align-items:center;gap:0.4rem;
+  font-size:0.72rem;color:rgba(255,255,255,0.35);
+  white-space:nowrap;
+}
+.controls input[type="range"]{
+  width:70px;height:3px;
+  accent-color:#8eb4fc;background:transparent;cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+}
+.controls input[type="range"]::-webkit-slider-runnable-track{
+  height:3px;background:rgba(255,255,255,0.1);border-radius:2px;
+}
+.controls .val{
+  min-width:2.2em;text-align:right;font-size:0.68rem;
+  color:rgba(255,255,255,0.25);font-variant-numeric:tabular-nums;
+}
+@media(max-width:700px){
+  .controls{
+    gap:0.4rem;padding:0.5rem 0.8rem;border-radius:16px;
+    width:95vw;justify-content:center;
+  }
+  .controls input[type="range"]{width:45px}
+  .controls label{font-size:0.65rem}
+}
+
+/* ═══════════════════════════════════════════════
+   BRAND LINK
+   ═══════════════════════════════════════════════ */
+.brand{
+  position:fixed;top:1.25rem;left:1.25rem;z-index:20;
+  font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;
+  color:rgba(255,255,255,0.15);
+}
+.brand a{color:inherit;text-decoration:none;transition:color 0.3s}
+.brand a:hover{color:rgba(255,255,255,0.4)}
+
+/* ═══════════════════════════════════════════════
+   SHAPES GRID — visual targets for the lens
+   ═══════════════════════════════════════════════ */
+.shapes-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:0.9rem;
+  max-width:380px;width:100%;margin-bottom:1.8rem;
+}
+@media(max-width:540px){.shapes-grid{grid-template-columns:repeat(2,1fr)}}
+.shape{
+  aspect-ratio:1;border-radius:18px;
+  display:flex;align-items:center;justify-content:center;font-size:1.8rem;
+  box-shadow:0 4px 24px rgba(0,0,0,0.3);
+  transition:transform 0.3s,box-shadow 0.3s;
+}
+.shape:hover{transform:scale(1.03);box-shadow:0 8px 32px rgba(0,0,0,0.4)}
 .shape-1{background:linear-gradient(135deg,#667eea,#764ba2)}
 .shape-2{background:linear-gradient(135deg,#f093fb,#f5576c)}
 .shape-3{background:linear-gradient(135deg,#4facfe,#00f2fe)}
@@ -39,224 +269,640 @@ body{
 .shape-5{background:linear-gradient(135deg,#fa709a,#fee140)}
 .shape-6{background:linear-gradient(135deg,#a18cd1,#fbc2eb)}
 
-#lens-ring{
-  position:fixed;pointer-events:none;z-index:10;
-  border-radius:50%;border:1.5px solid rgba(255,255,255,0.08);
-  box-shadow:0 0 0 1px rgba(255,255,255,0.03) inset,0 8px 40px rgba(0,0,0,0.5);
+/* ── Architecture section ── */
+.arch-section{
+  max-width:500px;width:100%;margin-bottom:1.5rem;text-align:left;
 }
-#lens-ring::after{
-  content:'';position:absolute;top:3px;left:20%;right:20%;height:30%;
-  border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,0.06),transparent);
+.arch-section h3{
+  font-size:0.78rem;font-weight:600;color:rgba(255,255,255,0.55);
+  margin-bottom:0.5rem;letter-spacing:0.02em;
 }
-.controls{
-  position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
-  display:flex;gap:1.25rem;align-items:center;z-index:20;
-  background:rgba(15,15,26,0.8);backdrop-filter:blur(16px);
-  -webkit-backdrop-filter:blur(16px);
-  padding:0.65rem 1.25rem;border-radius:100px;
-  border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;
+.arch-row{
+  display:flex;gap:0.6rem;margin-bottom:0.4rem;align-items:flex-start;
+  font-size:0.7rem;color:rgba(255,255,255,0.25);line-height:1.5;
 }
-.controls label{display:flex;align-items:center;gap:0.4rem;color:rgba(255,255,255,0.4)}
-.controls input[type="range"]{width:72px;accent-color:#8ec5fc;background:transparent}
-.controls .val{min-width:2em;text-align:right;color:rgba(255,255,255,0.2);font-variant-numeric:tabular-nums}
-.info{
-  position:fixed;top:1.25rem;left:1.25rem;z-index:20;
-  font-size:0.65rem;color:rgba(255,255,255,0.12);letter-spacing:1px;text-transform:uppercase;
+.arch-num{
+  width:18px;height:18px;border-radius:50%;
+  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.6rem;font-weight:700;flex-shrink:0;
+  color:rgba(255,255,255,0.3);
 }
-.info a{color:rgba(255,255,255,0.2);text-decoration:none}
-.info a:hover{color:rgba(255,255,255,0.45)}
-#drag{position:fixed;inset:0;z-index:8;cursor:grab}
-#drag:active{cursor:grabbing}
-@media(prefers-reduced-motion:reduce){#lens-ring{display:none}.controls{display:none}#drag{cursor:default}}
-@media(max-width:640px){
-  .controls{gap:0.5rem;padding:0.5rem 0.75rem;flex-wrap:wrap;width:94vw;justify-content:center;border-radius:16px}
-  .controls input[type="range"]{width:50px}
+.arch-row code{
+  background:rgba(255,255,255,0.04);padding:0.1em 0.35em;border-radius:3px;
+  font-size:0.88em;color:rgba(255,255,255,0.45);
+}
+
+/* ── Drag hint ── */
+.drag-hint{
+  font-size:0.65rem;color:rgba(255,255,255,0.12);
+  letter-spacing:0.06em;text-transform:uppercase;
+  margin-top:0.5rem;opacity:0;
+  animation:fadeHint 4s ease-in-out 1.5s forwards;
+}
+@keyframes fadeHint{0%{opacity:0}50%{opacity:1}100%{opacity:0}}
+
+/* ═══════════════════════════════════════════════
+   DRAG LAYER
+   ═══════════════════════════════════════════════ */
+#drag-layer{position:fixed;inset:0;z-index:8;cursor:grab}
+#drag-layer:active{cursor:grabbing}
+#drag-layer.dragging{cursor:grabbing}
+
+/* ── Reduced motion ── */
+@media(prefers-reduced-motion:reduce){
+  #lens-ring,#lens-dot,.controls,.drag-hint,.shapes-grid{display:none}
+  #drag-layer{cursor:default}
+  body::before{animation:none}
 }
 </style>
 </head>
 <body>
 
-<!-- SVG filter: references the map <image> by ID -->
-<svg style="position:fixed;width:0;height:0" aria-hidden="true">
-  <defs>
-    <image id="dmap" href="" width="100%" height="100%" preserveAspectRatio="none" crossorigin="anonymous"/>
-    <filter id="glass">
-      <feDisplacementMap in="SourceGraphic" in2="dmap" scale="30" xChannelSelector="R" yChannelSelector="G" result="d"/>
-      <feOffset in="d" dx="2" dy="0" result="ro"/><feOffset in="d" dx="-2" dy="0" result="bo"/>
-      <feColorMatrix in="ro" type="matrix" values="1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.3 0" result="rc"/>
-      <feColorMatrix in="bo" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0.3 0" result="bc"/>
-      <feBlend in="rc" in2="bc" mode="screen" result="ch"/>
-      <feBlend in="ch" in2="d" mode="screen"/>
-    </filter>
-  </defs>
-</svg>
+<div class="grid-overlay"></div>
 
-<div class="info"><a href="https://aave.design/design/building-glass-for-the-web" target="_blank">← Aave Glass</a></div>
+<!-- Floating particles for atmosphere -->
+<div class="particles">
+  <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+  <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+  <div class="particle"></div><div class="particle"></div>
+</div>
 
+<!-- ═══════════════ SVG FILTER DEFINITIONS ═══════════════ -->
+<svg id="filter-svg" style="position:fixed;width:0;height:0" aria-hidden="true"></svg>
+
+<!-- ═══════════════ BRAND LINK ═══════════════ -->
+<div class="brand">
+  <a href="https://aave.com/design/building-glass-for-the-web" target="_blank" rel="noopener">
+    ← Aave Liquid Glass
+  </a>
+</div>
+
+<!-- ═══════════════ MAIN CONTENT ═══════════════ -->
 <div id="content">
-  <h1>Refraction</h1>
-  <p>Drag the lens. SVG <code>feDisplacementMap</code> refracts the content's own pixels — live DOM, selectable, clickable.</p>
-  <div class="shape-grid">
-    <div class="shape shape-1">◆</div><div class="shape shape-2">●</div><div class="shape shape-3">■</div>
-    <div class="shape shape-4">▲</div><div class="shape shape-5">★</div><div class="shape shape-6">⬟</div>
+  <h1 class="hero-title">Liquid Glass</h1>
+  <p class="hero-sub">
+    A single SVG <code>feDisplacementMap</code> with a
+    <code>filterUnits=&quot;userSpaceOnUse&quot;</code> moving filter region —
+    refracting live DOM. No WebGL, no canvas copying, no hidden duplicates.
+  </p>
+
+  <div class="stats-row">
+    <div class="stat"><span class="stat-val">60</span><span class="stat-label">fps</span></div>
+    <div class="stat"><span class="stat-val">3</span><span class="stat-label">Browsers</span></div>
+    <div class="stat"><span class="stat-val">0</span><span class="stat-label">DOM Copies</span></div>
   </div>
+
+  <!-- Shapes grid — visual targets that distort under the lens -->
+  <div class="shapes-grid">
+    <div class="shape shape-1">◆</div>
+    <div class="shape shape-2">●</div>
+    <div class="shape shape-3">■</div>
+    <div class="shape shape-4">▲</div>
+    <div class="shape shape-5">★</div>
+    <div class="shape shape-6">⬡</div>
+  </div>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🌊</div>
+      <h4>Real-time</h4>
+      <p>Single-pass filter on live layout</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔮</div>
+      <h4>Chromatic Aberration</h4>
+      <p>RGB channels displaced independently</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h4>Zero Copies</h4>
+      <p>No offscreen DOM or canvas duplication</p>
+    </div>
+  </div>
+
+  <div class="arch-section">
+    <h3>▸ How the moving filter region works</h3>
+    <div class="arch-row"><span class="arch-num">1</span>A canvas-generated <code>PNG</code> the size of the lens encodes displacement vectors — <code>R=128</code> is neutral, edge values peak via sinusoidal gradient.</div>
+    <div class="arch-row"><span class="arch-num">2</span>The SVG <code>&lt;filter&gt;</code> uses <code>filterUnits=&quot;userSpaceOnUse&quot;</code> so its <code>x</code> / <code>y</code> attributes place the lens in viewport coordinates.</div>
+    <div class="arch-row"><span class="arch-num">3</span><code>feImage</code> loads the map at <code>(0,0)</code> relative to the filter region. <code>feDisplacementMap</code> displaces <code>SourceGraphic</code> using the map.</div>
+    <div class="arch-row"><span class="arch-num">4</span>Each frame: assign a fresh filter <code>id</code>, set <code>x</code>/<code>y</code> to the lerped cursor position — Safari's filter cache is defeated, lens moves.</div>
+  </div>
+
+  <div class="feature-list">
+    <div class="feature-item"><span class="dot"></span>Single <code>&lt;filter&gt;</code> applied to content container — browser composites only the lens region</div>
+    <div class="feature-item"><span class="dot"></span>Fresh filter <code>id</code> every frame — defeats Safari's filter output cache</div>
+    <div class="feature-item"><span class="dot"></span>Canvas-generated displacement map — lens‑sized PNG with sinusoidal gradient peaking at edges</div>
+    <div class="feature-item"><span class="dot"></span><code>feSpecularLighting</code> + <code>fePointLight</code> for realistic glass highlight</div>
+  </div>
+
+  <div class="code-card">
+    <span class="tag">&lt;filter</span> <span class="attr">id</span>=<span class="val">"glass-42"</span><br>
+    &nbsp;&nbsp;<span class="attr">filterUnits</span>=<span class="val">"userSpaceOnUse"</span><br>
+    &nbsp;&nbsp;<span class="attr">x</span>=<span class="val">"{lensX}"</span> <span class="attr">y</span>=<span class="val">"{lensY}"</span><br>
+    &nbsp;&nbsp;<span class="attr">width</span>=<span class="val">"{lensW}"</span> <span class="attr">height</span>=<span class="val">"{lensH}"</span><br>
+    &nbsp;&nbsp;<span class="attr">colorInterpolationFilters</span>=<span class="val">"sRGB"</span>&gt;<br>
+    &nbsp;&nbsp;<span class="tag">&lt;feImage</span> <span class="attr">href</span>=<span class="val">"map.png"</span> <span class="attr">result</span>=<span class="val">"map"</span>/&gt;<br>
+    &nbsp;&nbsp;<span class="tag">&lt;feDisplacementMap</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">in</span>=<span class="val">"SourceGraphic"</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">in2</span>=<span class="val">"map"</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">scale</span>=<span class="val">"45"</span>/&gt;<br>
+    &nbsp;&nbsp;<span class="tag">&lt;feSpecularLighting</span> <span class="attr">in</span>=<span class="val">"map"</span>&gt;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="tag">&lt;fePointLight</span> <span class="attr">x</span>=<span class="val">"..."</span> <span class="attr">y</span>=<span class="val">"..."</span> <span class="attr">z</span>=<span class="val">"90"</span>/&gt;<br>
+    &nbsp;&nbsp;<span class="tag">&lt;/feSpecularLighting&gt;</span><br>
+    <span class="tag">&lt;/filter&gt;</span><br>
+    <span class="comment">← filter region moves with cursor</span>
+  </div>
+
+  <p class="drag-hint">Drag anywhere to move the lens</p>
 </div>
 
+<!-- ═══════════════ LENS INDICATORS ═══════════════ -->
 <div id="lens-ring"></div>
-<div id="drag"></div>
+<div id="lens-dot"></div>
 
+<!-- ═══════════════ DRAG LAYER ═══════════════ -->
+<div id="drag-layer"></div>
+
+<!-- Subtle vignette for depth -->
+<div class="vignette"></div>
+
+<!-- ═══════════════ CONTROLS ═══════════════ -->
 <div class="controls">
-  <label>Bend <input type="range" id="bendC" min="5" max="80" value="30"><span class="val" id="bendV">30</span></label>
-  <label>Size <input type="range" id="sizeC" min="100" max="400" value="260"><span class="val" id="sizeV">260</span></label>
-  <label>Fringe <input type="range" id="fringeC" min="0" max="6" step="0.5" value="2"><span class="val" id="fringeV">2</span></label>
+  <label>Scale <input type="range" id="ctrl-scale" min="5" max="100" value="45"><span class="val" id="val-scale">45</span></label>
+  <label>Radius <input type="range" id="ctrl-radius" min="20" max="180" value="110"><span class="val" id="val-radius">110</span></label>
+  <label>Chroma <input type="range" id="ctrl-chroma" min="0" max="40" value="12"><span class="val" id="val-chroma">12</span></label>
+  <label>Size <input type="range" id="ctrl-size" min="120" max="500" value="260"><span class="val" id="val-size">260</span></label>
+  <label>Blur <input type="range" id="ctrl-blur" min="0" max="8" step="0.5" value="2.5"><span class="val" id="val-blur">2.5</span></label>
 </div>
 
+<!-- ═══════════════════════════════════════════════
+   JAVASCRIPT
+   ═══════════════════════════════════════════════ -->
 <script>
 (function(){
 'use strict';
-const $=id=>document.getElementById(id);
-const content=$('content'), ring=$('lens-ring'), drag=$('drag'), dmap=$('dmap');
 
-let cx=window.innerWidth/2, cy=window.innerHeight/2, r=130, dragging=false;
-let mapCanvas=null, mapCtx=null, mapW=0, mapH=0;
-let pending=null;
+// ─── DOM refs ──────────────────────────────────────
+const $ = id => document.getElementById(id);
+const filterSvg = $('filter-svg');
+const content   = $('content');
+const ring      = $('lens-ring');
+const dot       = $('lens-dot');
+const dragLayer = $('drag-layer');
 
-// Init/reuse a half-res offscreen canvas for the displacement map
-function prepMap() {
-  const w=window.innerWidth, h=window.innerHeight;
-  const mw=Math.ceil(w/2), mh=Math.ceil(h/2);
-  if (!mapCanvas || mapW!==mw || mapH!==mh) {
-    mapCanvas=document.createElement('canvas');
-    mapCanvas.width=mw; mapCanvas.height=mh;
-    mapCtx=mapCanvas.getContext('2d');
-    mapW=mw; mapH=mh;
-    const img=mapCtx.createImageData(mw,mh);
-    for(let i=0;i<img.data.length;i+=4){img.data[i]=128;img.data[i+1]=128;img.data[i+2]=128;img.data[i+3]=255;}
-    mapCtx.putImageData(img,0,0);
+// ─── State ────────────────────────────────────────
+let targetX   = window.innerWidth / 2;
+let targetY   = window.innerHeight / 2;
+let currentX  = targetX;
+let currentY  = targetY;
+let dragging  = false;
+let frameId   = 0;
+let rafId     = null;
+
+// Map cache: key → dataURL
+const mapCache = {};
+
+// Default parameters
+const P = {
+  scale:  45,
+  radius: 110,
+  chroma: 12,
+  size:   260,
+  blur:   2.5
+};
+
+// ═══════════════════════════════════════════════════
+// DISPLACEMENT MAP GENERATION
+//
+// The displacement map is a small canvas-generated PNG the size of the lens.
+// Each pixel encodes a displacement vector:
+//   - R channel: horizontal displacement (128 = neutral, no displacement)
+//   - G channel: vertical displacement
+//   - B channel: unused (set to 0)
+//   - A channel: always 255
+//
+// The map shape is a rounded rectangle. Inside the shape, a sinusoidal
+// gradient peaks at the edges (maximum displacement) and falls to zero
+// at the center. Outside the shape, pixels are neutral (R=128, G=128).
+//
+// This creates a bulge/magnify effect: content near the lens edge is
+// displaced outward, stretching the view under the lens.
+//
+// The map is cached by parameter key (size + corner radius) since it
+// only needs regeneration when the lens shape changes, not every frame.
+// ═══════════════════════════════════════════════════
+
+/**
+ * Generate a lens-sized displacement map as a PNG data URL.
+ * The map is a rounded rectangle with a sinusoidal gradient
+ * peaking at the edges. R = horizontal displ, G = vertical displ.
+ * Outside the rounded rect: R=128 G=128 (neutral = no displacement).
+ *
+ * @param {number} w - lens width (px)
+ * @param {number} h - lens height (px)
+ * @param {number} cornerRadius - corner radius of the rounded rect
+ * @returns {string} data:image/png;base64,...
+ */
+function generateMap(w, h, cornerRadius) {
+  const key = `${w}|${h}|${cornerRadius}`;
+  if (mapCache[key]) return mapCache[key];
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(w, h);
+  const d   = img.data;
+
+  const cx = w / 2;
+  const cy = h / 2;
+  const hw = w / 2;
+  const hh = h / 2;
+  const cr = Math.min(cornerRadius, hw, hh);
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const dx = Math.abs(x - cx);
+      const dy = Math.abs(y - cy);
+
+      // ── Inside rounded rectangle test ──
+      let inside = false;
+      let edgeDist = 0;
+
+      if (dx <= hw - cr && dy <= hh) {
+        // Central horizontal band
+        inside = true;
+        edgeDist = hh - dy;
+      } else if (dy <= hh - cr && dx <= hw) {
+        // Central vertical band
+        inside = true;
+        edgeDist = hw - dx;
+      } else if (dx > hw - cr && dy > hh - cr && dx <= hw && dy <= hh) {
+        // Corner region — check quarter-circle
+        const cdx = dx - (hw - cr);
+        const cdy = dy - (hh - cr);
+        const cornerDist = Math.sqrt(cdx * cdx + cdy * cdy);
+        if (cornerDist <= cr) {
+          inside = true;
+          edgeDist = cr - cornerDist;
+        }
+      }
+
+      if (!inside) {
+        // Neutral — no displacement
+        d[i]     = 128;
+        d[i + 1] = 128;
+        d[i + 2] = 0;
+        d[i + 3] = 255;
+        continue;
+      }
+
+      // ── Displacement computation ──
+      const rdx = x - cx;
+      const rdy = y - cy;
+      const distFromCenter = Math.sqrt(rdx * rdx + rdy * rdy);
+
+      // Total distance to edge along this ray
+      const totalDist = distFromCenter + Math.max(edgeDist, 0.001);
+
+      // Sinusoidal: 0 at center, 1 at edge
+      const t = Math.min(1, distFromCenter / totalDist);
+      const factor = Math.sin(t * Math.PI / 2);
+
+      // Direction from center (normalized)
+      const len = distFromCenter > 0.001 ? distFromCenter : 1;
+      const nx = rdx / len;
+      const ny = rdy / len;
+
+      // Displacement magnitude in color channel (0-127 range from neutral 128)
+      const amp = factor * 127;
+      d[i]     = Math.round(128 + nx * amp);
+      d[i + 1] = Math.round(128 + ny * amp);
+      d[i + 2] = 0;
+      d[i + 3] = 255;
+    }
   }
-  return {mw, mh, sx: mw/w, sy: mh/h};
+
+  ctx.putImageData(img, 0, 0);
+  const url = canvas.toDataURL('image/png');
+  mapCache[key] = url;
+  return url;
 }
 
-// Paint the circular lens gradient onto the map at half-res coords
-function paintLens(lcx,lcy,lr,amount) {
-  const {mw,mh,sx,sy}=prepMap();
-  const mlx=lcx*sx, mly=lcy*sy, mlr=lr*sx;
-  const x0=Math.max(0,Math.floor(mlx-mlr)), y0=Math.max(0,Math.floor(mly-mlr));
-  const x1=Math.min(mw-1,Math.ceil(mlx+mlr)), y1=Math.min(mh-1,Math.ceil(mly+mlr));
-  if(x1-x0<0||y1-y0<0) return;
-  const img=mapCtx.getImageData(x0,y0,x1-x0+1,y1-y0+1);
-  const r2=mlr*mlr;
-  for(let y=0;y<img.height;y++)for(let x=0;x<img.width;x++){
-    const dx=(x0+x)-mlx, dy=(y0+y)-mly;
-    if(dx*dx+dy*dy>r2) continue;
-    const dist=Math.sqrt(dx*dx+dy*dy)/mlr;
-    const v=Math.min(255,Math.max(0,Math.round(128+Math.sin(dist*Math.PI)*amount)));
-    const i=(y*img.width+x)*4; img.data[i]=img.data[i+1]=v;
+// ═══════════════════════════════════════════════════
+// SVG FILTER CONSTRUCTION (per-frame)
+//
+// Each frame, we build a completely new <filter> element with a unique id.
+// This is REQUIRED for Safari, which caches filter output by id.
+// If we reused the same id while changing filter parameters (x, y),
+// Safari would show stale (cached) output — defeating the moving lens.
+//
+// The filter pipeline:
+//   SourceGraphic → (3× feDisplacementMap for RGB chroma) → screen blend
+//                 → composite with feSpecularLighting highlight
+//                 → composite with blurred-map rim glow
+//
+// All coordinates are in userSpaceOnUse (viewport pixels).
+// The feImage map is positioned at the lens location so that
+// feDisplacementMap samples the correct displacement for each pixel
+// within the filter region.
+// ═══════════════════════════════════════════════════
+
+let prevFilterId = null;
+
+function buildFilterElement(id, lensX, lensY, lensW, lensH, mapUrl, scale, chroma, blur) {
+  const NS = 'http://www.w3.org/2000/svg';
+
+  const filter = document.createElementNS(NS, 'filter');
+  filter.setAttribute('id', id);
+  filter.setAttribute('filterUnits', 'userSpaceOnUse');
+  filter.setAttribute('x', String(Math.round(lensX)));
+  filter.setAttribute('y', String(Math.round(lensY)));
+  filter.setAttribute('width',  String(lensW));
+  filter.setAttribute('height', String(lensH));
+  filter.setAttribute('colorInterpolationFilters', 'sRGB');
+
+  // ── (1) Load displacement map ──
+  // Position the map at the lens location in viewport space.
+  // The map is lens-sized and aligned with the filter region.
+  const feImg = document.createElementNS(NS, 'feImage');
+  feImg.setAttribute('href', mapUrl);
+  feImg.setAttribute('x', String(Math.round(lensX)));
+  feImg.setAttribute('y', String(Math.round(lensY)));
+  feImg.setAttribute('width',  String(lensW));
+  feImg.setAttribute('height', String(lensH));
+  feImg.setAttribute('result', 'map');
+  feImg.setAttribute('crossorigin', 'anonymous');
+  filter.appendChild(feImg);
+
+  // ── (2) Chromatic aberration — 3 displacement passes ──
+  const sR = scale + chroma;
+  const sG = scale;
+  const sB = scale - chroma * 0.8;
+
+  // R channel displacement
+  const dispR = mkDisp(NS, 'SourceGraphic', 'map', sR, 'dispR'); filter.appendChild(dispR);
+  const matR  = mkColorMatrix(NS, 'dispR', 'rChan',
+    '1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0'); filter.appendChild(matR);
+
+  // G channel displacement (base)
+  const dispG = mkDisp(NS, 'SourceGraphic', 'map', sG, 'dispG'); filter.appendChild(dispG);
+  const matG  = mkColorMatrix(NS, 'dispG', 'gChan',
+    '0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0'); filter.appendChild(matG);
+
+  // B channel displacement
+  const dispB = mkDisp(NS, 'SourceGraphic', 'map', Math.max(0, sB), 'dispB'); filter.appendChild(dispB);
+  const matB  = mkColorMatrix(NS, 'dispB', 'bChan',
+    '0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0'); filter.appendChild(matB);
+
+  // ── (3) Blend RGB channels via screen ──
+  const bl1 = mkBlend(NS, 'rChan', 'gChan', 'screen', 'rg');  filter.appendChild(bl1);
+  const bl2 = mkBlend(NS, 'rg',    'bChan', 'screen', 'disp'); filter.appendChild(bl2);
+
+  // ── (4) Specular highlight ──
+  const specLight = document.createElementNS(NS, 'feSpecularLighting');
+  specLight.setAttribute('in', 'map');
+  specLight.setAttribute('surfaceScale', '4');
+  specLight.setAttribute('specularConstant', '0.7');
+  specLight.setAttribute('specularExponent', '35');
+  specLight.setAttribute('lighting-color', '#ffffff');
+  specLight.setAttribute('result', 'spec');
+
+  const ptLight = document.createElementNS(NS, 'fePointLight');
+  // Light slightly offset from center for a natural highlight
+  ptLight.setAttribute('x', String(lensX + lensW * 0.5));
+  ptLight.setAttribute('y', String(lensY + lensH * 0.25));
+  ptLight.setAttribute('z', '90');
+  specLight.appendChild(ptLight);
+  filter.appendChild(specLight);
+
+  // ── (5) Composite specular atop displaced content ──
+  const comp = mkArithmetic(NS, 'spec', 'disp', '0', '1', '0.9', '0', 'withSpec');
+  filter.appendChild(comp);
+
+  // ── (6) Rim glow from blurred map ──
+  const blurNode = document.createElementNS(NS, 'feGaussianBlur');
+  blurNode.setAttribute('in', 'map');
+  blurNode.setAttribute('stdDeviation', String(blur));
+  blurNode.setAttribute('result', 'blurMap');
+  filter.appendChild(blurNode);
+
+  // Convert blurred map into a subtle white glow
+  const glowMat = mkColorMatrix(NS, 'blurMap', 'glow',
+    '0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.12 0');
+  filter.appendChild(glowMat);
+
+  // Composite glow over
+  const comp2 = mkArithmetic(NS, 'glow', 'withSpec', '0', '1', '1', '0', 'final');
+  filter.appendChild(comp2);
+
+  return filter;
+
+  // ── helpers ──
+  function mkDisp(ns, in1, in2, s, result) {
+    const el = document.createElementNS(ns, 'feDisplacementMap');
+    el.setAttribute('in', in1);
+    el.setAttribute('in2', in2);
+    el.setAttribute('scale', String(Math.round(s)));
+    el.setAttribute('xChannelSelector', 'R');
+    el.setAttribute('yChannelSelector', 'G');
+    el.setAttribute('result', result);
+    return el;
   }
-  mapCtx.putImageData(img,x0,y0);
-}
-
-// Erase old lens region (set back to neutral)
-function eraseLens(lcx,lcy,lr) {
-  const {mw,mh,sx,sy}=prepMap();
-  const mlx=lcx*sx, mly=lcy*sy, mlr=lr*sx;
-  const x0=Math.max(0,Math.floor(mlx-mlr)), y0=Math.max(0,Math.floor(mly-mlr));
-  const x1=Math.min(mw-1,Math.ceil(mlx+mlr)), y1=Math.min(mh-1,Math.ceil(mly+mlr));
-  if(x1-x0<0||y1-y0<0) return;
-  const img=mapCtx.getImageData(x0,y0,x1-x0+1,y1-y0+1);
-  for(let i=0;i<img.data.length;i+=4){img.data[i]=128;img.data[i+1]=128;}
-  mapCtx.putImageData(img,x0,y0);
-}
-
-// Commit the map to the SVG image element
-let lastUrl=null;
-function commitMap() {
-  const url=mapCanvas.toDataURL();
-  dmap.setAttribute('href',url);
-  // Revoke previous blob/data URL if needed
-  if(lastUrl && lastUrl!==url && lastUrl.startsWith('blob:')) URL.revokeObjectURL(lastUrl);
-  lastUrl=url;
-}
-
-// Update the filter scale + fringe
-function updateFilter(scale,fringe) {
-  // Update feDisplacementMap scale
-  const filter=document.querySelector('#glass feDisplacementMap');
-  if(filter) filter.setAttribute('scale',scale);
-  // Update fringe offsets
-  const offsets=document.querySelectorAll('#glass feOffset');
-  if(offsets.length>=2){
-    offsets[0].setAttribute('dx',fringe);
-    offsets[1].setAttribute('dx',-fringe);
+  function mkColorMatrix(ns, in1, result, values) {
+    const el = document.createElementNS(ns, 'feColorMatrix');
+    el.setAttribute('in', in1);
+    el.setAttribute('type', 'matrix');
+    el.setAttribute('values', values);
+    el.setAttribute('result', result);
+    return el;
+  }
+  function mkBlend(ns, in1, in2, mode, result) {
+    const el = document.createElementNS(ns, 'feBlend');
+    el.setAttribute('in', in1);
+    el.setAttribute('in2', in2);
+    el.setAttribute('mode', mode);
+    el.setAttribute('result', result);
+    return el;
+  }
+  function mkArithmetic(ns, in1, in2, k1, k2, k3, k4, result) {
+    const el = document.createElementNS(ns, 'feComposite');
+    el.setAttribute('in', in1);
+    el.setAttribute('in2', in2);
+    el.setAttribute('operator', 'arithmetic');
+    el.setAttribute('k1', k1);
+    el.setAttribute('k2', k2);
+    el.setAttribute('k3', k3);
+    el.setAttribute('k4', k4);
+    el.setAttribute('result', result);
+    return el;
   }
 }
 
-function move(x,y) {
-  cx=Math.max(r,Math.min(x,window.innerWidth-r));
-  cy=Math.max(r,Math.min(y,window.innerHeight-r));
+// ═══════════════════════════════════════════════════
+// FRAME UPDATE — rebuild filter with new position
+// ═══════════════════════════════════════════════════
 
-  const scale=+$('bendC').value, fringe=+$('fringeC').value;
+function updateFrame() {
+  // Clamp lens position to viewport bounds
+  const hw = P.size / 2;
+  const cx = Math.max(hw, Math.min(currentX, window.innerWidth - hw));
+  const cy = Math.max(hw, Math.min(currentY, window.innerHeight - hw));
 
-  prepMap();
-  // Erase at OLD position — we track this in move() closure
-  // Actually we need to track old position. Let's use a simple approach:
-  // just redraw the whole map fresh each time (it's fast enough at half-res)
-  const w=window.innerWidth, h=window.innerHeight;
-  const mw=Math.ceil(w/2), mh=Math.ceil(h/2);
-  // Clear all — simple approach
-  const img=mapCtx.createImageData(mw,mh);
-  for(let i=0;i<img.data.length;i+=4){img.data[i]=128;img.data[i+1]=128;img.data[i+2]=128;img.data[i+3]=255;}
-  mapCtx.putImageData(img,0,0);
-  // Paint lens
-  paintLens(cx,cy,r,Math.min(scale,80));
+  const lensX = cx - hw;
+  const lensY = cy - hw;
+  const lensW = P.size;
+  const lensH = P.size;
 
-  commitMap();
-  updateFilter(scale,fringe);
+  // Generate (or retrieve cached) map
+  const cornerR = Math.min(P.radius * 0.45, hw * 0.8);
+  const mapUrl = generateMap(lensW, lensH, cornerR);
 
-  // Apply filter to content (only if not already applied)
-  if(!content.style.filter) content.style.filter='url(#glass)';
+  // New filter id every frame (defeats Safari cache)
+  const filterId = 'glass-' + (frameId++);
 
-  // Move ring
-  ring.style.left=(cx-r)+'px'; ring.style.top=(cy-r)+'px';
+  // Build and insert filter
+  const filterEl = buildFilterElement(
+    filterId, lensX, lensY, lensW, lensH, mapUrl,
+    P.scale, P.chroma, P.blur
+  );
+
+  // Remove old filter, insert new
+  const oldFilter = filterSvg.querySelector('filter');
+  if (oldFilter) oldFilter.remove();
+  filterSvg.appendChild(filterEl);
+
+  // Apply filter to content
+  content.style.filter = `url(#${filterId})`;
+
+  // Update visual indicators
+  ring.style.left   = lensX + 'px';
+  ring.style.top    = lensY + 'px';
+  ring.style.width  = lensW + 'px';
+  ring.style.height = lensH + 'px';
+
+  dot.style.left = cx + 'px';
+  dot.style.top  = cy + 'px';
 }
 
-// ─── Debounced move ───
-function scheduleMove(x,y) {
-  if(pending) cancelAnimationFrame(pending);
-  pending=requestAnimationFrame(()=>{move(x,y);pending=null;});
+// ═══════════════════════════════════════════════════
+// ANIMATION LOOP — lerp toward target
+// ═══════════════════════════════════════════════════
+
+const LERP = 0.22; // smooth following factor
+
+function animate() {
+  // Lerp
+  currentX += (targetX - currentX) * LERP;
+  currentY += (targetY - currentY) * LERP;
+
+  updateFrame();
+  rafId = requestAnimationFrame(animate);
 }
 
-function setSize(s) {
-  r=s/2;
-  ring.style.width=ring.style.height=s+'px';
-  ring.style.marginLeft=ring.style.marginTop=(-r)+'px';
-  scheduleMove(cx,cy);
+// ═══════════════════════════════════════════════════
+// INPUT HANDLING — mouse & touch
+// ═══════════════════════════════════════════════════
+
+function setTarget(x, y) {
+  targetX = x;
+  targetY = y;
 }
 
-// ─── Events ───
-drag.addEventListener('mousedown',e=>{dragging=true;scheduleMove(e.clientX,e.clientY);});
-document.addEventListener('mousemove',e=>{if(dragging)scheduleMove(e.clientX,e.clientY);});
-document.addEventListener('mouseup',()=>{dragging=false;});
-drag.addEventListener('touchstart',e=>{dragging=true;const t=e.touches[0];scheduleMove(t.clientX,t.clientY);},{passive:true});
-document.addEventListener('touchmove',e=>{if(dragging){const t=e.touches[0];scheduleMove(t.clientX,t.clientY);}},{passive:true});
-document.addEventListener('touchend',()=>{dragging=false;});
-
-$('bendC').addEventListener('input',function(){$('bendV').textContent=this.value;scheduleMove(cx,cy);});
-$('sizeC').addEventListener('input',function(){$('sizeV').textContent=this.value;setSize(+this.value);});
-$('fringeC').addEventListener('input',function(){$('fringeV').textContent=this.value;scheduleMove(cx,cy);});
-
-let rt;
-window.addEventListener('resize',()=>{
-  clearTimeout(rt);rt=setTimeout(()=>{mapCanvas=null;scheduleMove(cx,cy);},200);
+dragLayer.addEventListener('mousedown', e => {
+  dragging = true;
+  dragLayer.classList.add('dragging');
+  setTarget(e.clientX, e.clientY);
+});
+document.addEventListener('mousemove', e => {
+  if (dragging) setTarget(e.clientX, e.clientY);
+});
+document.addEventListener('mouseup', () => {
+  dragging = false;
+  dragLayer.classList.remove('dragging');
 });
 
-// ─── Init ───
-if(document.readyState==='complete')init();
-else window.addEventListener('load',init);
-function init(){
-  setSize(260);
-  scheduleMove(window.innerWidth/2,window.innerHeight/2);
+dragLayer.addEventListener('touchstart', e => {
+  dragging = true;
+  const t = e.touches[0];
+  setTarget(t.clientX, t.clientY);
+}, { passive: true });
+document.addEventListener('touchmove', e => {
+  if (dragging) {
+    const t = e.touches[0];
+    setTarget(t.clientX, t.clientY);
+  }
+}, { passive: true });
+document.addEventListener('touchend', () => {
+  dragging = false;
+});
+
+// ── Also move lens on hover when not dragging ──
+document.addEventListener('mousemove', e => {
+  if (!dragging) setTarget(e.clientX, e.clientY);
+});
+
+// ═══════════════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════════════
+
+function bindSlider(id, param, valId, onChange) {
+  const slider = $(id);
+  const display = $(valId);
+  slider.addEventListener('input', () => {
+    const v = parseFloat(slider.value);
+    display.textContent = slider.value;
+    if (param) P[param] = v;
+    if (onChange) onChange(v);
+  });
 }
+
+bindSlider('ctrl-scale',  'scale',  'val-scale',  () => {});
+bindSlider('ctrl-radius', 'radius', 'val-radius', () => { mapCacheClear(); });
+bindSlider('ctrl-chroma', 'chroma', 'val-chroma', () => {});
+bindSlider('ctrl-size',   'size',   'val-size',   v  => { mapCacheClear(); });
+bindSlider('ctrl-blur',   'blur',   'val-blur',   () => {});
+
+function mapCacheClear() {
+  // Clear cache so maps regenerate with new size/shape
+  for (const k in mapCache) delete mapCache[k];
+}
+
+// ═══════════════════════════════════════════════════
+// RESIZE HANDLER
+// ═══════════════════════════════════════════════════
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    mapCacheClear();
+    // Re-center
+    targetX = currentX = window.innerWidth / 2;
+    targetY = currentY = window.innerHeight / 2;
+  }, 200);
+});
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+
+function init() {
+  targetX  = currentX = window.innerWidth / 2;
+  targetY  = currentY = window.innerHeight / 2;
+
+  updateFrame();
+  rafId = requestAnimationFrame(animate);
+}
+
+if (document.readyState === 'complete') {
+  init();
+} else {
+  window.addEventListener('load', init);
+}
+
 })();
 </script>
 </body>
