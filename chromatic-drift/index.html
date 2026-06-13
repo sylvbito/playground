@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chromatic Drift</title>
+<style>
+/* ═══════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro','Helvetica Neue',Helvetica,Arial,sans-serif;
+  background:#07070b;color:rgba(255,255,255,0.85);
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale
+}
+
+/* ═══════════════════════════════════════
+   CANVAS
+   ═══════════════════════════════════════ */
+#canvas{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  display:block;z-index:0
+}
+
+/* ═══════════════════════════════════════
+   COMPARE LABELS
+   ═══════════════════════════════════════ */
+.compare-labels{
+  position:fixed;top:24px;left:0;width:100%;z-index:2;
+  display:none;pointer-events:none;
+  justify-content:center
+}
+.compare-labels.show{display:flex}
+.compare-labels span{
+  display:inline-block;padding:6px 18px;
+  font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,0.08);border-radius:999px;
+  margin:0 20vw;user-select:none
+}
+.compare-labels .oklch-label{color:#6ef}
+.compare-labels .hsl-label{color:rgba(255,255,255,0.4)}
+
+/* ═══════════════════════════════════════
+   GLASS PANEL
+   ═══════════════════════════════════════ */
+.panel{
+  position:fixed;bottom:32px;left:50%;transform:translateX(-50%);
+  z-index:10;width:92%;max-width:740px;
+  padding:20px 28px 24px;
+  background:rgba(12,12,24,0.72);
+  backdrop-filter:blur(24px) saturate(1.3);-webkit-backdrop-filter:blur(24px) saturate(1.3);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:18px;
+  box-shadow:0 12px 48px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.06);
+  transition:opacity .3s,transform .3s;
+  user-select:none
+}
+.panel-header{
+  display:flex;align-items:center;gap:12px;margin-bottom:16px
+}
+.panel-header h1{
+  font-size:15px;font-weight:600;letter-spacing:-.01em;
+  background:linear-gradient(135deg,#fff 40%,rgba(255,255,255,0.5));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text
+}
+.badge{
+  font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  padding:3px 10px;border-radius:999px;
+  background:rgba(118,255,255,0.12);color:#6ef;
+  border:1px solid rgba(118,255,255,0.15)
+}
+.badge.compare-badge{background:rgba(255,200,100,0.1);color:#ffc864;border-color:rgba(255,200,100,0.12)}
+.controls{
+  display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 20px
+}
+.control-group{
+  display:flex;flex-direction:column;gap:6px;flex:1;min-width:120px
+}
+.control-group label{
+  font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:rgba(255,255,255,0.35)
+}
+
+/* Toggle buttons */
+.toggle-group{
+  display:flex;gap:1px;
+  background:rgba(255,255,255,0.05);border-radius:8px;padding:2px;
+  border:1px solid rgba(255,255,255,0.06)
+}
+.toggle-group button{
+  flex:1;padding:5px 10px;
+  font-size:11px;font-weight:600;letter-spacing:.02em;
+  border:none;border-radius:6px;cursor:pointer;
+  background:transparent;color:rgba(255,255,255,0.4);
+  transition:all .2s;white-space:nowrap
+}
+.toggle-group button:hover{color:rgba(255,255,255,0.7)}
+.toggle-group button.active{
+  background:rgba(255,255,255,0.1);color:#fff;
+  box-shadow:0 1px 4px rgba(0,0,0,0.2)
+}
+
+/* Palette buttons */
+.palette-group{
+  display:flex;gap:4px
+}
+.palette-btn{
+  width:28px;height:28px;border-radius:50%;
+  border:2px solid transparent;cursor:pointer;
+  transition:all .2s;padding:0;position:relative
+}
+.palette-btn:hover{border-color:rgba(255,255,255,0.3)}
+.palette-btn.active{border-color:rgba(255,255,255,0.8);box-shadow:0 0 12px rgba(255,255,255,0.1)}
+.palette-btn .dot{
+  width:100%;height:100%;border-radius:50%;
+  background:var(--dot-bg);display:block
+}
+.palette-btn .tooltip{
+  position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+  font-size:10px;font-weight:600;white-space:nowrap;
+  background:rgba(0,0,0,0.8);color:rgba(255,255,255,0.8);
+  padding:3px 8px;border-radius:6px;opacity:0;pointer-events:none;
+  transition:opacity .15s
+}
+.palette-btn:hover .tooltip{opacity:1}
+
+/* Range slider */
+input[type="range"]{
+  -webkit-appearance:none;appearance:none;
+  width:100%;height:4px;border-radius:2px;
+  background:rgba(255,255,255,0.12);outline:none;
+  cursor:pointer;transition:background .2s
+}
+input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:14px;height:14px;border-radius:50%;
+  background:#fff;border:2px solid rgba(0,0,0,0.3);
+  box-shadow:0 1px 4px rgba(0,0,0,0.4);cursor:pointer;
+  transition:transform .15s
+}
+input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.15)}
+input[type="range"]::-moz-range-thumb{
+  width:14px;height:14px;border-radius:50%;
+  background:#fff;border:2px solid rgba(0,0,0,0.3);
+  cursor:pointer
+}
+
+/* ═══════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════ */
+@media(max-width:600px){
+  .panel{bottom:16px;padding:16px 18px 18px;border-radius:14px;width:94%}
+  .controls{gap:10px 14px}
+  .control-group{min-width:90px}
+  .panel-header h1{font-size:13px}
+}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div class="compare-labels" id="compareLabels">
+  <span class="oklch-label">OKLCH</span>
+  <span class="hsl-label">HSL</span>
+</div>
+
+<div class="panel" id="panel">
+  <div class="panel-header">
+    <h1>✦ Chromatic Drift</h1>
+    <span class="badge" id="modeBadge">OKLCH</span>
+  </div>
+  <div class="controls">
+    <div class="control-group">
+      <label>Mode</label>
+      <div class="toggle-group" id="modeToggle">
+        <button class="active" data-mode="ambient">Ambient</button>
+        <button data-mode="compare">Compare</button>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>Speed</label>
+      <input type="range" id="speedSlider" min="0" max="300" value="100">
+    </div>
+    <div class="control-group" style="flex:0.1;min-width:0">
+      <label>Palette</label>
+      <div class="palette-group" id="paletteGroup"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════
+   OKLCH ↔ sRGB MATH (Ottosson 2020)
+   ═══════════════════════════════════════ */
+function oklchToSrgb(l, c, h) {
+  // OKLCH → OKLab
+  const hr = h * Math.PI / 180;
+  const a = c * Math.cos(hr);
+  const b = c * Math.sin(hr);
+
+  // OKLab → Linear sRGB LMS
+  const l_ = l + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = l - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = l - 0.0894841775 * a - 1.2914855480 * b;
+
+  const sign = x => x < 0 ? -1 : 1;
+  const cube = x => x * x * x;
+  const l_l = sign(l_) * cube(Math.abs(l_));
+  const m_m = sign(m_) * cube(Math.abs(m_));
+  const s_s = sign(s_) * cube(Math.abs(s_));
+
+  // Linear sRGB → sRGB gamma
+  const rLin = +4.0767416621 * l_l - 3.3077115913 * m_m + 0.2309699292 * s_s;
+  const gLin = -1.2684380046 * l_l + 2.6097574011 * m_m - 0.3413193965 * s_s;
+  const bLin = -0.0041960863 * l_l - 0.7034186147 * m_m + 1.7076147010 * s_s;
+
+  const gamma = x => x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1/2.4) - 0.055;
+
+  return [
+    Math.round(Math.max(0, Math.min(255, gamma(rLin) * 255))),
+    Math.round(Math.max(0, Math.min(255, gamma(gLin) * 255))),
+    Math.round(Math.max(0, Math.min(255, gamma(bLin) * 255))),
+  ];
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function lerpHue(a, b, t) {
+  let d = b - a;
+  if (d > 180) d -= 360;
+  if (d < -180) d += 360;
+  return a + d * t;
+}
+
+/* ═══════════════════════════════════════
+   PALETTE PRESETS
+   ═══════════════════════════════════════ */
+const PALETTES = {
+  aurora: {
+    name: 'Aurora',
+    stops: [
+      { l: [0.45,0.70], c: [0.12,0.25], h: [100,170], freq:0.30, phase:[0,1.2,0.5] },
+      { l: [0.50,0.72], c: [0.10,0.20], h: [250,310], freq:0.42, phase:[1.5,0,2.0] },
+      { l: [0.40,0.65], c: [0.12,0.22], h: [330,30],  freq:0.35, phase:[2.5,2.0,1.0] },
+    ],
+  },
+  sunset: {
+    name: 'Sundown',
+    stops: [
+      { l: [0.50,0.75], c: [0.15,0.25], h: [10,60],    freq:0.28, phase:[0,0.8,0.3] },
+      { l: [0.45,0.70], c: [0.12,0.22], h: [280,340],  freq:0.38, phase:[1.2,0.5,1.8] },
+      { l: [0.40,0.60], c: [0.10,0.18], h: [200,250],  freq:0.32, phase:[2.0,1.5,0.7] },
+    ],
+  },
+  deepsea: {
+    name: 'Deep Sea',
+    stops: [
+      { l: [0.35,0.55], c: [0.10,0.18], h: [210,260],  freq:0.25, phase:[0,1.0,0.2] },
+      { l: [0.40,0.60], c: [0.12,0.20], h: [170,220],  freq:0.35, phase:[1.0,0.3,1.5] },
+      { l: [0.45,0.65], c: [0.10,0.16], h: [150,190],  freq:0.30, phase:[2.2,1.8,0.8] },
+    ],
+  },
+  neon: {
+    name: 'Neon',
+    stops: [
+      { l: [0.50,0.75], c: [0.20,0.35], h: [280,330],  freq:0.35, phase:[0,1.5,0.8] },
+      { l: [0.45,0.70], c: [0.18,0.30], h: [40,80],    freq:0.45, phase:[1.8,0.2,2.5] },
+      { l: [0.40,0.65], c: [0.15,0.28], h: [160,210],  freq:0.30, phase:[2.8,2.2,1.2] },
+    ],
+  },
+};
+
+/* ═══════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════ */
+const state = {
+  mode: 'ambient',      // 'ambient' | 'compare'
+  palette: 'aurora',
+  speed: 1.0,
+  time: 0,
+  lastFrame: 0,
+};
+
+/* ═══════════════════════════════════════
+   CANVAS SETUP
+   ═══════════════════════════════════════ */
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  ctx.scale(dpr, dpr);
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ═══════════════════════════════════════
+   GRADIENT RENDERING
+   ═══════════════════════════════════════ */
+function evaluateStop(stop, t) {
+  const v = 0.5 + 0.5 * Math.sin(t * stop.freq + stop.phase[0]);
+  const l = stop.l[0] + (stop.l[1] - stop.l[0]) * v;
+  const c = stop.c[0] + (stop.c[1] - stop.c[0]) * (0.5 + 0.5 * Math.sin(t * stop.freq + stop.phase[1]));
+  const h = stop.h[0] + (stop.h[1] - stop.h[0]) * (0.5 + 0.5 * Math.sin(t * stop.freq + stop.phase[2]));
+  return { l, c, h: ((h % 360) + 360) % 360 };
+}
+
+function interpolateOklch(colors, t) {
+  let a, b, f;
+  if (t <= 0.5) {
+    a = colors[0]; b = colors[1]; f = t * 2;
+  } else {
+    a = colors[1]; b = colors[2]; f = (t - 0.5) * 2;
+  }
+  return {
+    l: lerp(a.l, b.l, f),
+    c: lerp(a.c, b.c, f),
+    h: lerpHue(a.h, b.h, f),
+  };
+}
+
+function interpolateSrgb(colors, t) {
+  let a, b, f;
+  if (t <= 0.5) {
+    a = colors[0]; b = colors[1]; f = t * 2;
+  } else {
+    a = colors[1]; b = colors[2]; f = (t - 0.5) * 2;
+  }
+  const [r1,g1,bl1] = a.rgb;
+  const [r2,g2,bl2] = b.rgb;
+  const l = (a.l + b.l) / 2; // not used for rendering, just for comparison shape
+  return {
+    r: Math.round(lerp(r1, r2, f)),
+    g: Math.round(lerp(g1, g2, f)),
+    b: Math.round(lerp(bl1, bl2, f)),
+  };
+}
+
+function renderGradient(w, h, paletteColors, useOklch) {
+  const numStops = 120;
+  const gradient = ctx.createLinearGradient(0, 0, w, h);
+  
+  for (let i = 0; i <= numStops; i++) {
+    const t = i / numStops;
+    let r, g, b;
+    if (useOklch) {
+      const c = interpolateOklch(paletteColors, t);
+      [r, g, b] = oklchToSrgb(c.l, c.c, c.h);
+    } else {
+      const c = interpolateSrgb(paletteColors, t);
+      r = c.r; g = c.g; b = c.b;
+    }
+    gradient.addColorStop(t, `rgb(${r},${g},${b})`);
+  }
+  
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, w, h);
+}
+
+/* ═══════════════════════════════════════
+   ANIMATION LOOP
+   ═══════════════════════════════════════ */
+function animate(now) {
+  const dt = state.lastFrame ? (now - state.lastFrame) / 1000 : 0.016;
+  state.lastFrame = now;
+  state.time += dt * state.speed;
+
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const palette = PALETTES[state.palette];
+
+  // Evaluate color stops at current time
+  const colors = palette.stops.map(s => evaluateStop(s, state.time));
+  
+  // Pre-convert to sRGB for HSL comparison
+  const rgbColors = colors.map(c => {
+    const rgb = oklchToSrgb(c.l, c.c, c.h);
+    return { ...c, rgb };
+  });
+
+  ctx.clearRect(0, 0, w, h);
+
+  if (state.mode === 'compare') {
+    const midX = Math.round(w / 2);
+    
+    // Left: OKLCH
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, midX, h);
+    ctx.clip();
+    renderGradient(w, h, colors, true);
+    ctx.restore();
+
+    // Right: HSL (RGB interpolation)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(midX, 0, w - midX, h);
+    ctx.clip();
+    renderGradient(w, h, rgbColors, false);
+    ctx.restore();
+
+    // Divider line
+    ctx.beginPath();
+    ctx.moveTo(midX, 0);
+    ctx.lineTo(midX, h);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Subtle vignette overlays for labels
+    const grad = ctx.createLinearGradient(midX - 60, 0, midX, 0);
+    grad.addColorStop(0, 'transparent');
+    grad.addColorStop(1, 'rgba(0,0,0,0.2)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(midX - 60, 0, 60, 40);
+  } else {
+    // Ambient: full OKLCH
+    renderGradient(w, h, colors, true);
+  }
+
+  requestAnimationFrame(animate);
+}
+
+/* ═══════════════════════════════════════
+   UI CONTROLS
+   ═══════════════════════════════════════ */
+// Build palette buttons
+const paletteGroup = document.getElementById('paletteGroup');
+const paletteNames = Object.keys(PALETTES);
+
+// Pre-compute palette swatches for the buttons
+function getSwatch(paletteKey) {
+  const p = PALETTES[paletteKey];
+  const col = evaluateStop(p.stops[1], 0); // middle stop at t=0
+  const [r,g,b] = oklchToSrgb(col.l, col.c, col.h);
+  return `rgb(${r},${g},${b})`;
+}
+
+paletteNames.forEach(key => {
+  const p = PALETTES[key];
+  const btn = document.createElement('button');
+  btn.className = `palette-btn${key === state.palette ? ' active' : ''}`;
+  btn.dataset.palette = key;
+  const swatch = getSwatch(key);
+  btn.innerHTML = `<span class="dot" style="--dot-bg:${swatch}"></span><span class="tooltip">${p.name}</span>`;
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.palette = key;
+  });
+  paletteGroup.appendChild(btn);
+});
+
+// Mode toggle
+document.querySelectorAll('#modeToggle button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#modeToggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.mode = btn.dataset.mode;
+    
+    const badge = document.getElementById('modeBadge');
+    const labels = document.getElementById('compareLabels');
+    if (state.mode === 'compare') {
+      badge.textContent = 'Compare';
+      badge.className = 'badge compare-badge';
+      labels.classList.add('show');
+    } else {
+      badge.textContent = 'OKLCH';
+      badge.className = 'badge';
+      labels.classList.remove('show');
+    }
+  });
+});
+
+// Speed slider
+document.getElementById('speedSlider').addEventListener('input', function() {
+  // Map 0-300 → 0-3x
+  state.speed = this.value / 100;
+});
+
+/* ═══════════════════════════════════════
+   START
+   ═══════════════════════════════════════ */
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
