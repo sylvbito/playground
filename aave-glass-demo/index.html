@@ -2,717 +2,334 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Aave Liquid Glass — Full-Viewport Low-Res Map Lens</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aave Liquid Glass — feDisplacementMap Lens</title>
 <style>
-/* ═══════════════════════════════════════════════
-   RESET & BASE
-   ═══════════════════════════════════════════════ */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;touch-action:none}
-body{
-  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',Arial,sans-serif;
-  background:#080810;color:#e4e4f0;
-  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
-  -webkit-font-smoothing:antialiased;
-}
+html,body{width:100%;height:100%;overflow:hidden;background:#080810;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro',Arial,sans-serif;
+  user-select:none;-webkit-user-select:none;touch-action:none}
 
-/* ═══════════════════════════════════════════════
-   ANIMATED BACKGROUND MESH
-   ═══════════════════════════════════════════════ */
-body::before{
-  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+/* Dark gradient background */
+body::before{content:'';position:fixed;inset:0;z-index:0;
   background:
-    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(120,80,220,0.12) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 80% at 75% 60%, rgba(40,140,220,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 50% at 50% 80%, rgba(220,100,180,0.08) 0%, transparent 50%),
-    radial-gradient(ellipse 70% 40% at 85% 15%, rgba(80,200,160,0.06) 0%, transparent 50%);
-  animation: meshDrift 20s ease-in-out infinite alternate;
-}
-@keyframes meshDrift{
-  0%{transform:translate(0,0) scale(1)}
-  33%{transform:translate(2%,-1%) scale(1.03)}
-  66%{transform:translate(-1%,1.5%) scale(0.98)}
-  100%{transform:translate(1%,-0.5%) scale(1.01)}
-}
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(120,80,220,0.15), transparent 60%),
+    radial-gradient(ellipse 60% 80% at 75% 60%, rgba(40,140,220,0.12), transparent 55%),
+    radial-gradient(ellipse 50% 50% at 50% 80%, rgba(220,100,180,0.08), transparent 50%);}
 
-/* ═══════════════════════════════════════════════
-   GRID OVERLAY
-   ═══════════════════════════════════════════════ */
-.grid-overlay{
-  position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0.04;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.3) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(255,255,255,0.3) 1px,transparent 1px);
+/* Grid overlay */
+body::after{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.03;
+  background-image:linear-gradient(rgba(255,255,255,.3) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.3) 1px,transparent 1px);
   background-size:60px 60px;
-  mask-image:radial-gradient(ellipse 70% 70% at 50% 50%,black 30%,transparent 70%);
-  -webkit-mask-image:radial-gradient(ellipse 70% 70% at 50% 50%,black 30%,transparent 70%);
+  mask-image:radial-gradient(ellipse 70% 70% at 50% 50%,black 30%,transparent 70%);}
+
+/* ─── Content card — THIS receives the glass filter ─── */
+#card{
+  position:fixed;z-index:2;
+  /* Centered, margin:auto doesn't work with fixed, so use transform */
+  left:50%;top:50%;transform:translate(-50%,-50%);
+  width:520px;height:480px;max-width:90vw;max-height:80vh;
+  border-radius:24px;overflow:hidden;
+  background:linear-gradient(160deg,rgba(30,20,50,.9),rgba(10,10,30,.95));
+  border:1px solid rgba(255,255,255,.06);
+  box-shadow:0 20px 80px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.02) inset;
+  padding:2.5rem 2rem;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  /* Filter applied via JS */
 }
 
-/* ═══════════════════════════════════════════════
-   CONTENT LAYER — filtered by the SVG lens
-   ═══════════════════════════════════════════════ */
-#content{
-  position:fixed;inset:0;z-index:2;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  padding:2rem;text-align:center;
-  /* filter is applied via JS dynamically */
-  /* The SVG filter covers the FULL element (default bounds).
-     The low-res map (1/10th viewport) has neutral pixels everywhere
-     except at the lens position. SVG scales the map up to fill
-     the viewport with bilinear interpolation. */
+#card h1{
+  font-size:2.2rem;font-weight:800;letter-spacing:-.03em;line-height:1.1;
+  background:linear-gradient(160deg,#c4b5fd,#93c5fd,#67e8f9,#a5f3fc);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:.5rem;text-align:center;
+}
+#card p{
+  font-size:.95rem;line-height:1.6;color:rgba(255,255,255,.35);
+  max-width:380px;text-align:center;margin-bottom:1.5rem;
 }
 
-/* ── Vignette overlay ── */
-.vignette{
-  position:fixed;inset:0;z-index:3;pointer-events:none;
-  background:radial-gradient(ellipse 60% 50% at 50% 50%,transparent 40%,rgba(0,0,0,0.25) 100%);
+/* Shape grid — good visual targets for distortion */
+.shapes{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;
+  max-width:300px;width:100%;margin-bottom:1.5rem;
 }
+.shape{
+  aspect-ratio:1;border-radius:14px;display:flex;align-items:center;justify-content:center;
+  font-size:1.8rem;
+}
+.shape:nth-child(1){background:linear-gradient(135deg,#667eea,#764ba2)}
+.shape:nth-child(2){background:linear-gradient(135deg,#f093fb,#f5576c)}
+.shape:nth-child(3){background:linear-gradient(135deg,#4facfe,#00f2fe)}
+.shape:nth-child(4){background:linear-gradient(135deg,#43e97b,#38f9d7)}
+.shape:nth-child(5){background:linear-gradient(135deg,#fa709a,#fee140)}
+.shape:nth-child(6){background:linear-gradient(135deg,#a18cd1,#fbc2eb)}
 
-/* ── Floating particles (CSS only) ── */
-.particles{
-  position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.15;
-}
-.particle{
-  position:absolute;width:2px;height:2px;border-radius:50%;
-  background:rgba(255,255,255,0.6);
-  animation:floatUp linear infinite;
-}
-.particle:nth-child(1){left:10%;animation-duration:14s;animation-delay:0s}
-.particle:nth-child(2){left:25%;animation-duration:18s;animation-delay:-3s;width:3px;height:3px}
-.particle:nth-child(3){left:40%;animation-duration:16s;animation-delay:-7s}
-.particle:nth-child(4){left:55%;animation-duration:20s;animation-delay:-2s;width:1px;height:1px}
-.particle:nth-child(5){left:70%;animation-duration:15s;animation-delay:-9s}
-.particle:nth-child(6){left:85%;animation-duration:22s;animation-delay:-5s;width:3px;height:3px}
-.particle:nth-child(7){left:15%;animation-duration:19s;animation-delay:-11s;width:1px;height:1px}
-.particle:nth-child(8){left:60%;animation-duration:17s;animation-delay:-4s}
-@keyframes floatUp{
-  0%{transform:translateY(110vh) scale(0);opacity:0}
-  10%{opacity:1}
-  90%{opacity:1}
-  100%{transform:translateY(-10vh) scale(1.5);opacity:0}
-}
+/* Stats */
+.stats{display:flex;gap:2rem;margin-bottom:1.5rem}
+.stat{text-align:center}
+.stat-val{font-size:1.4rem;font-weight:700;color:#c4b5fd}
+.stat-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.2)}
 
-/* ── Hero ── */
-.hero-title{
-  font-size:clamp(2.2rem,7vw,5rem);font-weight:800;letter-spacing:-0.04em;line-height:1.05;
-  background:linear-gradient(160deg,#c4b5fd 0%,#93c5fd 30%,#67e8f9 55%,#a5f3fc 75%,#ddd6fe 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  margin-bottom:0.6rem;
+/* Code snippet */
+.code{
+  background:rgba(0,0,0,.3);border-radius:10px;padding:.8rem 1rem;
+  font-family:'SF Mono',monospace;font-size:.65rem;color:rgba(255,255,255,.35);
+  max-width:380px;width:100%;text-align:left;overflow-x:auto;
 }
-.hero-sub{
-  font-size:clamp(0.9rem,1.6vw,1.1rem);line-height:1.65;max-width:560px;
-  color:rgba(255,255,255,0.35);margin-bottom:1.8rem;
-}
-.hero-sub code{
-  background:rgba(255,255,255,0.05);padding:0.15em 0.45em;border-radius:4px;
-  font-size:0.9em;color:rgba(255,255,255,0.55);font-family:'SF Mono','Fira Code','Cascadia Code',monospace;
-}
+.code .tag{color:#c4b5fd}.code .attr{color:#93c5fd}.code .val{color:#67e8f9}
 
-/* ── Stats Row ── */
-.stats-row{
-  display:flex;gap:2.5rem;margin-bottom:2.5rem;flex-wrap:wrap;justify-content:center;
-}
-.stat{
-  display:flex;flex-direction:column;align-items:center;gap:0.2rem;
-}
-.stat-val{
-  font-size:1.8rem;font-weight:700;letter-spacing:-0.02em;
-  background:linear-gradient(135deg,#a5b4fc,#67e8f9);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  font-variant-numeric:tabular-nums;
-}
-.stat-label{
-  font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;
-  color:rgba(255,255,255,0.2);
-}
-
-/* ── Feature Cards ── */
-.feature-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem;
-  max-width:500px;width:100%;margin-bottom:2rem;
-}
-@media(max-width:540px){.feature-grid{grid-template-columns:repeat(2,1fr)}}
-.feature-card{
-  background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.05);
-  border-radius:14px;padding:1rem 0.8rem;text-align:center;
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  transition:border-color 0.3s,background 0.3s;
-}
-.feature-card:hover{
-  border-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);
-}
-.feature-icon{font-size:1.5rem;margin-bottom:0.35rem}
-.feature-card h4{font-size:0.8rem;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:0.15rem}
-.feature-card p{font-size:0.68rem;color:rgba(255,255,255,0.25);line-height:1.4}
-
-/* ── Feature List ── */
-.feature-list{
-  display:flex;flex-direction:column;gap:0.5rem;max-width:480px;width:100%;
-  margin-bottom:2rem;text-align:left;
-}
-.feature-item{
-  display:flex;align-items:flex-start;gap:0.6rem;
-  font-size:0.78rem;color:rgba(255,255,255,0.3);line-height:1.5;
-}
-.feature-item .dot{
-  width:6px;height:6px;border-radius:50%;background:linear-gradient(135deg,#a5b4fc,#67e8f9);
-  margin-top:0.45rem;flex-shrink:0;
-}
-
-/* ── Code Card ── */
-.code-card{
-  background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.06);
-  border-radius:12px;padding:1rem 1.2rem;max-width:460px;width:100%;
-  text-align:left;font-family:'SF Mono','Fira Code','Cascadia Code',monospace;
-  font-size:0.7rem;line-height:1.55;color:rgba(255,255,255,0.4);
-  overflow-x:auto;margin-bottom:1rem;
-}
-.code-card .tag{color:#c4b5fd}
-.code-card .attr{color:#93c5fd}
-.code-card .val{color:#67e8f9}
-.code-card .comment{color:rgba(255,255,255,0.15)}
-
-/* ═══════════════════════════════════════════════
-   LENS RING OVERLAY — visual indicator
-   ═══════════════════════════════════════════════ */
+/* ─── Lens ring overlay ─── */
 #lens-ring{
   position:fixed;pointer-events:none;z-index:10;
-  border-radius:28% 28% 28% 28%;
-  border:1.5px solid rgba(255,255,255,0.07);
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.025) inset,
-    0 8px 50px rgba(0,0,0,0.45),
-    0 0 0 1px rgba(255,255,255,0.04);
-  transition:border-radius 0.3s;
-}
-#lens-ring::after{
-  content:'';position:absolute;
-  top:4px;left:18%;right:18%;height:28%;
-  border-radius:50%;
-  background:linear-gradient(180deg,rgba(255,255,255,0.05) 0%,transparent 100%);
+  border-radius:50%;border:1.5px solid rgba(255,255,255,.08);
+  box-shadow:0 0 0 1px rgba(255,255,255,.03) inset,0 8px 40px rgba(0,0,0,.5);
+  opacity:0;transition:opacity .2s;
 }
 #lens-dot{
   position:fixed;pointer-events:none;z-index:11;
   width:6px;height:6px;border-radius:50%;
-  background:rgba(255,255,255,0.5);
-  box-shadow:0 0 8px rgba(255,255,255,0.3),0 0 18px rgba(160,180,255,0.3);
+  background:rgba(255,255,255,.5);
+  box-shadow:0 0 8px rgba(255,255,255,.3),0 0 18px rgba(160,180,255,.3);
   transform:translate(-50%,-50%);
-  transition:opacity 0.3s;
+  opacity:0;transition:opacity .2s;
 }
 
-/* ═══════════════════════════════════════════════
-   CONTROLS PANEL
-   ═══════════════════════════════════════════════ */
+/* ─── Controls ─── */
 .controls{
-  position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
-  display:flex;gap:1rem;align-items:center;z-index:20;flex-wrap:wrap;
-  background:rgba(8,8,16,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  padding:0.6rem 1.2rem;border-radius:100px;
-  border:1px solid rgba(255,255,255,0.06);
-  box-shadow:0 4px 24px rgba(0,0,0,0.5);
+  position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:20;
+  display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;
+  background:rgba(0,0,0,.5);backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:.7rem 1rem;
 }
 .controls label{
-  display:flex;align-items:center;gap:0.4rem;
-  font-size:0.72rem;color:rgba(255,255,255,0.35);
-  white-space:nowrap;
+  display:flex;align-items:center;gap:.3rem;
+  font-size:.7rem;color:rgba(255,255,255,.25);
 }
-.controls input[type="range"]{
-  width:70px;height:3px;
-  accent-color:#8eb4fc;background:transparent;cursor:pointer;
-  -webkit-appearance:none;appearance:none;
-}
-.controls input[type="range"]::-webkit-slider-runnable-track{
-  height:3px;background:rgba(255,255,255,0.1);border-radius:2px;
-}
-.controls .val{
-  min-width:2.2em;text-align:right;font-size:0.68rem;
-  color:rgba(255,255,255,0.25);font-variant-numeric:tabular-nums;
-}
-@media(max-width:700px){
-  .controls{
-    gap:0.4rem;padding:0.5rem 0.8rem;border-radius:16px;
-    width:95vw;justify-content:center;
-  }
-  .controls input[type="range"]{width:45px}
-  .controls label{font-size:0.65rem}
-}
+.controls input[type=range]{width:70px;accent-color:#c4b5fd}
+.controls .val{min-width:28px;text-align:right;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.15)}
 
-/* ═══════════════════════════════════════════════
-   BRAND LINK
-   ═══════════════════════════════════════════════ */
-.brand{
-  position:fixed;top:1.25rem;left:1.25rem;z-index:20;
-  font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;
-  color:rgba(255,255,255,0.15);
-}
-.brand a{color:inherit;text-decoration:none;transition:color 0.3s}
-.brand a:hover{color:rgba(255,255,255,0.4)}
-
-/* ═══════════════════════════════════════════════
-   SHAPES GRID — visual targets for the lens
-   ═══════════════════════════════════════════════ */
-.shapes-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:0.9rem;
-  max-width:380px;width:100%;margin-bottom:1.8rem;
-}
-@media(max-width:540px){.shapes-grid{grid-template-columns:repeat(2,1fr)}}
-.shape{
-  aspect-ratio:1;border-radius:18px;
-  display:flex;align-items:center;justify-content:center;font-size:1.8rem;
-  box-shadow:0 4px 24px rgba(0,0,0,0.3);
-  transition:transform 0.3s,box-shadow 0.3s;
-}
-.shape:hover{transform:scale(1.03);box-shadow:0 8px 32px rgba(0,0,0,0.4)}
-.shape-1{background:linear-gradient(135deg,#667eea,#764ba2)}
-.shape-2{background:linear-gradient(135deg,#f093fb,#f5576c)}
-.shape-3{background:linear-gradient(135deg,#4facfe,#00f2fe)}
-.shape-4{background:linear-gradient(135deg,#43e97b,#38f9d7)}
-.shape-5{background:linear-gradient(135deg,#fa709a,#fee140)}
-.shape-6{background:linear-gradient(135deg,#a18cd1,#fbc2eb)}
-
-/* ── Architecture section ── */
-.arch-section{
-  max-width:500px;width:100%;margin-bottom:1.5rem;text-align:left;
-}
-.arch-section h3{
-  font-size:0.78rem;font-weight:600;color:rgba(255,255,255,0.55);
-  margin-bottom:0.5rem;letter-spacing:0.02em;
-}
-.arch-row{
-  display:flex;gap:0.6rem;margin-bottom:0.4rem;align-items:flex-start;
-  font-size:0.7rem;color:rgba(255,255,255,0.25);line-height:1.5;
-}
-.arch-num{
-  width:18px;height:18px;border-radius:50%;
-  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);
-  display:flex;align-items:center;justify-content:center;
-  font-size:0.6rem;font-weight:700;flex-shrink:0;
-  color:rgba(255,255,255,0.3);
-}
-.arch-row code{
-  background:rgba(255,255,255,0.04);padding:0.1em 0.35em;border-radius:3px;
-  font-size:0.88em;color:rgba(255,255,255,0.45);
-}
-
-/* ── Drag hint ── */
-.drag-hint{
-  font-size:0.65rem;color:rgba(255,255,255,0.12);
-  letter-spacing:0.06em;text-transform:uppercase;
-  margin-top:0.5rem;opacity:0;
-  animation:fadeHint 4s ease-in-out 1.5s forwards;
-}
-@keyframes fadeHint{0%{opacity:0}50%{opacity:1}100%{opacity:0}}
-
-/* ═══════════════════════════════════════════════
-   DRAG LAYER
-   ═══════════════════════════════════════════════ */
-#drag-layer{position:fixed;inset:0;z-index:8;cursor:grab}
-#drag-layer:active{cursor:grabbing}
-#drag-layer.dragging{cursor:grabbing}
-
-/* ── Reduced motion ── */
-@media(prefers-reduced-motion:reduce){
-  #lens-ring,#lens-dot,.controls,.drag-hint,.shapes-grid{display:none}
-  #drag-layer{cursor:default}
-  body::before{animation:none}
+/* ─── Hint text ─── */
+.hint{
+  position:fixed;bottom:5rem;left:50%;transform:translateX(-50%);z-index:20;
+  font-size:.75rem;color:rgba(255,255,255,.15);pointer-events:none;
 }
 </style>
 </head>
 <body>
 
-<div class="grid-overlay"></div>
+<!-- SVG with filter definitions -->
+<svg id="filter-svg" xmlns="http://www.w3.org/2000/svg" style="position:fixed;inset:0;z-index:0;pointer-events:none;width:0;height:0">
+  <!-- Filters injected dynamically -->
+</svg>
 
-<!-- Floating particles for atmosphere -->
-<div class="particles">
-  <div class="particle"></div><div class="particle"></div><div class="particle"></div>
-  <div class="particle"></div><div class="particle"></div><div class="particle"></div>
-  <div class="particle"></div><div class="particle"></div>
-</div>
-
-<!-- ═══════════════ SVG FILTER DEFINITIONS ═══════════════ -->
-<svg id="filter-svg" style="position:fixed;width:0;height:0" aria-hidden="true"></svg>
-
-<!-- ═══════════════ BRAND LINK ═══════════════ -->
-<div class="brand">
-  <a href="https://aave.com/design/building-glass-for-the-web" target="_blank" rel="noopener">
-    ← Aave Liquid Glass
-  </a>
-</div>
-
-<!-- ═══════════════ MAIN CONTENT ═══════════════ -->
-<div id="content">
-  <h1 class="hero-title">Liquid Glass</h1>
-  <p class="hero-sub">
-    A minimal SVG filter chain — <code>feDisplacementMap</code> +
-    <code>feSpecularLighting</code> — driven by a low-resolution
-    (1/10th viewport) displacement map scaled via SVG. No chromatic
-    aberration, no clipping, no DOM duplicates.
-  </p>
-
-  <div class="stats-row">
-    <div class="stat"><span class="stat-val">60</span><span class="stat-label">fps</span></div>
-    <div class="stat"><span class="stat-val">3</span><span class="stat-label">Browsers</span></div>
-    <div class="stat"><span class="stat-val">~20K</span><span class="stat-label">Map Pixels</span></div>
+<!-- Content card — the filter target -->
+<div id="card">
+  <h1>Liquid Glass</h1>
+  <p>SVG <code>feDisplacementMap</code> bends live DOM pixels. Move your cursor over the card to see refraction.</p>
+  
+  <div class="shapes">
+    <div class="shape">◆</div><div class="shape">●</div><div class="shape">■</div>
+    <div class="shape">▲</div><div class="shape">★</div><div class="shape">⬡</div>
   </div>
-
-  <!-- Shapes grid — visual targets that distort under the lens -->
-  <div class="shapes-grid">
-    <div class="shape shape-1">◆</div>
-    <div class="shape shape-2">●</div>
-    <div class="shape shape-3">■</div>
-    <div class="shape shape-4">▲</div>
-    <div class="shape shape-5">★</div>
-    <div class="shape shape-6">⬡</div>
+  
+  <div class="stats">
+    <div class="stat"><div class="stat-val">3</div><div class="stat-label">Browsers</div></div>
+    <div class="stat"><div class="stat-val">0</div><div class="stat-label">DOM Copies</div></div>
+    <div class="stat"><div class="stat-val">1</div><div class="stat-label">Filter Primitive</div></div>
   </div>
-
-  <div class="feature-grid">
-    <div class="feature-card">
-      <div class="feature-icon">🌊</div>
-      <h4>Real-time</h4>
-      <p>Single-pass filter on live layout</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">⚡</div>
-      <h4>Low-Res Map</h4>
-      <p>1/10th viewport — ~20K px total</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🔮</div>
-      <h4>No Clipping</h4>
-      <p>Full-viewport map — neutral outside lens</p>
-    </div>
-  </div>
-
-  <div class="arch-section">
-    <h3>▸ Minimal full-viewport displacement approach</h3>
-    <div class="arch-row"><span class="arch-num">1</span>A canvas generates a <strong>low-resolution</strong> displacement map at 1/10th viewport size — e.g. 192×108 px for a 1920×1080 screen. Only <strong>~20K pixels</strong> total. The lens shape — a rounded rect with sinusoidal gradient — is drawn at the current cursor position. Everywhere else is neutral (<code>R=128, G=128, A=0</code>) = no displacement.</div>
-    <div class="arch-row"><span class="arch-num">2</span>The SVG <code>&lt;filter&gt;</code> uses <strong>default bounds</strong> — covers the full element. <code>feImage</code> loads the tiny map scaled to <code>(0, 0, vw, vh)</code> with bilinear interpolation — SVG handles the upscaling for free.</div>
-    <div class="arch-row"><span class="arch-num">3</span><strong>Single</strong> <code>feDisplacementMap</code> samples the map at each pixel. Neutral pixels → no displacement (content renders unchanged). Lens pixels → sinusoidal displacement → refraction. No chromatic aberration chains.</div>
-    <div class="arch-row"><span class="arch-num">4</span><code>feSpecularLighting</code> reads the map's alpha channel as a bump map. <code>A=255</code> inside lens → specular highlight. <code>A=0</code> outside → transparent → no effect. Composited atop displaced content via <code>feComposite arithmetic</code>.</div>
-    <div class="arch-row"><span class="arch-num">5</span>Each frame: fresh filter <code>id</code> (Safari cache workaround). Map regenerated only when lens moves &gt;3 px — <code>Uint32Array.fill()</code> for instant neutral reset.</div>
-  </div>
-
-  <div class="feature-list">
-    <div class="feature-item"><span class="dot"></span>4 filter primitives total: <code>feImage → feDisplacementMap → feSpecularLighting → feComposite</code></div>
-    <div class="feature-item"><span class="dot"></span>1/10th viewport map: only ~676 lens pixels iterated per frame (vs 500K+ full-res)</div>
-    <div class="feature-item"><span class="dot"></span>Fresh filter <code>id</code> every frame — defeats Safari's filter output cache</div>
-    <div class="feature-item"><span class="dot"></span>No effect outside lens: neutral map pixels + transparent specular = unchanged content</div>
-  </div>
-
-  <div class="code-card">
-    <span class="tag">&lt;filter</span> <span class="attr">id</span>=<span class="val">"glass-42"</span><br>
-    &nbsp;&nbsp;<span class="attr">filterUnits</span>=<span class="val">"userSpaceOnUse"</span><br>
-    &nbsp;&nbsp;<span class="attr">colorInterpolationFilters</span>=<span class="val">"sRGB"</span>&gt;<br>
-    &nbsp;&nbsp;<span class="comment">&lt;!-- Low-res map scaled to full viewport --&gt;</span><br>
-    &nbsp;&nbsp;<span class="tag">&lt;feImage</span> <span class="attr">href</span>=<span class="val">"data:image/png;…"</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">x</span>=<span class="val">"0"</span> <span class="attr">y</span>=<span class="val">"0"</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">width</span>=<span class="val">"{vw}"</span> <span class="attr">height</span>=<span class="val">"{vh}"</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">result</span>=<span class="val">"map"</span>/&gt;<br>
+  
+  <div class="code">
+    <span class="tag">&lt;filter</span> <span class="attr">id</span>=<span class="val">"glass"</span>&gt;<br>
+    &nbsp;&nbsp;<span class="tag">&lt;feImage</span> <span class="attr">href</span>=<span class="val">"map.png"</span> <span class="attr">result</span>=<span class="val">"map"</span>/&gt;<br>
     &nbsp;&nbsp;<span class="tag">&lt;feDisplacementMap</span><br>
     &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">in</span>=<span class="val">"SourceGraphic"</span><br>
     &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">in2</span>=<span class="val">"map"</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">scale</span>=<span class="val">"45"</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">result</span>=<span class="val">"displaced"</span>/&gt;<br>
-    &nbsp;&nbsp;<span class="tag">&lt;feSpecularLighting</span> <span class="attr">in</span>=<span class="val">"map"</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">surfaceScale</span>=<span class="val">"3"</span> <span class="attr">specularConstant</span>=<span class="val">"0.6"</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">lighting-color</span>=<span class="val">"#ffffff"</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">result</span>=<span class="val">"spec"</span>&gt;<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="tag">&lt;fePointLight</span> <span class="attr">x</span>=<span class="val">"{cx}"</span> <span class="attr">y</span>=<span class="val">"{cy}"</span> <span class="attr">z</span>=<span class="val">"90"</span>/&gt;<br>
-    &nbsp;&nbsp;<span class="tag">&lt;/feSpecularLighting&gt;</span><br>
-    &nbsp;&nbsp;<span class="tag">&lt;feComposite</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">in</span>=<span class="val">"spec"</span> <span class="attr">in2</span>=<span class="val">"displaced"</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">operator</span>=<span class="val">"arithmetic"</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">k2</span>=<span class="val">"1"</span> <span class="attr">k3</span>=<span class="val">"1"</span>/&gt;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">xChannelSelector</span>=<span class="val">"R"</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">yChannelSelector</span>=<span class="val">"G"</span>/&gt;<br>
     <span class="tag">&lt;/filter&gt;</span>
   </div>
-
-  <p class="drag-hint">Drag anywhere to move the lens</p>
 </div>
 
-<!-- ═══════════════ LENS INDICATORS ═══════════════ -->
+<!-- Lens indicators -->
 <div id="lens-ring"></div>
 <div id="lens-dot"></div>
 
-<!-- ═══════════════ DRAG LAYER ═══════════════ -->
-<div id="drag-layer"></div>
-
-<!-- Subtle vignette for depth -->
-<div class="vignette"></div>
-
-<!-- ═══════════════ CONTROLS ═══════════════ -->
+<!-- Controls -->
 <div class="controls">
-  <label>Scale <input type="range" id="ctrl-scale" min="5" max="100" value="45"><span class="val" id="val-scale">45</span></label>
-  <label>Radius <input type="range" id="ctrl-radius" min="10" max="180" value="110"><span class="val" id="val-radius">110</span></label>
-  <label>Size <input type="range" id="ctrl-size" min="120" max="500" value="260"><span class="val" id="val-size">260</span></label>
-  <label>Gloss <input type="range" id="ctrl-gloss" min="0" max="8" step="0.5" value="3"><span class="val" id="val-gloss">3</span></label>
+  <label>Scale <input type="range" id="ctrl-scale" min="5" max="80" value="40"><span class="val" id="val-scale">40</span></label>
+  <label>Size <input type="range" id="ctrl-size" min="100" max="300" value="180"><span class="val" id="val-size">180</span></label>
+  <label>Gloss <input type="range" id="ctrl-gloss" min="0" max="6" step="0.5" value="2"><span class="val" id="val-gloss">2</span></label>
 </div>
+<div class="hint">Hover over the card to see the effect</div>
 
-<!-- ═══════════════════════════════════════════════
-   JAVASCRIPT
-   ═══════════════════════════════════════════════ -->
 <script>
 (function(){
 'use strict';
 
-// ─── DOM refs ──────────────────────────────────────
 const $ = id => document.getElementById(id);
-const filterSvg = $('filter-svg');
-const content   = $('content');
-const ring      = $('lens-ring');
-const dot       = $('lens-dot');
-const dragLayer = $('drag-layer');
+const svg = $('filter-svg');
+const card = $('card');
+const ring = $('lens-ring');
+const dot = $('lens-dot');
 
 // ─── State ────────────────────────────────────────
-let targetX   = window.innerWidth / 2;
-let targetY   = window.innerHeight / 2;
-let currentX  = targetX;
-let currentY  = targetY;
-let dragging  = false;
-let frameId   = 0;
-let rafId     = null;
-
-// Map generation cache
+let lensCX = 0, lensCY = 0;    // lens center (in card coordinate space for map generation)
+let frameId = 0;
+let rafId = null;
 let mapCache = null;
 let mapCacheKey = '';
 
-// Default parameters
 const P = {
-  scale: 45,
-  radius: 110,
-  size: 260,
-  gloss: 3
+  scale: 40,
+  size: 180,
+  gloss: 2
 };
 
-// ═══════════════════════════════════════════════════
-// LOW-RESOLUTION FULL-VIEWPORT DISPLACEMENT MAP
-//
-// Map is generated at 1/10th viewport resolution.
-// For 1920×1080: 192×108 = ~20K pixels total.
-// Only lens bounding box pixels are iterated (~676 px
-// for a 260px lens at 1/10th scale).
-//
-// Map content:
-//   - Outside lens: R=128, G=128, B=0, A=0 (neutral)
-//   - Inside lens:  R/G = sinusoidal displacement,
-//                   A=255 (enables specular)
-//
-// feImage loads this tiny map and SVG scales it to
-// full viewport size with bilinear interpolation.
-// ═══════════════════════════════════════════════════
-
-const MAP_SCALE = 10; // 1/10th viewport resolution
-
-function getViewportDims() {
-  return {
-    vw: window.innerWidth,
-    vh: window.innerHeight
-  };
+// ─── Utility: card bounding rect ──────────────────
+function cardBounds() {
+  return card.getBoundingClientRect();
 }
 
-/**
- * Generate a 1/10th-viewport displacement map as a PNG data URL.
- * @param {number} vw - viewport width
- * @param {number} vh - viewport height
- * @param {number} lensCX - lens center X in viewport coords
- * @param {number} lensCY - lens center Y in viewport coords
- * @param {number} lensSize - lens width/height
- * @param {number} cornerRadius - corner radius for rounded rect
- * @returns {string} data:image/png;base64,...
- */
-function generateLowResMap(vw, vh, lensCX, lensCY, lensSize, cornerRadius) {
-  // Quantize lens position to 3px grid for caching
-  const Q = 3;
-  const qCX = Math.round(lensCX / Q) * Q;
-  const qCY = Math.round(lensCY / Q) * Q;
+// ═══════════════════════════════════════════════════
+// GENERATE DISPLACEMENT MAP
+// Map is sized to the card (NOT the viewport)
+// Resolution: 1/2 of card size (smooth, fast)
+// ═══════════════════════════════════════════════════
+const MAP_SCALE = 2; // 1/2 card resolution
 
-  const key = `${vw}|${vh}|${qCX}|${qCY}|${lensSize}|${cornerRadius}`;
+function genMap(br, lx, ly) {
+  // lx, ly = lens center relative to card (0=left/top of card)
+  const key = `${br.width}|${br.height}|${lx}|${ly}|${P.size}`;
+  if (mapCache && mapCacheKey === key) return mapCache;
 
-  // Return cached map if unchanged
-  if (mapCache && mapCacheKey === key) {
-    return mapCache;
-  }
-
-  // Low-resolution map dimensions (1/MAP_SCALE of viewport)
-  const mw = Math.ceil(vw / MAP_SCALE);
-  const mh = Math.ceil(vh / MAP_SCALE);
+  const mw = Math.ceil(br.width / MAP_SCALE);
+  const mh = Math.ceil(br.height / MAP_SCALE);
 
   const canvas = document.createElement('canvas');
-  canvas.width  = mw;
-  canvas.height = mh;
+  canvas.width = mw; canvas.height = mh;
   const ctx = canvas.getContext('2d');
   const img = ctx.createImageData(mw, mh);
-  const d   = img.data;
+  const d = img.data;
 
-  // ── Fast fill: neutral everywhere ──
-  // Uint32 view (little-endian): R=0x80, G=0x80, B=0x00, A=0x00
-  // neutral = 0x00008080 = 32896
+  // Fast fill: neutral everywhere (R=128, G=128, B=0, A=0)
   const buf = new Uint32Array(d.buffer);
   buf.fill(0x8080);
 
-  // ── Compute lens region in map coordinates ──
-  const halfSize = lensSize / 2;
-  const mcx = lensCX / MAP_SCALE;
-  const mcy = lensCY / MAP_SCALE;
-  const mlw = lensSize / MAP_SCALE;
-  const mlh = lensSize / MAP_SCALE;
-  const cr  = Math.min(cornerRadius / MAP_SCALE, mlw / 2, mlh / 2);
+  // Lens in map coordinates (relative to card)
+  const mlx = Math.floor(lx / MAP_SCALE);
+  const mly = Math.floor(ly / MAP_SCALE);
+  const mlw = Math.ceil(P.size / MAP_SCALE);
+  const mlh = Math.ceil(P.size / MAP_SCALE);
   const hw = mlw / 2;
   const hh = mlh / 2;
+  const mcx = mlx + hw; // lens center in map coords
+  const mcy = mly + hh;
 
-  // Bounding box in map pixels
-  const mlx = mcx - hw;
-  const mly = mcy - hh;
-  const bx0 = Math.max(0, Math.floor(mlx));
-  const by0 = Math.max(0, Math.floor(mly));
-  const bx1 = Math.min(mw, Math.ceil(mlx + mlw));
-  const by1 = Math.min(mh, Math.ceil(mly + mlh));
+  // Lens bounding box in map pixels
+  const bx0 = Math.max(0, mlx);
+  const by0 = Math.max(0, mly);
+  const bx1 = Math.min(mw, mlx + mlw);
+  const by1 = Math.min(mh, mly + mlh);
 
-  // ── Rounded rectangle test ──
-  function isInsideRoundedRect(rx, ry) {
-    const dx = Math.abs(rx);
-    const dy = Math.abs(ry);
-    if (dx <= hw - cr && dy <= hh) return { inside: true, edgeDist: hh - dy };
-    if (dy <= hh - cr && dx <= hw) return { inside: true, edgeDist: hw - dx };
-    if (dx > hw - cr && dy > hh - cr && dx <= hw && dy <= hh) {
-      const cdx = dx - (hw - cr);
-      const cdy = dy - (hh - cr);
-      const cornerDist = Math.sqrt(cdx * cdx + cdy * cdy);
-      if (cornerDist <= cr) {
-        return { inside: true, edgeDist: cr - cornerDist };
-      }
-    }
-    return { inside: false, edgeDist: 0 };
-  }
-
-  // ── Draw lens pixels ──
-  // Only iterate pixels within the lens bounding box (~676 px at 1/10th scale)
   for (let my = by0; my < by1; my++) {
     for (let mx = bx0; mx < bx1; mx++) {
       const rx = mx - mcx;
       const ry = my - mcy;
-      const test = isInsideRoundedRect(rx, ry);
-      if (!test.inside) continue;
+      const dist = Math.sqrt(rx * rx + ry * ry);
+      const maxDist = Math.max(hw, hh); // simplified: circular lens for now
+      
+      if (dist > maxDist) continue; // outside lens
 
-      const i = (my * mw + mx) * 4;
-
-      // Sinusoidal displacement gradient peaking at edges
-      const distFromCenter = Math.sqrt(rx * rx + ry * ry);
-      const totalDist = distFromCenter + Math.max(test.edgeDist, 0.001);
-      const t = Math.min(1, distFromCenter / totalDist);
+      // Sinusoidal: 0 at center, 1 at edge
+      const t = Math.min(1, dist / maxDist);
       const factor = Math.sin(t * Math.PI / 2);
 
-      const len = distFromCenter > 0.001 ? distFromCenter : 1;
+      const len = dist > 0.001 ? dist : 1;
       const nx = rx / len;
       const ny = ry / len;
-
       const amp = factor * 127;
-      d[i]     = Math.round(128 + nx * amp);  // R: horizontal displacement
-      d[i + 1] = Math.round(128 + ny * amp);  // G: vertical displacement
-      d[i + 2] = 0;                            // B: unused
-      d[i + 3] = 255;                          // A: lens mask (enables specular)
+
+      const i = (my * mw + mx) * 4;
+      d[i]     = Math.round(128 + nx * amp);
+      d[i + 1] = Math.round(128 + ny * amp);
+      d[i + 2] = 0;
+      d[i + 3] = 255;
     }
   }
 
   ctx.putImageData(img, 0, 0);
   const url = canvas.toDataURL('image/png');
-
-  // Cache result
   mapCache = url;
   mapCacheKey = key;
-
   return url;
 }
 
-// Clear map cache (on resize or shape change)
-function clearMapCache() {
-  mapCache = null;
-  mapCacheKey = '';
-}
+function clearMapCache() { mapCache = null; mapCacheKey = ''; }
 
 // ═══════════════════════════════════════════════════
-// SVG FILTER CONSTRUCTION — MINIMAL CHAIN
-//
-// Pipeline (4 primitives, 5 with optional blur):
-//   feImage(map) → map
-//   [feGaussianBlur(map, gloss) → softMap]  (optional, when gloss>0)
-//   feDisplacementMap(SourceGraphic, map/softMap) → displaced
-//   feSpecularLighting(map/softMap) → spec
-//   feComposite(spec, displaced, arithmetic) → output
-//
-// The map's A channel controls specular visibility:
-//   A=255 inside lens → specular highlight
-//   A=0 outside lens → transparent → no effect
-//
-// R/G=128 outside lens → zero displacement → content unchanged.
+// BUILD SVG FILTER (minimal chain)
 // ═══════════════════════════════════════════════════
-
-function buildFilterElement(id, vw, vh, lensCX, lensCY, mapUrl, scale, gloss) {
+function buildFilter(id, br, mapUrl, gloss) {
   const NS = 'http://www.w3.org/2000/svg';
+  const f = document.createElementNS(NS, 'filter');
+  f.setAttribute('id', id);
+  f.setAttribute('filterUnits', 'userSpaceOnUse');
+  // No x/y/w/h — default bounds cover the card element fully
+  f.setAttribute('colorInterpolationFilters', 'sRGB');
 
-  const filter = document.createElementNS(NS, 'filter');
-  filter.setAttribute('id', id);
-  filter.setAttribute('filterUnits', 'userSpaceOnUse');
-  // No x/y/w/h — full element coverage (defaults: -10% to 120%)
-  filter.setAttribute('colorInterpolationFilters', 'sRGB');
+  // feImage: map covers the card
+  const fi = document.createElementNS(NS, 'feImage');
+  fi.setAttribute('href', mapUrl);
+  fi.setAttribute('x', String(Math.round(br.left)));
+  fi.setAttribute('y', String(Math.round(br.top)));
+  fi.setAttribute('width', String(Math.round(br.width)));
+  fi.setAttribute('height', String(Math.round(br.height)));
+  fi.setAttribute('preserveAspectRatio', 'none');
+  fi.setAttribute('result', 'map');
+  fi.setAttribute('crossorigin', 'anonymous');
+  f.appendChild(fi);
 
-  // ── (1) Load low-res map, scaled to full viewport ──
-  const feImg = document.createElementNS(NS, 'feImage');
-  feImg.setAttribute('href', mapUrl);
-  feImg.setAttribute('x', '0');
-  feImg.setAttribute('y', '0');
-  feImg.setAttribute('width',  String(vw));
-  feImg.setAttribute('height', String(vh));
-  feImg.setAttribute('result', 'map');
-  feImg.setAttribute('crossorigin', 'anonymous');
-  feImg.setAttribute('preserveAspectRatio', 'none');
-  filter.appendChild(feImg);
-
-  // Determine input name for subsequent primitives
   let mapInput = 'map';
 
-  // ── (2) Optional blur for smoother glass ──
+  // Optional gloss blur
   if (gloss > 0) {
-    const blurNode = document.createElementNS(NS, 'feGaussianBlur');
-    blurNode.setAttribute('in', 'map');
-    blurNode.setAttribute('stdDeviation', String(gloss));
-    blurNode.setAttribute('result', 'softMap');
-    filter.appendChild(blurNode);
+    const bl = document.createElementNS(NS, 'feGaussianBlur');
+    bl.setAttribute('in', 'map');
+    bl.setAttribute('stdDeviation', String(gloss));
+    bl.setAttribute('result', 'softMap');
+    f.appendChild(bl);
     mapInput = 'softMap';
   }
 
-  // ── (3) Single displacement pass (no chromatic aberration) ──
+  // Single feDisplacementMap
   const disp = document.createElementNS(NS, 'feDisplacementMap');
   disp.setAttribute('in', 'SourceGraphic');
   disp.setAttribute('in2', mapInput);
-  disp.setAttribute('scale', String(Math.round(scale)));
+  disp.setAttribute('scale', String(Math.round(P.scale)));
   disp.setAttribute('xChannelSelector', 'R');
   disp.setAttribute('yChannelSelector', 'G');
   disp.setAttribute('result', 'displaced');
-  filter.appendChild(disp);
+  f.appendChild(disp);
 
-  // ── (4) Specular highlight from map alpha ──
-  const specLight = document.createElementNS(NS, 'feSpecularLighting');
-  specLight.setAttribute('in', mapInput);
-  specLight.setAttribute('surfaceScale', '3');
-  specLight.setAttribute('specularConstant', '0.6');
-  specLight.setAttribute('specularExponent', '30');
-  specLight.setAttribute('lighting-color', '#ffffff');
-  specLight.setAttribute('result', 'spec');
+  // Specular highlight
+  const sl = document.createElementNS(NS, 'feSpecularLighting');
+  sl.setAttribute('in', mapInput);
+  sl.setAttribute('surfaceScale', '3');
+  sl.setAttribute('specularConstant', '0.6');
+  sl.setAttribute('specularExponent', '30');
+  sl.setAttribute('lighting-color', '#ffffff');
+  sl.setAttribute('result', 'spec');
 
-  const ptLight = document.createElementNS(NS, 'fePointLight');
-  ptLight.setAttribute('x', String(Math.round(lensCX)));
-  ptLight.setAttribute('y', String(Math.round(lensCY)));
-  ptLight.setAttribute('z', '90');
-  specLight.appendChild(ptLight);
-  filter.appendChild(specLight);
+  const pl = document.createElementNS(NS, 'fePointLight');
+  pl.setAttribute('x', String(Math.round(br.left + lensCX)));
+  pl.setAttribute('y', String(Math.round(br.top + lensCY)));
+  pl.setAttribute('z', '90');
+  sl.appendChild(pl);
+  f.appendChild(sl);
 
-  // ── (5) Composite: add specular atop displaced content ──
-  // arithmetic: result = k1*i1*i2 + k2*i1 + k3*i2 + k4
-  // k2=1, k3=1: spec + displaced. Outside lens, spec=(0,0,0,0)
-  //   so result = displaced (unchanged). Inside lens, spec
-  //   highlight adds to displaced content.
+  // Composite specular over displaced
   const comp = document.createElementNS(NS, 'feComposite');
   comp.setAttribute('in', 'spec');
   comp.setAttribute('in2', 'displaced');
@@ -721,162 +338,129 @@ function buildFilterElement(id, vw, vh, lensCX, lensCY, mapUrl, scale, gloss) {
   comp.setAttribute('k2', '1');
   comp.setAttribute('k3', '1');
   comp.setAttribute('k4', '0');
-  filter.appendChild(comp);
+  f.appendChild(comp);
 
-  return filter;
+  return f;
 }
 
 // ═══════════════════════════════════════════════════
 // FRAME UPDATE
 // ═══════════════════════════════════════════════════
+function update() {
+  const br = cardBounds();
+  const clx = lensCX - P.size / 2;
+  const cly = lensCY - P.size / 2;
 
-function updateFrame() {
-  const { vw, vh } = getViewportDims();
+  // Generate map (lens position relative to card top-left)
+  const mapUrl = genMap(br, clx, cly);
 
-  // Clamp lens position to viewport
-  const hw = P.size / 2;
-  const lensCX = Math.max(hw, Math.min(currentX, vw - hw));
-  const lensCY = Math.max(hw, Math.min(currentY, vh - hw));
-
-  // Generate (or retrieve cached) low-res map
-  const cornerR = Math.min(P.radius * 0.45, hw * 0.8);
-  const mapUrl = generateLowResMap(vw, vh, lensCX, lensCY, P.size, cornerR);
-
-  // New filter id every frame (defeats Safari filter output cache)
-  const filterId = 'glass-' + (frameId++);
-
-  // Build and insert filter
-  const filterEl = buildFilterElement(
-    filterId, vw, vh, lensCX, lensCY, mapUrl,
-    P.scale, P.gloss
-  );
+  // Build filter with fresh ID
+  const id = 'glass-' + (frameId++);
+  const f = buildFilter(id, br, mapUrl, P.gloss);
 
   // Replace old filter
-  const oldFilter = filterSvg.querySelector('filter');
-  if (oldFilter) oldFilter.remove();
-  filterSvg.appendChild(filterEl);
+  const old = svg.querySelector('filter');
+  if (old) old.remove();
+  svg.appendChild(f);
 
-  // Apply filter to content
-  content.style.filter = `url(#${filterId})`;
+  // Apply to card
+  card.style.filter = `url(#${id})`;
 
-  // Update visual indicators
-  const lensX = lensCX - hw;
-  const lensY = lensCY - hw;
-  ring.style.left   = lensX + 'px';
-  ring.style.top    = lensY + 'px';
-  ring.style.width  = P.size + 'px';
+  // Update lens ring indicator
+  ring.style.left = (br.left + clx) + 'px';
+  ring.style.top = (br.top + cly) + 'px';
+  ring.style.width = P.size + 'px';
   ring.style.height = P.size + 'px';
+  ring.style.opacity = '1';
 
-  dot.style.left = lensCX + 'px';
-  dot.style.top  = lensCY + 'px';
+  dot.style.left = (br.left + lensCX) + 'px';
+  dot.style.top = (br.top + lensCY) + 'px';
+  dot.style.opacity = '1';
+}
+
+function hideLens() {
+  ring.style.opacity = '0';
+  dot.style.opacity = '0';
+  card.style.filter = '';
+  const old = svg.querySelector('filter');
+  if (old) old.remove();
 }
 
 // ═══════════════════════════════════════════════════
-// ANIMATION LOOP — lerp toward target
+// ANIMATION LOOP
 // ═══════════════════════════════════════════════════
-
-const LERP = 0.22;
+let targetX = -999, targetY = -999;
+let currentX = -999, currentY = -999;
+let active = false;
+const LERP = 0.25;
 
 function animate() {
-  currentX += (targetX - currentX) * LERP;
-  currentY += (targetY - currentY) * LERP;
-  updateFrame();
+  if (active) {
+    currentX += (targetX - currentX) * LERP;
+    currentY += (targetY - currentY) * LERP;
+    // Clamp to card bounds
+    const br = cardBounds();
+    lensCX = Math.max(P.size/2, Math.min(br.width - P.size/2, currentX));
+    lensCY = Math.max(P.size/2, Math.min(br.height - P.size/2, currentY));
+    update();
+  }
   rafId = requestAnimationFrame(animate);
 }
 
 // ═══════════════════════════════════════════════════
-// INPUT HANDLING — mouse & touch
+// INPUT
 // ═══════════════════════════════════════════════════
-
-function setTarget(x, y) {
-  targetX = x;
-  targetY = y;
-}
-
-dragLayer.addEventListener('mousedown', e => {
-  dragging = true;
-  dragLayer.classList.add('dragging');
-  setTarget(e.clientX, e.clientY);
-});
-document.addEventListener('mousemove', e => {
-  if (dragging) setTarget(e.clientX, e.clientY);
-});
-document.addEventListener('mouseup', () => {
-  dragging = false;
-  dragLayer.classList.remove('dragging');
-});
-
-dragLayer.addEventListener('touchstart', e => {
-  dragging = true;
-  const t = e.touches[0];
-  setTarget(t.clientX, t.clientY);
-}, { passive: true });
-document.addEventListener('touchmove', e => {
-  if (dragging) {
-    const t = e.touches[0];
-    setTarget(t.clientX, t.clientY);
+card.addEventListener('mousemove', e => {
+  const br = cardBounds();
+  targetX = e.clientX - br.left;
+  targetY = e.clientY - br.top;
+  if (!active) {
+    active = true;
+    currentX = targetX;
+    currentY = targetY;
   }
-}, { passive: true });
-document.addEventListener('touchend', () => {
-  dragging = false;
 });
 
-// Also move lens on hover when not dragging
-document.addEventListener('mousemove', e => {
-  if (!dragging) setTarget(e.clientX, e.clientY);
-});
+card.addEventListener('mouseenter', () => { active = true; });
+card.addEventListener('mouseleave', () => { active = false; hideLens(); });
+
+// Touch
+card.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const br = cardBounds();
+  const t = e.touches[0];
+  targetX = t.clientX - br.left;
+  targetY = t.clientY - br.top;
+  if (!active) { active = true; currentX = targetX; currentY = targetY; }
+}, { passive: false });
+
+card.addEventListener('touchend', () => { active = false; hideLens(); });
 
 // ═══════════════════════════════════════════════════
 // CONTROLS
 // ═══════════════════════════════════════════════════
-
-function bindSlider(id, param, valId, onChange) {
-  const slider = $(id);
-  const display = $(valId);
-  slider.addEventListener('input', () => {
-    const v = parseFloat(slider.value);
-    display.textContent = slider.value;
-    if (param) P[param] = v;
-    if (onChange) onChange(v);
-  });
-}
-
-bindSlider('ctrl-scale',  'scale',  'val-scale',  () => {});
-bindSlider('ctrl-radius', 'radius', 'val-radius', () => { clearMapCache(); });
-bindSlider('ctrl-size',   'size',   'val-size',   () => { clearMapCache(); });
-bindSlider('ctrl-gloss',  'gloss',  'val-gloss',  () => {});
-
-// ═══════════════════════════════════════════════════
-// RESIZE HANDLER
-// ═══════════════════════════════════════════════════
-
-let resizeTimer;
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
-    clearMapCache();
-    targetX = currentX = window.innerWidth / 2;
-    targetY = currentY = window.innerHeight / 2;
-  }, 200);
+$('ctrl-scale').addEventListener('input', function() {
+  P.scale = parseInt(this.value);
+  $('val-scale').textContent = P.scale;
+  clearMapCache();
+});
+$('ctrl-size').addEventListener('input', function() {
+  P.size = parseInt(this.value);
+  $('val-size').textContent = P.size;
+  clearMapCache();
+});
+$('ctrl-gloss').addEventListener('input', function() {
+  P.gloss = parseFloat(this.value);
+  $('val-gloss').textContent = P.gloss;
+  clearMapCache();
 });
 
-// ═══════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════
+// Init
+$('val-scale').textContent = P.scale;
+$('val-size').textContent = P.size;
+$('val-gloss').textContent = P.gloss;
 
-function init() {
-  targetX  = currentX = window.innerWidth / 2;
-  targetY  = currentY = window.innerHeight / 2;
-  updateFrame();
-  rafId = requestAnimationFrame(animate);
-}
-
-if (document.readyState === 'complete') {
-  init();
-} else {
-  window.addEventListener('load', init);
-}
-
+animate();
 })();
 </script>
 </body>
