@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Aave Liquid Glass — SVG feDisplacementMap Lens</title>
+<title>Aave Liquid Glass — Full-Viewport Displacement Map Lens</title>
 <style>
 /* ═══════════════════════════════════════════════
    RESET & BASE
@@ -58,7 +58,9 @@ body::before{
   align-items:center;justify-content:center;
   padding:2rem;text-align:center;
   /* filter is applied via JS dynamically */
-  /* The SVG filter's userSpaceOnUse region clips displacement to the lens area */
+  /* The SVG filter covers the FULL element (default bounds).
+     Displacement only happens where the viewport-sized map
+     has non-neutral pixels — i.e., at the lens position. */
 }
 
 /* ── Vignette overlay ── */
@@ -343,8 +345,9 @@ body::before{
   <h1 class="hero-title">Liquid Glass</h1>
   <p class="hero-sub">
     A single SVG <code>feDisplacementMap</code> with a
-    <code>filterUnits=&quot;userSpaceOnUse&quot;</code> moving filter region —
-    refracting live DOM. No WebGL, no canvas copying, no hidden duplicates.
+    full-viewport displacement map — the lens position is encoded
+    <em>inside the map pixels</em>, not via filter bounds.
+    No clipping. No WebGL. No hidden duplicates.
   </p>
 
   <div class="stats-row">
@@ -376,42 +379,41 @@ body::before{
     </div>
     <div class="feature-card">
       <div class="feature-icon">⚡</div>
-      <h4>Zero Copies</h4>
-      <p>No offscreen DOM or canvas duplication</p>
+      <h4>No Clipping</h4>
+      <p>Full-viewport map — content outside lens stays visible</p>
     </div>
   </div>
 
   <div class="arch-section">
-    <h3>▸ How the moving filter region works</h3>
-    <div class="arch-row"><span class="arch-num">1</span>A canvas-generated <code>PNG</code> the size of the lens encodes displacement vectors — <code>R=128</code> is neutral, edge values peak via sinusoidal gradient.</div>
-    <div class="arch-row"><span class="arch-num">2</span>The SVG <code>&lt;filter&gt;</code> uses <code>filterUnits=&quot;userSpaceOnUse&quot;</code> so its <code>x</code> / <code>y</code> attributes place the lens in viewport coordinates.</div>
-    <div class="arch-row"><span class="arch-num">3</span><code>feImage</code> loads the map at <code>(0,0)</code> relative to the filter region. <code>feDisplacementMap</code> displaces <code>SourceGraphic</code> using the map.</div>
-    <div class="arch-row"><span class="arch-num">4</span>Each frame: assign a fresh filter <code>id</code>, set <code>x</code>/<code>y</code> to the lerped cursor position — Safari's filter cache is defeated, lens moves.</div>
+    <h3>▸ Full-viewport displacement map approach</h3>
+    <div class="arch-row"><span class="arch-num">1</span>A canvas generates a <strong>viewport-sized</strong> displacement map (at half resolution). The lens shape — a rounded rect with a sinusoidal gradient — is drawn at the current cursor position. Everywhere else is neutral (<code>R=128, G=128</code>) = no displacement.</div>
+    <div class="arch-row"><span class="arch-num">2</span>The SVG <code>&lt;filter&gt;</code> uses <strong>default bounds</strong> (no <code>x</code>/<code>y</code>/<code>width</code>/<code>height</code>) — the filter covers the full element. <code>feImage</code> loads the map at <code>(0, 0, viewportW, viewportH)</code>.</div>
+    <div class="arch-row"><span class="arch-num">3</span><code>feDisplacementMap</code> samples the map at each pixel. Neutral map pixels → no displacement (content renders normally). Map pixels at the lens position → displacement → refraction effect.</div>
+    <div class="arch-row"><span class="arch-num">4</span>Each frame: assign a fresh filter <code>id</code> (Safari cache workaround). The map is regenerated only when the lens moves &gt;3 px — cached per quantized position.</div>
   </div>
 
   <div class="feature-list">
-    <div class="feature-item"><span class="dot"></span>Single <code>&lt;filter&gt;</code> applied to content container — browser composites only the lens region</div>
+    <div class="feature-item"><span class="dot"></span>Single <code>&lt;filter&gt;</code> with default bounds — no filter-region clipping</div>
     <div class="feature-item"><span class="dot"></span>Fresh filter <code>id</code> every frame — defeats Safari's filter output cache</div>
-    <div class="feature-item"><span class="dot"></span>Canvas-generated displacement map — lens‑sized PNG with sinusoidal gradient peaking at edges</div>
-    <div class="feature-item"><span class="dot"></span><code>feSpecularLighting</code> + <code>fePointLight</code> for realistic glass highlight</div>
+    <div class="feature-item"><span class="dot"></span>Full-viewport canvas map (½ res) — lens drawn at cursor position, neutral elsewhere</div>
+    <div class="feature-item"><span class="dot"></span>Map regenerated on &gt;3 px movement — Uint32Array fill for fast neutral clearing</div>
   </div>
 
   <div class="code-card">
     <span class="tag">&lt;filter</span> <span class="attr">id</span>=<span class="val">"glass-42"</span><br>
     &nbsp;&nbsp;<span class="attr">filterUnits</span>=<span class="val">"userSpaceOnUse"</span><br>
-    &nbsp;&nbsp;<span class="attr">x</span>=<span class="val">"{lensX}"</span> <span class="attr">y</span>=<span class="val">"{lensY}"</span><br>
-    &nbsp;&nbsp;<span class="attr">width</span>=<span class="val">"{lensW}"</span> <span class="attr">height</span>=<span class="val">"{lensH}"</span><br>
     &nbsp;&nbsp;<span class="attr">colorInterpolationFilters</span>=<span class="val">"sRGB"</span>&gt;<br>
-    &nbsp;&nbsp;<span class="tag">&lt;feImage</span> <span class="attr">href</span>=<span class="val">"map.png"</span> <span class="attr">result</span>=<span class="val">"map"</span>/&gt;<br>
+    &nbsp;&nbsp;<span class="comment">&lt;!-- No x/y/w/h — defaults cover -10% to 120% --&gt;</span><br>
+    &nbsp;&nbsp;<span class="tag">&lt;feImage</span> <span class="attr">href</span>=<span class="val">"full-map.png"</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">x</span>=<span class="val">"0"</span> <span class="attr">y</span>=<span class="val">"0"</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">width</span>=<span class="val">"{vw}"</span> <span class="attr">height</span>=<span class="val">"{vh}"</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">result</span>=<span class="val">"map"</span>/&gt;<br>
     &nbsp;&nbsp;<span class="tag">&lt;feDisplacementMap</span><br>
     &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">in</span>=<span class="val">"SourceGraphic"</span><br>
     &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">in2</span>=<span class="val">"map"</span><br>
     &nbsp;&nbsp;&nbsp;&nbsp;<span class="attr">scale</span>=<span class="val">"45"</span>/&gt;<br>
-    &nbsp;&nbsp;<span class="tag">&lt;feSpecularLighting</span> <span class="attr">in</span>=<span class="val">"map"</span>&gt;<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="tag">&lt;fePointLight</span> <span class="attr">x</span>=<span class="val">"..."</span> <span class="attr">y</span>=<span class="val">"..."</span> <span class="attr">z</span>=<span class="val">"90"</span>/&gt;<br>
-    &nbsp;&nbsp;<span class="tag">&lt;/feSpecularLighting&gt;</span><br>
     <span class="tag">&lt;/filter&gt;</span><br>
-    <span class="comment">← filter region moves with cursor</span>
+    <span class="comment">← lens position is inside the map, not the filter</span>
   </div>
 
   <p class="drag-hint">Drag anywhere to move the lens</p>
@@ -460,8 +462,13 @@ let dragging  = false;
 let frameId   = 0;
 let rafId     = null;
 
-// Map cache: key → dataURL
-const mapCache = {};
+// Last lens position that triggered a map rebuild
+let lastMapCX = -9999;
+let lastMapCY = -9999;
+
+// Map cache: key → dataURL (cleared on resize/shape change)
+let mapCache = null;
+let mapCacheKey = '';
 
 // Default parameters
 const P = {
@@ -473,166 +480,211 @@ const P = {
 };
 
 // ═══════════════════════════════════════════════════
-// DISPLACEMENT MAP GENERATION
+// FULL-VIEWPORT DISPLACEMENT MAP GENERATION
 //
-// The displacement map is a small canvas-generated PNG the size of the lens.
-// Each pixel encodes a displacement vector:
-//   - R channel: horizontal displacement (128 = neutral, no displacement)
-//   - G channel: vertical displacement
-//   - B channel: unused (set to 0)
-//   - A channel: always 255
+// Instead of generating a small lens-sized map and
+// positioning it via filter x/y (which clipped content),
+// we generate a viewport-sized map where:
 //
-// The map shape is a rounded rectangle. Inside the shape, a sinusoidal
-// gradient peaks at the edges (maximum displacement) and falls to zero
-// at the center. Outside the shape, pixels are neutral (R=128, G=128).
+//   - Every pixel starts neutral: R=128, G=128, B=0, A=0
+//     (R=128/G=128 → no displacement; A=0 → no glow mask)
 //
-// This creates a bulge/magnify effect: content near the lens edge is
-// displaced outward, stretching the view under the lens.
+//   - At the lens position, we draw a rounded rectangle
+//     with the sinusoidal displacement gradient. R and G
+//     deviate from 128 proportionally to the displacement
+//     direction and magnitude. A=255 inside the lens
+//     (marks the area for specular/glow masking).
 //
-// The map is cached by parameter key (size + corner radius) since it
-// only needs regeneration when the lens shape changes, not every frame.
+// The feImage loads this full map at (0,0) covering the
+// entire viewport. feDisplacementMap samples it for every
+// pixel. Neutral pixels → no displacement → content
+// visible. Lens pixels → displacement → refraction.
+//
+// PERFORMANCE:
+//   - Half resolution (viewport / 2) — SVG scales it up
+//   - Uint32Array.fill() for instant neutral fill
+//   - Only iterate pixels within the lens bounding box
+//   - Cache by quantized position (3 px grid)
+//   - Regenerates only when lens moves >3 px or shape changes
 // ═══════════════════════════════════════════════════
 
+const MAP_SCALE = 2; // divide viewport dimensions by this
+
+function getViewportDims() {
+  return {
+    vw: window.innerWidth,
+    vh: window.innerHeight
+  };
+}
+
 /**
- * Generate a lens-sized displacement map as a PNG data URL.
- * The map is a rounded rectangle with a sinusoidal gradient
- * peaking at the edges. R = horizontal displ, G = vertical displ.
- * Outside the rounded rect: R=128 G=128 (neutral = no displacement).
+ * Generate a full-viewport displacement map as a PNG data URL.
+ * The map is viewportW/MAP_SCALE × viewportH/MAP_SCALE pixels.
+ * The lens rounded rect is drawn at the quantized lens position.
  *
- * @param {number} w - lens width (px)
- * @param {number} h - lens height (px)
- * @param {number} cornerRadius - corner radius of the rounded rect
+ * @param {number} vw - viewport width (px)
+ * @param {number} vh - viewport height (px)
+ * @param {number} lensCX - lens center X in viewport coords
+ * @param {number} lensCY - lens center Y in viewport coords
+ * @param {number} lensSize - lens width/height (square) in viewport px
+ * @param {number} cornerRadius - corner radius for the rounded rect
  * @returns {string} data:image/png;base64,...
  */
-function generateMap(w, h, cornerRadius) {
-  const key = `${w}|${h}|${cornerRadius}`;
-  if (mapCache[key]) return mapCache[key];
+function generateFullViewportMap(vw, vh, lensCX, lensCY, lensSize, cornerRadius) {
+  // Quantize lens position to 3px grid (viewport coords)
+  const Q = 3;
+  const qCX = Math.round(lensCX / Q) * Q;
+  const qCY = Math.round(lensCY / Q) * Q;
+
+  const key = `${vw}|${vh}|${qCX}|${qCY}|${lensSize}|${cornerRadius}`;
+
+  // Return cached map if position hasn't changed significantly
+  if (mapCache && mapCacheKey === key) {
+    return mapCache;
+  }
+
+  // Half-resolution map dimensions
+  const mw = Math.ceil(vw / MAP_SCALE);
+  const mh = Math.ceil(vh / MAP_SCALE);
 
   const canvas = document.createElement('canvas');
-  canvas.width  = w;
-  canvas.height = h;
+  canvas.width  = mw;
+  canvas.height = mh;
   const ctx = canvas.getContext('2d');
-  const img = ctx.createImageData(w, h);
+  const img = ctx.createImageData(mw, mh);
   const d   = img.data;
 
-  const cx = w / 2;
-  const cy = h / 2;
-  const hw = w / 2;
-  const hh = h / 2;
-  const cr = Math.min(cornerRadius, hw, hh);
+  // ── Fast fill: neutral everywhere (R=128, G=128, B=0, A=0) ──
+  // Uint32 view (little-endian): A<<24 | B<<16 | G<<8 | R
+  // neutral = 0x00_00_80_80 = 0x8080 = 32896
+  const buf = new Uint32Array(d.buffer);
+  buf.fill(0x8080);
 
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = (y * w + x) * 4;
-      const dx = Math.abs(x - cx);
-      const dy = Math.abs(y - cy);
+  // ── Compute lens region in map coordinates ──
+  const halfSize = lensSize / 2;
+  const mlx = (lensCX - halfSize) / MAP_SCALE;
+  const mly = (lensCY - halfSize) / MAP_SCALE;
+  const mlw = lensSize / MAP_SCALE;
+  const mlh = lensSize / MAP_SCALE;
+  const mcx = lensCX / MAP_SCALE;
+  const mcy = lensCY / MAP_SCALE;
+  const cr  = Math.min(cornerRadius / MAP_SCALE, mlw / 2, mlh / 2);
 
-      // ── Inside rounded rectangle test ──
-      let inside = false;
-      let edgeDist = 0;
+  // Clamp bounding box to map dimensions
+  const bx0 = Math.max(0, Math.floor(mlx));
+  const by0 = Math.max(0, Math.floor(mly));
+  const bx1 = Math.min(mw, Math.ceil(mlx + mlw));
+  const by1 = Math.min(mh, Math.ceil(mly + mlh));
 
-      if (dx <= hw - cr && dy <= hh) {
-        // Central horizontal band
-        inside = true;
-        edgeDist = hh - dy;
-      } else if (dy <= hh - cr && dx <= hw) {
-        // Central vertical band
-        inside = true;
-        edgeDist = hw - dx;
-      } else if (dx > hw - cr && dy > hh - cr && dx <= hw && dy <= hh) {
-        // Corner region — check quarter-circle
-        const cdx = dx - (hw - cr);
-        const cdy = dy - (hh - cr);
-        const cornerDist = Math.sqrt(cdx * cdx + cdy * cdy);
-        if (cornerDist <= cr) {
-          inside = true;
-          edgeDist = cr - cornerDist;
-        }
+  // Helper: rounded rectangle test for a point relative to rect center
+  // rect spans (-hw, -hh) to (+hw, +hh) with corner radius cr
+  const hw = mlw / 2;
+  const hh = mlh / 2;
+
+  function isInsideRoundedRect(px, py) {
+    const dx = Math.abs(px);
+    const dy = Math.abs(py);
+
+    if (dx <= hw - cr && dy <= hh) return { inside: true, edgeDist: hh - dy };
+    if (dy <= hh - cr && dx <= hw) return { inside: true, edgeDist: hw - dx };
+    if (dx > hw - cr && dy > hh - cr && dx <= hw && dy <= hh) {
+      const cdx = dx - (hw - cr);
+      const cdy = dy - (hh - cr);
+      const cornerDist = Math.sqrt(cdx * cdx + cdy * cdy);
+      if (cornerDist <= cr) {
+        return { inside: true, edgeDist: cr - cornerDist };
       }
+    }
+    return { inside: false, edgeDist: 0 };
+  }
 
-      if (!inside) {
-        // Neutral — no displacement
-        d[i]     = 128;
-        d[i + 1] = 128;
-        d[i + 2] = 0;
-        d[i + 3] = 255;
-        continue;
-      }
+  // ── Draw lens pixels ──
+  for (let my = by0; my < by1; my++) {
+    for (let mx = bx0; mx < bx1; mx++) {
+      // Coordinates relative to lens center
+      const rx = mx - mcx;
+      const ry = my - mcy;
+      const test = isInsideRoundedRect(rx, ry);
+
+      if (!test.inside) continue;
+
+      const i = (my * mw + mx) * 4;
 
       // ── Displacement computation ──
-      const rdx = x - cx;
-      const rdy = y - cy;
-      const distFromCenter = Math.sqrt(rdx * rdx + rdy * rdy);
-
-      // Total distance to edge along this ray
-      const totalDist = distFromCenter + Math.max(edgeDist, 0.001);
-
-      // Sinusoidal: 0 at center, 1 at edge
+      const distFromCenter = Math.sqrt(rx * rx + ry * ry);
+      const totalDist = distFromCenter + Math.max(test.edgeDist, 0.001);
       const t = Math.min(1, distFromCenter / totalDist);
       const factor = Math.sin(t * Math.PI / 2);
 
-      // Direction from center (normalized)
       const len = distFromCenter > 0.001 ? distFromCenter : 1;
-      const nx = rdx / len;
-      const ny = rdy / len;
+      const nx = rx / len;
+      const ny = ry / len;
 
-      // Displacement magnitude in color channel (0-127 range from neutral 128)
       const amp = factor * 127;
-      d[i]     = Math.round(128 + nx * amp);
-      d[i + 1] = Math.round(128 + ny * amp);
-      d[i + 2] = 0;
-      d[i + 3] = 255;
+      d[i]     = Math.round(128 + nx * amp);  // R: horizontal displacement
+      d[i + 1] = Math.round(128 + ny * amp);  // G: vertical displacement
+      d[i + 2] = 0;                            // B: unused
+      d[i + 3] = 255;                          // A: lens mask (for glow/specular)
     }
   }
 
   ctx.putImageData(img, 0, 0);
   const url = canvas.toDataURL('image/png');
-  mapCache[key] = url;
+
+  // Cache the result
+  mapCache = url;
+  mapCacheKey = key;
+
   return url;
+}
+
+// Clear map cache (call when shape/size/viewport changes)
+function clearMapCache() {
+  mapCache = null;
+  mapCacheKey = '';
+  lastMapCX = -9999;
+  lastMapCY = -9999;
 }
 
 // ═══════════════════════════════════════════════════
 // SVG FILTER CONSTRUCTION (per-frame)
 //
-// Each frame, we build a completely new <filter> element with a unique id.
-// This is REQUIRED for Safari, which caches filter output by id.
-// If we reused the same id while changing filter parameters (x, y),
-// Safari would show stale (cached) output — defeating the moving lens.
+// Each frame we build a new <filter> with a unique id
+// (required for Safari, which caches filter output by id).
 //
-// The filter pipeline:
+// KEY DIFFERENCE from the old approach:
+//   The filter element has NO x/y/w/h — it uses the
+//   defaults (-10%, -10%, 120%, 120%) which cover the
+//   full element. feImage loads the full-viewport map
+//   at (0, 0, viewportW, viewportH).
+//
+//   The lens position is encoded INSIDE the map pixels,
+//   not in the filter bounds. Content outside the lens
+//   renders normally because the map is neutral there.
+//
+// Filter pipeline:
 //   SourceGraphic → (3× feDisplacementMap for RGB chroma) → screen blend
 //                 → composite with feSpecularLighting highlight
 //                 → composite with blurred-map rim glow
-//
-// All coordinates are in userSpaceOnUse (viewport pixels).
-// The feImage map is positioned at the lens location so that
-// feDisplacementMap samples the correct displacement for each pixel
-// within the filter region.
 // ═══════════════════════════════════════════════════
 
-let prevFilterId = null;
-
-function buildFilterElement(id, lensX, lensY, lensW, lensH, mapUrl, scale, chroma, blur) {
+function buildFilterElement(id, vw, vh, lensCX, lensCY, mapUrl, scale, chroma, blur) {
   const NS = 'http://www.w3.org/2000/svg';
 
   const filter = document.createElementNS(NS, 'filter');
   filter.setAttribute('id', id);
   filter.setAttribute('filterUnits', 'userSpaceOnUse');
-  filter.setAttribute('x', String(Math.round(lensX)));
-  filter.setAttribute('y', String(Math.round(lensY)));
-  filter.setAttribute('width',  String(lensW));
-  filter.setAttribute('height', String(lensH));
+  // NO x, y, width, height — use defaults (full element coverage)
   filter.setAttribute('colorInterpolationFilters', 'sRGB');
 
-  // ── (1) Load displacement map ──
-  // Position the map at the lens location in viewport space.
-  // The map is lens-sized and aligned with the filter region.
+  // ── (1) Load full-viewport displacement map ──
+  // Positioned at (0,0) covering the entire viewport.
   const feImg = document.createElementNS(NS, 'feImage');
   feImg.setAttribute('href', mapUrl);
-  feImg.setAttribute('x', String(Math.round(lensX)));
-  feImg.setAttribute('y', String(Math.round(lensY)));
-  feImg.setAttribute('width',  String(lensW));
-  feImg.setAttribute('height', String(lensH));
+  feImg.setAttribute('x', '0');
+  feImg.setAttribute('y', '0');
+  feImg.setAttribute('width',  String(vw));
+  feImg.setAttribute('height', String(vh));
   feImg.setAttribute('result', 'map');
   feImg.setAttribute('crossorigin', 'anonymous');
   filter.appendChild(feImg);
@@ -640,7 +692,7 @@ function buildFilterElement(id, lensX, lensY, lensW, lensH, mapUrl, scale, chrom
   // ── (2) Chromatic aberration — 3 displacement passes ──
   const sR = scale + chroma;
   const sG = scale;
-  const sB = scale - chroma * 0.8;
+  const sB = Math.max(0, scale - chroma * 0.8);
 
   // R channel displacement
   const dispR = mkDisp(NS, 'SourceGraphic', 'map', sR, 'dispR'); filter.appendChild(dispR);
@@ -653,7 +705,7 @@ function buildFilterElement(id, lensX, lensY, lensW, lensH, mapUrl, scale, chrom
     '0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0'); filter.appendChild(matG);
 
   // B channel displacement
-  const dispB = mkDisp(NS, 'SourceGraphic', 'map', Math.max(0, sB), 'dispB'); filter.appendChild(dispB);
+  const dispB = mkDisp(NS, 'SourceGraphic', 'map', sB, 'dispB'); filter.appendChild(dispB);
   const matB  = mkColorMatrix(NS, 'dispB', 'bChan',
     '0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0'); filter.appendChild(matB);
 
@@ -662,6 +714,8 @@ function buildFilterElement(id, lensX, lensY, lensW, lensH, mapUrl, scale, chrom
   const bl2 = mkBlend(NS, 'rg',    'bChan', 'screen', 'disp'); filter.appendChild(bl2);
 
   // ── (4) Specular highlight ──
+  // Uses the map's alpha channel as a bump map.
+  // Light positioned at the lens center in viewport coordinates.
   const specLight = document.createElementNS(NS, 'feSpecularLighting');
   specLight.setAttribute('in', 'map');
   specLight.setAttribute('surfaceScale', '4');
@@ -671,9 +725,8 @@ function buildFilterElement(id, lensX, lensY, lensW, lensH, mapUrl, scale, chrom
   specLight.setAttribute('result', 'spec');
 
   const ptLight = document.createElementNS(NS, 'fePointLight');
-  // Light slightly offset from center for a natural highlight
-  ptLight.setAttribute('x', String(lensX + lensW * 0.5));
-  ptLight.setAttribute('y', String(lensY + lensH * 0.25));
+  ptLight.setAttribute('x', String(Math.round(lensCX)));
+  ptLight.setAttribute('y', String(Math.round(lensCY - P.size * 0.25)));
   ptLight.setAttribute('z', '90');
   specLight.appendChild(ptLight);
   filter.appendChild(specLight);
@@ -683,13 +736,17 @@ function buildFilterElement(id, lensX, lensY, lensW, lensH, mapUrl, scale, chrom
   filter.appendChild(comp);
 
   // ── (6) Rim glow from blurred map ──
+  // The map has A=255 inside the lens and A=0 outside.
+  // Blurring creates a soft transition at the lens boundary.
+  // The color matrix produces white glow with alpha proportional
+  // to the blurred A channel — so glow only appears near the lens.
   const blurNode = document.createElementNS(NS, 'feGaussianBlur');
   blurNode.setAttribute('in', 'map');
   blurNode.setAttribute('stdDeviation', String(blur));
   blurNode.setAttribute('result', 'blurMap');
   filter.appendChild(blurNode);
 
-  // Convert blurred map into a subtle white glow
+  // Convert blurred map into a subtle white glow masked by alpha
   const glowMat = mkColorMatrix(NS, 'blurMap', 'glow',
     '0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.12 0');
   filter.appendChild(glowMat);
@@ -746,26 +803,25 @@ function buildFilterElement(id, lensX, lensY, lensW, lensH, mapUrl, scale, chrom
 // ═══════════════════════════════════════════════════
 
 function updateFrame() {
+  const { vw, vh } = getViewportDims();
+
   // Clamp lens position to viewport bounds
   const hw = P.size / 2;
-  const cx = Math.max(hw, Math.min(currentX, window.innerWidth - hw));
-  const cy = Math.max(hw, Math.min(currentY, window.innerHeight - hw));
+  const lensCX = Math.max(hw, Math.min(currentX, vw - hw));
+  const lensCY = Math.max(hw, Math.min(currentY, vh - hw));
 
-  const lensX = cx - hw;
-  const lensY = cy - hw;
-  const lensW = P.size;
-  const lensH = P.size;
-
-  // Generate (or retrieve cached) map
+  // Generate (or retrieve cached) full-viewport map
+  // The cache key includes quantized position — map regenerates
+  // only when lens moves >3 px or shape/size changes.
   const cornerR = Math.min(P.radius * 0.45, hw * 0.8);
-  const mapUrl = generateMap(lensW, lensH, cornerR);
+  const mapUrl = generateFullViewportMap(vw, vh, lensCX, lensCY, P.size, cornerR);
 
   // New filter id every frame (defeats Safari cache)
   const filterId = 'glass-' + (frameId++);
 
-  // Build and insert filter
+  // Build and insert filter (NO x/y/w/h — full element coverage)
   const filterEl = buildFilterElement(
-    filterId, lensX, lensY, lensW, lensH, mapUrl,
+    filterId, vw, vh, lensCX, lensCY, mapUrl,
     P.scale, P.chroma, P.blur
   );
 
@@ -778,13 +834,15 @@ function updateFrame() {
   content.style.filter = `url(#${filterId})`;
 
   // Update visual indicators
+  const lensX = lensCX - hw;
+  const lensY = lensCY - hw;
   ring.style.left   = lensX + 'px';
   ring.style.top    = lensY + 'px';
-  ring.style.width  = lensW + 'px';
-  ring.style.height = lensH + 'px';
+  ring.style.width  = P.size + 'px';
+  ring.style.height = P.size + 'px';
 
-  dot.style.left = cx + 'px';
-  dot.style.top  = cy + 'px';
+  dot.style.left = lensCX + 'px';
+  dot.style.top  = lensCY + 'px';
 }
 
 // ═══════════════════════════════════════════════════
@@ -860,15 +918,10 @@ function bindSlider(id, param, valId, onChange) {
 }
 
 bindSlider('ctrl-scale',  'scale',  'val-scale',  () => {});
-bindSlider('ctrl-radius', 'radius', 'val-radius', () => { mapCacheClear(); });
+bindSlider('ctrl-radius', 'radius', 'val-radius', () => { clearMapCache(); });
 bindSlider('ctrl-chroma', 'chroma', 'val-chroma', () => {});
-bindSlider('ctrl-size',   'size',   'val-size',   v  => { mapCacheClear(); });
+bindSlider('ctrl-size',   'size',   'val-size',   () => { clearMapCache(); });
 bindSlider('ctrl-blur',   'blur',   'val-blur',   () => {});
-
-function mapCacheClear() {
-  // Clear cache so maps regenerate with new size/shape
-  for (const k in mapCache) delete mapCache[k];
-}
 
 // ═══════════════════════════════════════════════════
 // RESIZE HANDLER
@@ -878,7 +931,7 @@ let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
-    mapCacheClear();
+    clearMapCache();
     // Re-center
     targetX = currentX = window.innerWidth / 2;
     targetY = currentY = window.innerHeight / 2;
