@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boiling Geometry — SVG Hand-Drawn Line Effects</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @layer base {
+      html, body {
+        width: 100%; height: 100%;
+        overflow: hidden;
+        background: #060610;
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .bg-layer {
+        position: fixed; inset: 0;
+        z-index: 0;
+        pointer-events: none;
+      }
+      .bg-layer canvas {
+        width: 100%; height: 100%;
+      }
+    }
+
+    @layer shapes {
+      .shapes-stage {
+        position: fixed; inset: 0;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      }
+
+      .shapes-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 280px);
+        grid-template-rows: repeat(2, 280px);
+        gap: 40px;
+        align-items: center;
+        justify-items: center;
+      }
+
+      .shape-wrapper {
+        position: relative;
+        width: 220px; height: 220px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        pointer-events: auto;
+        transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
+      }
+      .shape-wrapper:hover {
+        transform: scale(1.12);
+      }
+
+      .shape-wrapper svg {
+        width: 100%; height: 100%;
+      }
+
+      .shape-label {
+        position: absolute;
+        bottom: -32px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        transition: color 0.3s;
+      }
+      .shape-wrapper:hover .shape-label {
+        color: rgba(255, 255, 255, 0.85);
+      }
+
+      @media (max-width: 680px) {
+        .shapes-grid {
+          grid-template-columns: repeat(2, 180px);
+          grid-template-rows: repeat(2, 180px);
+          gap: 24px;
+        }
+        .shape-wrapper {
+          width: 140px; height: 140px;
+        }
+        .shape-label { font-size: 0.65rem; bottom: -26px; }
+      }
+    }
+
+    @layer glass-panel {
+      .info-panel {
+        position: fixed;
+        bottom: 32px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2;
+        background: rgba(18, 18, 40, 0.55);
+        backdrop-filter: blur(24px) saturate(1.4);
+        -webkit-backdrop-filter: blur(24px) saturate(1.4);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 18px;
+        padding: 20px 28px;
+        max-width: 520px;
+        width: calc(100% - 48px);
+        color: #d0d0e0;
+        font-size: 0.9rem;
+        line-height: 1.55;
+        transition: all 0.5s cubic-bezier(0.2, 0, 0, 1);
+      }
+      .info-panel h2 {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #f0f0f8;
+        margin-bottom: 8px;
+        letter-spacing: -0.01em;
+      }
+      .info-panel .params {
+        display: flex;
+        gap: 16px;
+        margin-top: 12px;
+        color: rgba(255, 255, 255, 0.45);
+        font-size: 0.78rem;
+        flex-wrap: wrap;
+      }
+      .info-panel .params span {
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-family: 'SF Mono', 'Fira Code', monospace;
+      }
+      .info-panel .params .active-param {
+        color: #c4b5fd;
+        background: rgba(196, 181, 253, 0.12);
+      }
+
+      @media (max-width: 680px) {
+        .info-panel {
+          bottom: 16px;
+          padding: 14px 18px;
+          font-size: 0.8rem;
+          border-radius: 14px;
+        }
+        .info-panel h2 { font-size: 0.95rem; }
+      }
+    }
+
+    @layer controls {
+      .intensity-slider {
+        position: fixed;
+        top: 32px;
+        right: 32px;
+        z-index: 3;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
+      }
+      .intensity-slider label {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .intensity-slider input[type=range] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 140px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+      }
+      .intensity-slider input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px; height: 16px;
+        border-radius: 50%;
+        background: #c4b5fd;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        cursor: pointer;
+      }
+      .intensity-value {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.72rem;
+        font-family: 'SF Mono', 'Fira Code', monospace;
+      }
+
+      @media (max-width: 680px) {
+        .intensity-slider {
+          top: 16px;
+          right: 16px;
+        }
+        .intensity-slider input[type=range] { width: 100px; }
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background canvas with ambient OKLCH gradient blobs -->
+  <div class="bg-layer">
+    <canvas id="bg-canvas"></canvas>
+  </div>
+
+  <!-- SVG Filter definitions (hidden, used via url(#filter-id)) -->
+  <svg style="position:absolute;width:0;height:0" aria-hidden="true">
+    <defs>
+      <!-- Filter 1: Gentle wobble (circle) -->
+      <filter id="boil-gentle" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="1" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+
+      <!-- Filter 2: Moderate boil (hexagon) -->
+      <filter id="boil-moderate" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="3" seed="42" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="8" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+
+      <!-- Filter 3: Aggressive sketch (diamond) -->
+      <filter id="boil-aggressive" x="-15%" y="-15%" width="130%" height="130%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="4" seed="99" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="12" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+
+      <!-- Filter 4: Ink-bleed (squircle) -->
+      <filter id="boil-ink" x="-15%" y="-15%" width="130%" height="130%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="5" seed="7" result="noise1"/>
+        <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="13" result="noise2"/>
+        <feMerge result="merged-noise">
+          <feMergeNode in="noise1"/>
+          <feMergeNode in="noise2"/>
+        </feMerge>
+        <feDisplacementMap in="SourceGraphic" in2="merged-noise" scale="10" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- Shape stage -->
+  <div class="shapes-stage">
+    <div class="shapes-grid">
+
+      <!-- Circle: Gentle boil -->
+      <div class="shape-wrapper" data-filter="boil-gentle" data-name="Circle" data-params="scale=5, freq=0.04, octaves=3">
+        <svg viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="75" fill="none" stroke="#e8d5f5" stroke-width="3" filter="url(#boil-gentle)"/>
+          <circle cx="100" cy="100" r="75" fill="none" stroke="rgba(232,213,245,0.15)" stroke-width="8" filter="url(#boil-gentle)"/>
+        </svg>
+        <span class="shape-label">Gentle</span>
+      </div>
+
+      <!-- Hexagon: Moderate boil -->
+      <div class="shape-wrapper" data-filter="boil-moderate" data-name="Hexagon" data-params="scale=8, freq=0.06, octaves=3">
+        <svg viewBox="0 0 200 200">
+          <polygon points="100,30 165,68 165,132 100,170 35,132 35,68" fill="none" stroke="#b8d4f8" stroke-width="3" filter="url(#boil-moderate)"/>
+          <polygon points="100,30 165,68 165,132 100,170 35,132 35,68" fill="none" stroke="rgba(184,212,248,0.12)" stroke-width="8" filter="url(#boil-moderate)"/>
+        </svg>
+        <span class="shape-label">Moderate</span>
+      </div>
+
+      <!-- Diamond: Aggressive sketch -->
+      <div class="shape-wrapper" data-filter="boil-aggressive" data-name="Diamond" data-params="scale=12, freq=0.08, octaves=4">
+        <svg viewBox="0 0 200 200">
+          <polygon points="100,20 180,100 100,180 20,100" fill="none" stroke="#f5c8d0" stroke-width="3" filter="url(#boil-aggressive)"/>
+          <polygon points="100,20 180,100 100,180 20,100" fill="none" stroke="rgba(245,200,208,0.10)" stroke-width="8" filter="url(#boil-aggressive)"/>
+        </svg>
+        <span class="shape-label">Sketch</span>
+      </div>
+
+      <!-- Squircle: Ink-bleed boil -->
+      <div class="shape-wrapper" data-filter="boil-ink" data-name="Squircle" data-params="scale=10, freq=0.05/0.025, octaves=5+3">
+        <svg viewBox="0 0 200 200">
+          <path d="M100,20 C155,20 180,45 180,100 C180,155 155,180 100,180 C45,180 20,155 20,100 C20,45 45,20 100,20 Z" fill="none" stroke="#d5e8c8" stroke-width="3" filter="url(#boil-ink)"/>
+          <path d="M100,20 C155,20 180,45 180,100 C180,155 155,180 100,180 C45,180 20,155 20,100 C20,45 45,20 100,20 Z" fill="none" stroke="rgba(213,232,200,0.10)" stroke-width="8" filter="url(#boil-ink)"/>
+        </svg>
+        <span class="shape-label">Ink Bleed</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Info panel -->
+  <div class="info-panel" id="info-panel">
+    <h2 id="info-title">Boiling Geometry</h2>
+    <p id="info-desc">Hover a shape to see its filter parameters. Every line is rendered with SVG <code>feTurbulence</code> + <code>feDisplacementMap</code> — the same technique used to simulate hand-drawn illustration on the web. Turbulence seeds shuffle at 30fps, creating organic, sketch-like motion with no WebGL or canvas required.</p>
+    <div class="params" id="info-params">
+      <span>Hover a shape →</span>
+    </div>
+  </div>
+
+  <!-- Intensity control -->
+  <div class="intensity-slider">
+    <label for="intensity">Intensity</label>
+    <input type="range" id="intensity" min="2" max="20" value="8" step="1">
+    <span class="intensity-value" id="intensity-value">1.0×</span>
+  </div>
+
+<script>
+// ====================================================================
+// Boiling Geometry — SVG Hand-Drawn Line Effects
+// Animates SVG feTurbulence seeds at 30fps for organic sketch motion
+// ====================================================================
+
+const filters = [
+  { id: 'boil-gentle',     baseScale: 5,  baseFreq: 0.04, currentSeed: 1 },
+  { id: 'boil-moderate',   baseScale: 8,  baseFreq: 0.06, currentSeed: 42 },
+  { id: 'boil-aggressive', baseScale: 12, baseFreq: 0.08, currentSeed: 99 },
+  { id: 'boil-ink',        baseScale: 10, baseFreq: 0.05, currentSeed: 7 },
+];
+
+let globalIntensity = 1.0;
+let animationId;
+
+// ---- Background Canvas: Ambient OKLCH gradient blobs ----
+(function initBackground() {
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let w, h;
+
+  function resize() {
+    w = canvas.width = window.innerWidth * devicePixelRatio;
+    h = canvas.height = window.innerHeight * devicePixelRatio;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Pre-render a rich background with OKLCH-based radial gradients
+  // We'll do it once and rotate a subtle noise overlay
+  const bgCanvas = document.createElement('canvas');
+  bgCanvas.width = w;
+  bgCanvas.height = h;
+  const bgCtx = bgCanvas.getContext('2d');
+
+  function renderBackground() {
+    bgCtx.clearRect(0, 0, w, h);
+
+    // Deep cosmic background
+    const baseGrad = bgCtx.createRadialGradient(w * 0.25, h * 0.3, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.7);
+    baseGrad.addColorStop(0, '#1a1040');
+    baseGrad.addColorStop(0.3, '#0e0a24');
+    baseGrad.addColorStop(0.7, '#060610');
+    baseGrad.addColorStop(1, '#04040c');
+    bgCtx.fillStyle = baseGrad;
+    bgCtx.fillRect(0, 0, w, h);
+
+    // Warm OKLCH blob (top-right)
+    const blob1 = bgCtx.createRadialGradient(w * 0.7, h * 0.2, 0, w * 0.7, h * 0.2, w * 0.45);
+    blob1.addColorStop(0, 'rgba(140, 100, 220, 0.18)');
+    blob1.addColorStop(0.5, 'rgba(100, 60, 180, 0.06)');
+    blob1.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    bgCtx.fillStyle = blob1;
+    bgCtx.fillRect(0, 0, w, h);
+
+    // Cool OKLCH blob (bottom-left)
+    const blob2 = bgCtx.createRadialGradient(w * 0.2, h * 0.75, 0, w * 0.2, h * 0.75, w * 0.4);
+    blob2.addColorStop(0, 'rgba(80, 140, 200, 0.14)');
+    blob2.addColorStop(0.5, 'rgba(60, 100, 180, 0.05)');
+    blob2.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    bgCtx.fillStyle = blob2;
+    bgCtx.fillRect(0, 0, w, h);
+
+    // Subtle warm accent (center)
+    const blob3 = bgCtx.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.45, w * 0.3);
+    blob3.addColorStop(0, 'rgba(200, 140, 180, 0.08)');
+    blob3.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    bgCtx.fillStyle = blob3;
+    bgCtx.fillRect(0, 0, w, h);
+  }
+  renderBackground();
+
+  // Animate subtle drifting of the blobs using pixel manipulation
+  // Lightweight: just draw the background with a tiny offset each frame
+  let time = 0;
+  const noiseData = new Uint8Array(w * h * 4);
+  
+  function drawBackground() {
+    time += 0.003;
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(bgCanvas, 0, 0);
+    
+    // Overlay subtle film grain
+    ctx.globalAlpha = 0.03;
+    ctx.fillStyle = `hsl(${220 + Math.sin(time) * 30}, 60%, ${50 + Math.sin(time * 1.7) * 15}%)`;
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalAlpha = 1.0;
+  }
+  
+  // Store for use in main animation loop
+  window._drawBackground = drawBackground;
+})();
+
+// ---- SVG Filter Animation: Shuffle turbulence seeds ----
+function getFilterElement(filterId) {
+  const el = document.querySelector(`#${filterId} feTurbulence`);
+  if (!el) {
+    // Ink bleed filter has two turbulence elements
+    return document.querySelectorAll(`#${filterId} feTurbulence`);
+  }
+  return el;
+}
+
+function updateFilters() {
+  for (const f of filters) {
+    const turbEls = getFilterElement(f.id);
+    const elList = turbEls.length !== undefined ? Array.from(turbEls) : [turbEls];
+    
+    for (const el of elList) {
+      if (!el) continue;
+      // Shuffle seed every frame for organic motion
+      f.currentSeed = (f.currentSeed + 1 + Math.floor(Math.random() * 3)) % 1000;
+      el.setAttribute('seed', f.currentSeed);
+      
+      // Scale baseFrequency with intensity
+      const baseFreq = parseFloat(el.getAttribute('baseFrequency')) || f.baseFreq;
+      // Don't modify frequency every frame — too jittery. Keep it stable.
+    }
+    
+    // Scale displacement map based on global intensity
+    const dispMap = document.querySelector(`#${f.id} feDisplacementMap`);
+    if (dispMap) {
+      const scale = Math.round(f.baseScale * globalIntensity);
+      dispMap.setAttribute('scale', scale);
+    }
+  }
+}
+
+// ---- Info panel updates ----
+const infoTitle = document.getElementById('info-title');
+const infoDesc = document.getElementById('info-desc');
+const infoParams = document.getElementById('info-params');
+
+const defaultInfo = {
+  title: 'Boiling Geometry',
+  desc: 'Hover a shape to see its filter parameters. Every line is rendered with SVG <code>feTurbulence</code> + <code>feDisplacementMap</code> — the same technique used to simulate hand-drawn illustration on the web. Turbulence seeds shuffle at 30fps, creating organic, sketch-like motion with no WebGL or canvas required.',
+  params: '<span>Hover a shape →</span>'
+};
+
+document.querySelectorAll('.shape-wrapper').forEach(wrapper => {
+  wrapper.addEventListener('mouseenter', () => {
+    const name = wrapper.dataset.name;
+    const params = wrapper.dataset.params;
+    const filterId = wrapper.dataset.filter;
+    
+    infoTitle.textContent = name;
+    infoDesc.textContent = `The "${name}" shape uses filter #${filterId} with these parameters applied to SVG stroke rendering. The feTurbulence element generates fractal noise, which feDisplacementMap uses to offset pixel positions — creating the illusion of hand-drawn line wobble.`;
+    
+    const paramParts = params.split(', ');
+    infoParams.innerHTML = paramParts.map((p, i) => {
+      const isActive = i === 0;
+      return `<span class="${isActive ? 'active-param' : ''}">${p.trim()}</span>`;
+    }).join('');
+    
+    document.querySelectorAll('.info-panel .params span').forEach(s => {
+      s.style.transition = 'all 0.3s';
+    });
+  });
+
+  wrapper.addEventListener('mouseleave', () => {
+    infoTitle.textContent = defaultInfo.title;
+    infoDesc.innerHTML = defaultInfo.desc;
+    infoParams.innerHTML = defaultInfo.params;
+  });
+
+  wrapper.addEventListener('click', () => {
+    // Cycle through intensity levels on click
+    const levels = [0.4, 0.7, 1.0, 1.5, 2.0, 2.5];
+    const current = levels.findIndex(l => Math.abs(l - globalIntensity) < 0.01);
+    const next = (current + 1) % levels.length;
+    globalIntensity = levels[next];
+    
+    document.getElementById('intensity').value = Math.round(globalIntensity * 8);
+    document.getElementById('intensity-value').textContent = globalIntensity.toFixed(1) + '×';
+  });
+});
+
+// ---- Intensity slider ----
+const slider = document.getElementById('intensity');
+slider.addEventListener('input', () => {
+  globalIntensity = slider.value / 8;
+  document.getElementById('intensity-value').textContent = globalIntensity.toFixed(1) + '×';
+});
+
+// ---- Main animation loop ----
+function animate() {
+  updateFilters();
+  if (window._drawBackground) window._drawBackground();
+  animationId = requestAnimationFrame(animate);
+}
+
+// ---- Responsive background re-render ----
+let resizeTimeout;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    // Re-init background on resize
+    const canvas = document.getElementById('bg-canvas');
+    canvas.width = window.innerWidth * devicePixelRatio;
+    canvas.height = window.innerHeight * devicePixelRatio;
+    // Simple: just restart the bg init
+    location.reload();
+  }, 500);
+});
+
+// ---- Start ----
+animate();
+</script>
+</body>
+</html>
