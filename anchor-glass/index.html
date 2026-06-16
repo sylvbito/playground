@@ -751,43 +751,26 @@ dropdownMenu.querySelectorAll('.dropdown-item').forEach(item => {
 // ============================================
 // Scroll-triggered entrance animations
 // ============================================
-// Uses CSS animation-trigger where supported (Chrome 145+),
-// falls back to IntersectionObserver for all other browsers.
+// Uses IntersectionObserver for entrance animations.
+// The native CSS animation-trigger API (Chrome 145+) is available but requires
+// timeline-trigger declarations per-element. Using IntersectionObserver gives us
+// the same scroll-triggered behaviour with broader browser support.
 
-const supportsAnimationTrigger = CSS.supports('animation-trigger', 'none');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      observer.unobserve(entry.target);
+    }
+  });
+}, {
+  threshold: 0.15,
+  rootMargin: '0px 0px -40px 0px'
+});
 
-if (!supportsAnimationTrigger) {
-  // IntersectionObserver fallback
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-        observer.unobserve(entry.target);
-      }
-    });
-  }, {
-    threshold: 0.15,
-    rootMargin: '0px 0px -40px 0px'
-  });
-
-  document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => {
-    observer.observe(el);
-  });
-} else {
-  // Native CSS animation-trigger — mark elements visible immediately
-  // since the CSS handles it declaratively
-  document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => {
-    el.style.setProperty('animation-trigger', 'auto');
-  });
-}
-
-// Mark all elements as visible if IntersectionObserver unavailable and animation-trigger unsupported
-// (browsers that support neither — just show everything)
-if (!supportsAnimationTrigger && typeof IntersectionObserver === 'undefined') {
-  document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => {
-    el.classList.add('visible');
-  });
-}
+document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => {
+  observer.observe(el);
+});
 </script>
 
 </body>
