@@ -197,6 +197,12 @@
     line-height: 1.5;
   }
 
+  /* === Tooltips container (section-level, outside grid) === */
+  .tooltips-container {
+    /* No visual presence — just an anchor-positioning host.
+       Tooltips inside are position:absolute with position-anchor. */
+  }
+
   /* === Tooltip Gallery (core anchor demo) === */
   .tooltip-gallery {
     display: grid;
@@ -271,8 +277,20 @@
     -webkit-backdrop-filter: blur(20px) saturate(1.4);
     box-shadow: 0 8px 32px oklch(0 0 0 / 0.3);
   }
-  .tooltip-trigger:hover + .tooltip,
-  .tooltip-trigger:focus-visible + .tooltip {
+  /* Hover visibility via :has() — tooltips live outside the grid now,
+     so + sibling combinator won't reach. :has() requires Chrome 105+. */
+  .tooltip-gallery:has([aria-describedby="tt1"]:hover) ~ .tooltips-container #tt1,
+  .tooltip-gallery:has([aria-describedby="tt2"]:hover) ~ .tooltips-container #tt2,
+  .tooltip-gallery:has([aria-describedby="tt3"]:hover) ~ .tooltips-container #tt3,
+  .tooltip-gallery:has([aria-describedby="tt4"]:hover) ~ .tooltips-container #tt4,
+  .tooltip-gallery:has([aria-describedby="tt5"]:hover) ~ .tooltips-container #tt5,
+  .tooltip-gallery:has([aria-describedby="tt6"]:hover) ~ .tooltips-container #tt6,
+  .tooltip-gallery:has([aria-describedby="tt1"]:focus-visible) ~ .tooltips-container #tt1,
+  .tooltip-gallery:has([aria-describedby="tt2"]:focus-visible) ~ .tooltips-container #tt2,
+  .tooltip-gallery:has([aria-describedby="tt3"]:focus-visible) ~ .tooltips-container #tt3,
+  .tooltip-gallery:has([aria-describedby="tt4"]:focus-visible) ~ .tooltips-container #tt4,
+  .tooltip-gallery:has([aria-describedby="tt5"]:focus-visible) ~ .tooltips-container #tt5,
+  .tooltip-gallery:has([aria-describedby="tt6"]:focus-visible) ~ .tooltips-container #tt6 {
     opacity: 1;
     transform: translateY(0);
   }
@@ -521,17 +539,6 @@
   .reveal-stagger.visible > *:nth-child(6) { transition-delay: 0.40s; opacity: 1; transform: translateY(0); }
 
   /* Anchor positioning fallback — if anchor positioning isn't supported, tooltips appear inline */
-  @supports not (anchor-name: --test) {
-    .tooltip, .popover-detail, .dropdown-menu {
-      position: static !important;
-      opacity: 1 !important;
-      transform: none !important;
-      pointer-events: auto !important;
-      margin: 8px 0 0 0 !important;
-      width: 100% !important;
-      max-width: 100% !important;
-    }
-  }
 }
 
 /* Reduced motion */
@@ -578,10 +585,6 @@
         <button class="tooltip-trigger" style="--anchor-name: --tt-1" aria-describedby="tt1">
           <span class="icon">🔮</span> Crystal
         </button>
-        <div class="tooltip" id="tt1" style="position-anchor: --tt-1">
-          <strong>Glass Morphism</strong>
-          Backdrop-filter blur creates depth separation. The browser composites this on the GPU — zero repaints.
-        </div>
       </div>
 
       <!-- 2 -->
@@ -589,10 +592,6 @@
         <button class="tooltip-trigger" style="--anchor-name: --tt-2" aria-describedby="tt2">
           <span class="icon">🎯</span> Anchor
         </button>
-        <div class="tooltip" id="tt2" style="position-anchor: --tt-2">
-          <strong>position-area</strong>
-          Declares where the tooltip sits relative to its anchor. <code>top center</code> → above, centered.
-        </div>
       </div>
 
       <!-- 3 -->
@@ -600,10 +599,6 @@
         <button class="tooltip-trigger" style="--anchor-name: --tt-3" aria-describedby="tt3">
           <span class="icon">🎨</span> OKLCH
         </button>
-        <div class="tooltip" id="tt3" style="position-anchor: --tt-3">
-          <strong>Perceptual Colour</strong>
-          OKLCH gradients maintain uniform lightness across hue shifts. No muddy midpoints.
-        </div>
       </div>
 
       <!-- 4 -->
@@ -611,10 +606,6 @@
         <button class="tooltip-trigger" style="--anchor-name: --tt-4" aria-describedby="tt4">
           <span class="icon">🔄</span> Fallback
         </button>
-        <div class="tooltip" id="tt4" style="position-anchor: --tt-4">
-          <strong>position-try-fallbacks</strong>
-          When the tooltip overflows the viewport, the browser flips it to the opposite side. Automatic edge detection.
-        </div>
       </div>
 
       <!-- 5 -->
@@ -622,10 +613,6 @@
         <button class="tooltip-trigger" style="--anchor-name: --tt-5" aria-describedby="tt5">
           <span class="icon">📐</span> Size
         </button>
-        <div class="tooltip" id="tt5" style="position-anchor: --tt-5">
-          <strong>anchor-size()</strong>
-          The tooltip width matches its anchor via <code>anchor-size(width)</code>. No JavaScript width sync.
-        </div>
       </div>
 
       <!-- 6 -->
@@ -633,10 +620,36 @@
         <button class="tooltip-trigger" style="--anchor-name: --tt-6" aria-describedby="tt6">
           <span class="icon">✨</span> Cascade
         </button>
-        <div class="tooltip" id="tt6" style="position-anchor: --tt-6">
-          <strong>@layer Cascade</strong>
-          All CSS is organised in explicit cascade layers — reset → theme → layout → components → utilities.
-        </div>
+      </div>
+    </div>
+
+    <!-- Tooltips live here (section-level) — anchor positioning is name-based
+         and works across DOM. Must be outside .tooltip-gallery to avoid
+         composite-layer interference with position-area. -->
+    <div class="tooltips-container">
+      <div class="tooltip" id="tt1" style="position-anchor: --tt-1">
+        <strong>Glass Morphism</strong>
+        Backdrop-filter blur creates depth separation. The browser composites this on the GPU — zero repaints.
+      </div>
+      <div class="tooltip" id="tt2" style="position-anchor: --tt-2">
+        <strong>position-area</strong>
+        Declares where the tooltip sits relative to its anchor. <code>top center</code> → above, centered.
+      </div>
+      <div class="tooltip" id="tt3" style="position-anchor: --tt-3">
+        <strong>Perceptual Colour</strong>
+        OKLCH gradients maintain uniform lightness across hue shifts. No muddy midpoints.
+      </div>
+      <div class="tooltip" id="tt4" style="position-anchor: --tt-4">
+        <strong>position-try-fallbacks</strong>
+        When the tooltip overflows the viewport, the browser flips it to the opposite side. Automatic edge detection.
+      </div>
+      <div class="tooltip" id="tt5" style="position-anchor: --tt-5">
+        <strong>anchor-size()</strong>
+        The tooltip width matches its anchor via <code>anchor-size(width)</code>. No JavaScript width sync.
+      </div>
+      <div class="tooltip" id="tt6" style="position-anchor: --tt-6">
+        <strong>@layer Cascade</strong>
+        All CSS is organised in explicit cascade layers — reset → theme → layout → components → utilities.
       </div>
     </div>
   </section>
