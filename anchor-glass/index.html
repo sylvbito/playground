@@ -206,6 +206,10 @@
     z-index: 1;
   }
 
+  .tooltip-pair {
+    /* Transparent wrapper — grid item keeps stagger at 6 children */
+  }
+
   .tooltip-trigger {
     position: relative;
     anchor-name: var(--anchor-name);
@@ -567,57 +571,69 @@
 
     <div class="tooltip-gallery reveal-stagger">
       <!-- 1 -->
-      <button class="tooltip-trigger" style="--anchor-name: --tt-1" aria-describedby="tt1">
-        <span class="icon">🔮</span> Crystal
-      </button>
-      <div class="tooltip" id="tt1" style="position-anchor: --tt-1">
-        <strong>Glass Morphism</strong>
-        Backdrop-filter blur creates depth separation. The browser composites this on the GPU — zero repaints.
+      <div class="tooltip-pair">
+        <button class="tooltip-trigger" style="--anchor-name: --tt-1" aria-describedby="tt1">
+          <span class="icon">🔮</span> Crystal
+        </button>
+        <div class="tooltip" id="tt1" style="position-anchor: --tt-1">
+          <strong>Glass Morphism</strong>
+          Backdrop-filter blur creates depth separation. The browser composites this on the GPU — zero repaints.
+        </div>
       </div>
 
       <!-- 2 -->
-      <button class="tooltip-trigger" style="--anchor-name: --tt-2" aria-describedby="tt2">
-        <span class="icon">🎯</span> Anchor
-      </button>
-      <div class="tooltip" id="tt2" style="position-anchor: --tt-2">
-        <strong>position-area</strong>
-        Declares where the tooltip sits relative to its anchor. <code>top center</code> → above, centered.
+      <div class="tooltip-pair">
+        <button class="tooltip-trigger" style="--anchor-name: --tt-2" aria-describedby="tt2">
+          <span class="icon">🎯</span> Anchor
+        </button>
+        <div class="tooltip" id="tt2" style="position-anchor: --tt-2">
+          <strong>position-area</strong>
+          Declares where the tooltip sits relative to its anchor. <code>top center</code> → above, centered.
+        </div>
       </div>
 
       <!-- 3 -->
-      <button class="tooltip-trigger" style="--anchor-name: --tt-3" aria-describedby="tt3">
-        <span class="icon">🎨</span> OKLCH
-      </button>
-      <div class="tooltip" id="tt3" style="position-anchor: --tt-3">
-        <strong>Perceptual Colour</strong>
-        OKLCH gradients maintain uniform lightness across hue shifts. No muddy midpoints.
+      <div class="tooltip-pair">
+        <button class="tooltip-trigger" style="--anchor-name: --tt-3" aria-describedby="tt3">
+          <span class="icon">🎨</span> OKLCH
+        </button>
+        <div class="tooltip" id="tt3" style="position-anchor: --tt-3">
+          <strong>Perceptual Colour</strong>
+          OKLCH gradients maintain uniform lightness across hue shifts. No muddy midpoints.
+        </div>
       </div>
 
       <!-- 4 -->
-      <button class="tooltip-trigger" style="--anchor-name: --tt-4" aria-describedby="tt4">
-        <span class="icon">🔄</span> Fallback
-      </button>
-      <div class="tooltip" id="tt4" style="position-anchor: --tt-4">
-        <strong>position-try-fallbacks</strong>
-        When the tooltip overflows the viewport, the browser flips it to the opposite side. Automatic edge detection.
+      <div class="tooltip-pair">
+        <button class="tooltip-trigger" style="--anchor-name: --tt-4" aria-describedby="tt4">
+          <span class="icon">🔄</span> Fallback
+        </button>
+        <div class="tooltip" id="tt4" style="position-anchor: --tt-4">
+          <strong>position-try-fallbacks</strong>
+          When the tooltip overflows the viewport, the browser flips it to the opposite side. Automatic edge detection.
+        </div>
       </div>
 
       <!-- 5 -->
-      <button class="tooltip-trigger" style="--anchor-name: --tt-5" aria-describedby="tt5">
-        <span class="icon">📐</span> Size
-      </button>
-      <div class="tooltip" id="tt5" style="position-anchor: --tt-5">
-        <strong>anchor-size()</strong>
-        The tooltip width matches its anchor via <code>anchor-size(width)</code>. No JavaScript width sync.
+      <div class="tooltip-pair">
+        <button class="tooltip-trigger" style="--anchor-name: --tt-5" aria-describedby="tt5">
+          <span class="icon">📐</span> Size
+        </button>
+        <div class="tooltip" id="tt5" style="position-anchor: --tt-5">
+          <strong>anchor-size()</strong>
+          The tooltip width matches its anchor via <code>anchor-size(width)</code>. No JavaScript width sync.
+        </div>
       </div>
 
       <!-- 6 -->
-      <button class="tooltip-trigger" style="--anchor-name: --tt-6" aria-describedby="tt6">
-        <span class="icon">✨</span> Cascade
-      </button>
-      <div class="tooltip" id="tt6" style="position-anchor: --tt-6">
-        <strong>@layer Cascade</strong>
-        All CSS is organised in explicit cascade layers — reset → theme → layout → components → utilities.
+      <div class="tooltip-pair">
+        <button class="tooltip-trigger" style="--anchor-name: --tt-6" aria-describedby="tt6">
+          <span class="icon">✨</span> Cascade
+        </button>
+        <div class="tooltip" id="tt6" style="position-anchor: --tt-6">
+          <strong>@layer Cascade</strong>
+          All CSS is organised in explicit cascade layers — reset → theme → layout → components → utilities.
+        </div>
       </div>
     </div>
   </section>
