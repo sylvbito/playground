@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anchor Glass — CSS Anchor Positioning + Liquid Glass</title>
+<style>
+/* ============================================
+   Cascade Layers — explicit priority control
+   ============================================ */
+@layer reset, theme, layout, components, utilities;
+
+/* --- RESET --- */
+@layer reset {
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body { min-height: 100vh; }
+  img, svg { display: block; max-width: 100%; }
+}
+
+/* --- THEME --- */
+@layer theme {
+  :root {
+    /* OKLCH colour system — perceptual uniformity */
+    --oklch-bg:       oklch(0.08 0.018 264);
+    --oklch-surface:  oklch(0.14 0.012 264);
+    --oklch-border:   oklch(0.22 0.015 264);
+    --oklch-text:     oklch(0.92 0.005 264);
+    --oklch-muted:    oklch(0.60 0.008 264);
+    --oklch-accent-1: oklch(0.72 0.18 200);
+    --oklch-accent-2: oklch(0.72 0.18 280);
+    --oklch-accent-3: oklch(0.72 0.18 330);
+
+    /* Glass tokens */
+    --glass-bg:       oklch(0.16 0.012 264 / 0.55);
+    --glass-border:   oklch(0.30 0.018 264 / 0.5);
+    --glass-blur:     24px;
+    --glass-saturate: 1.4;
+
+    /* Typography */
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+
+    /* Spacing */
+    --space-xs: 0.375rem;
+    --space-sm: 0.625rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2.5rem;
+    --space-2xl: 4rem;
+
+    /* Radii */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+
+    /* Motion */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --duration-fast: 180ms;
+    --duration-normal: 350ms;
+    --duration-slow: 600ms;
+  }
+}
+
+/* --- LAYOUT --- */
+@layer layout {
+  body {
+    font-family: var(--font-sans);
+    background: var(--oklch-bg);
+    color: var(--oklch-text);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 var(--space-lg);
+  }
+
+  section {
+    padding: var(--space-2xl) 0;
+    position: relative;
+  }
+}
+
+/* --- COMPONENTS --- */
+@layer components {
+  /* === Ambient background blobs (behind glass) === */
+  .bg-blobs {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .bg-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.35;
+    animation: blob-drift 20s ease-in-out infinite;
+  }
+  .bg-blob:nth-child(1) {
+    width: 600px; height: 600px;
+    background: var(--oklch-accent-1);
+    top: -15%; left: -10%;
+    animation-delay: 0s;
+  }
+  .bg-blob:nth-child(2) {
+    width: 500px; height: 500px;
+    background: var(--oklch-accent-2);
+    top: 40%; right: -12%;
+    animation-delay: -7s;
+    animation-duration: 24s;
+  }
+  .bg-blob:nth-child(3) {
+    width: 400px; height: 400px;
+    background: var(--oklch-accent-3);
+    bottom: -10%; left: 30%;
+    animation-delay: -14s;
+    animation-duration: 18s;
+  }
+
+  @keyframes blob-drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(60px, -40px) scale(1.08); }
+    50% { transform: translate(-30px, 50px) scale(0.94); }
+    75% { transform: translate(-50px, -30px) scale(1.05); }
+  }
+
+  /* === Glass panel base === */
+  .glass {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border-radius: var(--radius-lg);
+  }
+
+  /* === Hero === */
+  .hero {
+    padding-top: var(--space-2xl);
+    padding-bottom: var(--space-xl);
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+  .hero h1 {
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    background: linear-gradient(135deg, var(--oklch-accent-1), var(--oklch-accent-2), var(--oklch-accent-3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p {
+    margin-top: var(--space-md);
+    font-size: 1.1rem;
+    color: var(--oklch-muted);
+    max-width: 540px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+  }
+  .hero .badge {
+    display: inline-block;
+    margin-top: var(--space-lg);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-family: var(--font-mono);
+    color: var(--oklch-accent-1);
+    border: 1px solid oklch(0.72 0.18 200 / 0.3);
+    background: oklch(0.72 0.18 200 / 0.08);
+  }
+
+  /* === Section titles === */
+  .section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--space-sm);
+    z-index: 1;
+    position: relative;
+  }
+  .section-subtitle {
+    font-size: 0.9rem;
+    color: var(--oklch-muted);
+    margin-bottom: var(--space-xl);
+    z-index: 1;
+    position: relative;
+    line-height: 1.5;
+  }
+
+  /* === Tooltip Gallery (core anchor demo) === */
+  .tooltip-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-lg);
+    position: relative;
+    z-index: 1;
+  }
+
+  .tooltip-trigger {
+    position: relative;
+    anchor-name: var(--anchor-name);
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--oklch-border);
+    background: var(--oklch-surface);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    transition: all var(--duration-fast) var(--ease-out);
+    font-family: inherit;
+    color: var(--oklch-text);
+    font-size: 0.95rem;
+  }
+  .tooltip-trigger:hover,
+  .tooltip-trigger:focus-visible {
+    border-color: var(--oklch-accent-1);
+    background: oklch(0.18 0.015 264);
+    outline: none;
+    box-shadow: 0 0 0 3px oklch(0.72 0.18 200 / 0.15);
+  }
+  .tooltip-trigger .icon {
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  /* Anchor-positioned tooltip */
+  .tooltip {
+    position: absolute;
+    position-anchor: var(--anchor-name);
+    position-area: top center;
+    position-try-fallbacks: flip-block, bottom center;
+    /* Anchor-sized width with max constraint */
+    width: max(anchor-size(width), 180px);
+    max-width: 260px;
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--oklch-text);
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity var(--duration-fast) var(--ease-out),
+                transform var(--duration-fast) var(--ease-out);
+    /* Glass styling (embedded, not .glass class — avoids cascade issues) */
+    background: oklch(0.14 0.012 264 / 0.7);
+    border: 1px solid oklch(0.30 0.018 264 / 0.5);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    box-shadow: 0 8px 32px oklch(0 0 0 / 0.3);
+  }
+  .tooltip-trigger:hover + .tooltip,
+  .tooltip-trigger:focus-visible + .tooltip {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .tooltip strong {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--oklch-accent-1);
+  }
+
+  /* Anchor margin (gap between anchor and tooltip) */
+  .tooltip { margin: 8px; }
+
+  /* === Popover Cards === */
+  .popover-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--space-lg);
+    position: relative;
+    z-index: 1;
+  }
+
+  .popover-card {
+    position: relative;
+    anchor-name: var(--anchor-name);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--oklch-border);
+    background: var(--oklch-surface);
+    padding: var(--space-lg);
+    cursor: pointer;
+    transition: border-color var(--duration-fast) var(--ease-out);
+    min-height: 140px;
+  }
+  .popover-card:hover {
+    border-color: var(--oklch-accent-2);
+  }
+  .popover-card h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: var(--space-xs);
+  }
+  .popover-card p {
+    font-size: 0.85rem;
+    color: var(--oklch-muted);
+    line-height: 1.5;
+  }
+  .popover-card .hint {
+    display: inline-block;
+    margin-top: var(--space-sm);
+    font-size: 0.72rem;
+    color: var(--oklch-accent-2);
+    font-family: var(--font-mono);
+  }
+
+  /* Anchor-positioned popover */
+  .popover-detail {
+    position: absolute;
+    position-anchor: var(--anchor-name);
+    position-area: right center;
+    position-try-fallbacks: flip-inline, left center, bottom center;
+    width: 280px;
+    padding: var(--space-lg);
+    border-radius: var(--radius-lg);
+    z-index: 100;
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: opacity var(--duration-fast) var(--ease-out),
+                transform var(--duration-fast) var(--ease-out);
+    pointer-events: none;
+    background: oklch(0.12 0.012 264 / 0.75);
+    border: 1px solid oklch(0.30 0.018 264 / 0.5);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    box-shadow: 0 12px 40px oklch(0 0 0 / 0.35);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  .popover-detail { margin: 12px; }
+
+  .popover-card.active .popover-detail {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  /* === Dropdown Menu === */
+  .dropdown-section {
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .dropdown-anchor {
+    display: inline-block;
+    position: relative;
+    anchor-name: --dropdown-menu;
+  }
+
+  .dropdown-btn {
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--oklch-border);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    color: var(--oklch-text);
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+  .dropdown-btn:hover {
+    border-color: var(--oklch-accent-3);
+    background: oklch(0.20 0.012 264 / 0.6);
+  }
+  .dropdown-btn .chevron {
+    font-size: 0.7rem;
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+
+  .dropdown-menu {
+    position: absolute;
+    position-anchor: --dropdown-menu;
+    position-area: bottom center;
+    position-try-fallbacks: top center;
+    width: anchor-size(width);
+    min-width: 200px;
+    padding: var(--space-xs);
+    border-radius: var(--radius-md);
+    z-index: 100;
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity var(--duration-fast) var(--ease-out),
+                transform var(--duration-fast) var(--ease-out);
+    background: oklch(0.14 0.012 264 / 0.75);
+    border: 1px solid oklch(0.28 0.018 264 / 0.5);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    box-shadow: 0 12px 40px oklch(0 0 0 / 0.35);
+  }
+  .dropdown-menu { margin: 6px; }
+
+  .dropdown-menu.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .dropdown-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--oklch-text);
+    font-family: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-out);
+  }
+  .dropdown-item:hover {
+    background: oklch(0.72 0.18 330 / 0.12);
+  }
+
+  /* === Features list === */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-xl);
+    position: relative;
+    z-index: 1;
+  }
+  .feature {
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--oklch-border);
+    background: var(--oklch-surface);
+  }
+  .feature .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  .feature .dot.c1 { background: var(--oklch-accent-1); }
+  .feature .dot.c2 { background: var(--oklch-accent-2); }
+  .feature .dot.c3 { background: var(--oklch-accent-3); }
+  .feature span {
+    font-size: 0.82rem;
+    font-family: var(--font-mono);
+    color: var(--oklch-muted);
+  }
+
+  /* === Footer === */
+  .site-footer {
+    text-align: center;
+    padding: var(--space-2xl) 0;
+    font-size: 0.8rem;
+    color: var(--oklch-muted);
+    position: relative;
+    z-index: 1;
+  }
+  .site-footer a {
+    color: var(--oklch-accent-1);
+    text-decoration: none;
+  }
+  .site-footer a:hover { text-decoration: underline; }
+}
+
+/* --- UTILITIES --- */
+@layer utilities {
+  /* Scroll-triggered entrance animations */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity var(--duration-slow) var(--ease-out),
+                transform var(--duration-slow) var(--ease-out);
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Stagger children */
+  .reveal-stagger > * {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity var(--duration-normal) var(--ease-out),
+                transform var(--duration-normal) var(--ease-out);
+  }
+  .reveal-stagger.visible > *:nth-child(1) { transition-delay: 0s; opacity: 1; transform: translateY(0); }
+  .reveal-stagger.visible > *:nth-child(2) { transition-delay: 0.08s; opacity: 1; transform: translateY(0); }
+  .reveal-stagger.visible > *:nth-child(3) { transition-delay: 0.16s; opacity: 1; transform: translateY(0); }
+  .reveal-stagger.visible > *:nth-child(4) { transition-delay: 0.24s; opacity: 1; transform: translateY(0); }
+  .reveal-stagger.visible > *:nth-child(5) { transition-delay: 0.32s; opacity: 1; transform: translateY(0); }
+  .reveal-stagger.visible > *:nth-child(6) { transition-delay: 0.40s; opacity: 1; transform: translateY(0); }
+
+  /* Anchor positioning fallback — if anchor positioning isn't supported, tooltips appear inline */
+  @supports not (anchor-name: --test) {
+    .tooltip, .popover-detail, .dropdown-menu {
+      position: static !important;
+      opacity: 1 !important;
+      transform: none !important;
+      pointer-events: auto !important;
+      margin: 8px 0 0 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal, .reveal.visible,
+  .reveal-stagger > *, .reveal-stagger.visible > * {
+    opacity: 1;
+    transform: none;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- Ambient blob background — essential for glass visibility -->
+<div class="bg-blobs">
+  <div class="bg-blob"></div>
+  <div class="bg-blob"></div>
+  <div class="bg-blob"></div>
+</div>
+
+<main class="container">
+
+  <!-- HERO -->
+  <header class="hero reveal">
+    <h1>Anchor Glass</h1>
+    <p>CSS Anchor Positioning meets Liquid Glass. Tooltips, popovers, and dropdowns — all positioned declaratively, styled with OKLCH perceptual colour and backdrop-filter depth.</p>
+    <span class="badge">Chrome 129+</span>
+  </header>
+
+  <!-- SECTION: Tooltip Gallery -->
+  <section>
+    <h2 class="section-title reveal">Anchor-Positioned Tooltips</h2>
+    <p class="section-subtitle reveal">Hover any icon. Each tooltip is tethered via <code>position-anchor</code> with <code>position-try-fallbacks</code> for edge-aware repositioning. Zero JavaScript for positioning.</p>
+
+    <div class="tooltip-gallery reveal-stagger">
+      <!-- 1 -->
+      <button class="tooltip-trigger" style="--anchor-name: --tt-1" aria-describedby="tt1">
+        <span class="icon">🔮</span> Crystal
+      </button>
+      <div class="tooltip" id="tt1" style="position-anchor: --tt-1">
+        <strong>Glass Morphism</strong>
+        Backdrop-filter blur creates depth separation. The browser composites this on the GPU — zero repaints.
+      </div>
+
+      <!-- 2 -->
+      <button class="tooltip-trigger" style="--anchor-name: --tt-2" aria-describedby="tt2">
+        <span class="icon">🎯</span> Anchor
+      </button>
+      <div class="tooltip" id="tt2" style="position-anchor: --tt-2">
+        <strong>position-area</strong>
+        Declares where the tooltip sits relative to its anchor. <code>top center</code> → above, centered.
+      </div>
+
+      <!-- 3 -->
+      <button class="tooltip-trigger" style="--anchor-name: --tt-3" aria-describedby="tt3">
+        <span class="icon">🎨</span> OKLCH
+      </button>
+      <div class="tooltip" id="tt3" style="position-anchor: --tt-3">
+        <strong>Perceptual Colour</strong>
+        OKLCH gradients maintain uniform lightness across hue shifts. No muddy midpoints.
+      </div>
+
+      <!-- 4 -->
+      <button class="tooltip-trigger" style="--anchor-name: --tt-4" aria-describedby="tt4">
+        <span class="icon">🔄</span> Fallback
+      </button>
+      <div class="tooltip" id="tt4" style="position-anchor: --tt-4">
+        <strong>position-try-fallbacks</strong>
+        When the tooltip overflows the viewport, the browser flips it to the opposite side. Automatic edge detection.
+      </div>
+
+      <!-- 5 -->
+      <button class="tooltip-trigger" style="--anchor-name: --tt-5" aria-describedby="tt5">
+        <span class="icon">📐</span> Size
+      </button>
+      <div class="tooltip" id="tt5" style="position-anchor: --tt-5">
+        <strong>anchor-size()</strong>
+        The tooltip width matches its anchor via <code>anchor-size(width)</code>. No JavaScript width sync.
+      </div>
+
+      <!-- 6 -->
+      <button class="tooltip-trigger" style="--anchor-name: --tt-6" aria-describedby="tt6">
+        <span class="icon">✨</span> Cascade
+      </button>
+      <div class="tooltip" id="tt6" style="position-anchor: --tt-6">
+        <strong>@layer Cascade</strong>
+        All CSS is organised in explicit cascade layers — reset → theme → layout → components → utilities.
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION: Popover Cards -->
+  <section>
+    <h2 class="section-title reveal">Anchor-Positioned Popovers</h2>
+    <p class="section-subtitle reveal">Click a card to reveal a detail panel positioned with <code>position-area: right center</code>. Falls back to left or bottom when near viewport edges.</p>
+
+    <div class="popover-grid reveal-stagger">
+      <div class="popover-card" style="--anchor-name: --pop-1" data-popover>
+        <h3>Declarative Positioning</h3>
+        <p>No more Popper.js or Floating UI. The browser handles collision detection natively.</p>
+        <span class="hint">Click for details →</span>
+        <div class="popover-detail" style="position-anchor: --pop-1">
+          <strong>Before:</strong> ~12KB of JS + computeIntrinsicSize + middleware stack<br><br>
+          <strong>After:</strong> 3 CSS properties. The browser does the math at layout time, not the main thread.
+        </div>
+      </div>
+
+      <div class="popover-card" style="--anchor-name: --pop-2" data-popover>
+        <h3>Edge-Aware Fallbacks</h3>
+        <p>position-try-fallbacks lets you specify a chain of fallback positions. The browser picks the first that fits.</p>
+        <span class="hint">Click for details →</span>
+        <div class="popover-detail" style="position-anchor: --pop-2">
+          <strong>Try chain:</strong> <code>right → left → bottom</code><br><br>
+          Each fallback is evaluated in order. If the positioned element overflows in its current position, the browser tries the next one. No JavaScript viewport math.
+        </div>
+      </div>
+
+      <div class="popover-card" style="--anchor-name: --pop-3" data-popover>
+        <h3>Anchor Scope</h3>
+        <p>The anchor-scope property limits which anchors are visible to which positioned elements — essential for nested components.</p>
+        <span class="hint">Click for details →</span>
+        <div class="popover-detail" style="position-anchor: --pop-3">
+          <strong>Without scope:</strong> All anchors on the page compete for positioned elements.<br><br>
+          <strong>With scope:</strong> <code>anchor-scope: --my-component</code> isolates anchors to a subtree. Essential for design systems with nested anchor-positioned patterns.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION: Dropdown Menu -->
+  <section class="dropdown-section">
+    <h2 class="section-title reveal">Anchor-Positioned Dropdown</h2>
+    <p class="section-subtitle reveal">A button with a dropdown menu. The menu uses <code>anchor-size(width)</code> to match the button width, and <code>position-try-fallbacks</code> to flip above when needed.</p>
+
+    <div class="dropdown-anchor reveal">
+      <button class="dropdown-btn" id="dropdownBtn" aria-expanded="false" aria-haspopup="true">
+        Menu <span class="chevron">▾</span>
+      </button>
+      <div class="dropdown-menu" style="position-anchor: --dropdown-menu" id="dropdownMenu" role="menu">
+        <button class="dropdown-item" role="menuitem">New Project</button>
+        <button class="dropdown-item" role="menuitem">Open Recent…</button>
+        <button class="dropdown-item" role="menuitem">Save Copy As…</button>
+        <button class="dropdown-item" role="menuitem" style="color: var(--oklch-accent-3)">Delete…</button>
+      </div>
+    </div>
+
+    <!-- Features legend -->
+    <div class="features reveal">
+      <div class="feature"><span class="dot c1"></span> <span>anchor-name</span></div>
+      <div class="feature"><span class="dot c2"></span> <span>position-anchor</span></div>
+      <div class="feature"><span class="dot c3"></span> <span>position-area</span></div>
+      <div class="feature"><span class="dot c1"></span> <span>position-try-fallbacks</span></div>
+      <div class="feature"><span class="dot c2"></span> <span>anchor-size()</span></div>
+      <div class="feature"><span class="dot c3"></span> <span>anchor-scope</span></div>
+      <div class="feature"><span class="dot c1"></span> <span>backdrop-filter</span></div>
+      <div class="feature"><span class="dot c2"></span> <span>oklch()</span></div>
+      <div class="feature"><span class="dot c3"></span> <span>@layer</span></div>
+    </div>
+  </section>
+
+  <footer class="site-footer reveal">
+    Built by <a href="https://github.com/sylvbito">Hermes</a> · CSS Anchor Positioning (Chrome 129+) · OKLCH colours · <a href="/playground/">Playground</a>
+  </footer>
+
+</main>
+
+<script>
+// ============================================
+// Interactive behaviours
+// ============================================
+
+// --- Popover card toggle ---
+document.querySelectorAll('[data-popover]').forEach(card => {
+  card.addEventListener('click', () => {
+    // Close all others
+    document.querySelectorAll('[data-popover].active').forEach(c => {
+      if (c !== card) c.classList.remove('active');
+    });
+    card.classList.toggle('active');
+  });
+});
+
+// Close popovers on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('[data-popover].active').forEach(c => c.classList.remove('active'));
+    dropdownMenu.classList.remove('open');
+    dropdownBtn.setAttribute('aria-expanded', 'false');
+  }
+});
+
+// --- Dropdown toggle ---
+const dropdownBtn = document.getElementById('dropdownBtn');
+const dropdownMenu = document.getElementById('dropdownMenu');
+
+dropdownBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const isOpen = dropdownMenu.classList.toggle('open');
+  dropdownBtn.setAttribute('aria-expanded', isOpen);
+});
+
+// Close dropdown on outside click
+document.addEventListener('click', (e) => {
+  if (!dropdownBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
+    dropdownMenu.classList.remove('open');
+    dropdownBtn.setAttribute('aria-expanded', 'false');
+  }
+});
+
+// Close dropdown on menu item click
+dropdownMenu.querySelectorAll('.dropdown-item').forEach(item => {
+  item.addEventListener('click', () => {
+    dropdownMenu.classList.remove('open');
+    dropdownBtn.setAttribute('aria-expanded', 'false');
+  });
+});
+
+// ============================================
+// Scroll-triggered entrance animations
+// ============================================
+// Uses CSS animation-trigger where supported (Chrome 145+),
+// falls back to IntersectionObserver for all other browsers.
+
+const supportsAnimationTrigger = CSS.supports('animation-trigger', 'none');
+
+if (!supportsAnimationTrigger) {
+  // IntersectionObserver fallback
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, {
+    threshold: 0.15,
+    rootMargin: '0px 0px -40px 0px'
+  });
+
+  document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => {
+    observer.observe(el);
+  });
+} else {
+  // Native CSS animation-trigger — mark elements visible immediately
+  // since the CSS handles it declaratively
+  document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => {
+    el.style.setProperty('animation-trigger', 'auto');
+  });
+}
+
+// Mark all elements as visible if IntersectionObserver unavailable and animation-trigger unsupported
+// (browsers that support neither — just show everything)
+if (!supportsAnimationTrigger && typeof IntersectionObserver === 'undefined') {
+  document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => {
+    el.classList.add('visible');
+  });
+}
+</script>
+
+</body>
+</html>
