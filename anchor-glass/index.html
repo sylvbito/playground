@@ -207,7 +207,10 @@
   }
 
   .tooltip-pair {
-    /* Transparent wrapper — grid item keeps stagger at 6 children */
+    /* Prevent stagger transform on wrapper — even identity transform
+       (translateY(0)) creates a containing block that breaks CSS
+       anchor positioning. !important needed to beat @layer utilities. */
+    transform: none !important;
   }
 
   .tooltip-trigger {
