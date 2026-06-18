@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Spectral Veil</title>
+  <script>p5.disableFriendlyErrors = true;</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.3/p5.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #06060f;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    canvas {
+      display: block;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100% !important;
+      height: 100% !important;
+      z-index: 1;
+    }
+
+    .vignette {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: radial-gradient(ellipse at center, transparent 45%, rgba(4,4,12,0.55) 100%);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .info {
+      position: fixed;
+      top: 28px;
+      right: 32px;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Mono', 'SF Pro', system-ui, sans-serif;
+      font-size: 10px;
+      color: rgba(255,255,255,0.2);
+      text-align: right;
+      line-height: 1.7;
+      z-index: 10;
+      pointer-events: none;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      user-select: none;
+    }
+
+    .palette-panel {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      padding: 14px 22px;
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(28px) saturate(1.5);
+      -webkit-backdrop-filter: blur(28px) saturate(1.5);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 20px;
+      z-index: 10;
+    }
+    .swatch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+    .swatch-dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: transform 0.4s ease;
+    }
+    .swatch:hover .swatch-dot {
+      transform: scale(1.2);
+    }
+    .swatch-label {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Mono', 'SF Pro', system-ui, sans-serif;
+      font-size: 8px;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 640px) {
+      .palette-panel {
+        bottom: 16px;
+        padding: 10px 14px;
+        gap: 6px;
+        border-radius: 14px;
+      }
+      .swatch-dot { width: 18px; height: 18px; }
+      .swatch-label { font-size: 6px; letter-spacing: 0.5px; }
+      .info { top: 18px; right: 20px; font-size: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="vignette"></div>
+  <div class="palette-panel" id="palettePanel"></div>
+  <div class="info">Spectral Veil&ensp;·&ensp;<span id="fps">—</span></div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const CFG = {
+  seed: Math.floor(Math.random() * 99999),
+  numBands: 6,
+  minH: 60,
+  maxH: 240,
+  noiseSpeed: 0.0032,
+  noiseScaleX: 0.002,
+  particleCount: 40,
+  bandVerts: 80,
+  // Hand-drawn jitter amplitude (px) — creates the "boiling line" effect
+  jitterAmt: 1.4,
+  // How often (frames) to refresh jitter seed for new noise pattern
+  jitterRefresh: 5,
+};
+
+// ============================================================
+// PALETTE — HSB (hue, sat, bri) + display label
+// ============================================================
+const PALETTE = [
+  { h: 188, s: 72, b: 86, label: 'CYAN' },
+  { h: 338, s: 58, b: 90, label: 'ROSE' },
+  { h: 48,  s: 68, b: 94, label: 'GOLD' },
+  { h: 272, s: 50, b: 76, label: 'VIOLA' },
+  { h: 158, s: 40, b: 82, label: 'MINT' },
+  { h: 12,  s: 62, b: 84, label: 'CORAL' },
+  { h: 222, s: 55, b: 65, label: 'SLATE' },
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let bands = [];
+let particles = [];
+let fpsEl;
+let jitterSeed = 0;
+
+// ============================================================
+// HELPERS
+// ============================================================
+function hsbaToCSS(h, s, b) {
+  const c = color(h, s, b, 100);
+  return '#' + hex(c, 6);
+}
+
+// Fast 2D noise with built-in seed mixing
+let _noiseCache = {};
+
+// ============================================================
+// SETUP
+// ============================================================
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  colorMode(HSB, 360, 100, 100, 100);
+
+  randomSeed(CFG.seed);
+  noiseSeed(CFG.seed);
+
+  // Build bands
+  const pad = 40;
+  const usable = height - pad * 2;
+  for (let i = 0; i < CFG.numBands; i++) {
+    const t = (i + 1) / (CFG.numBands + 1);
+    bands.push({
+      yCenter: pad + t * usable,
+      baseH: random(CFG.minH, CFG.maxH),
+      nOffX: random(10000),
+      nOffY: random(10000),
+      speed: random(0.6, 1.5),
+      pi: i % PALETTE.length,
+      alpha: random(0.25, 0.55),
+      phase: random(TWO_PI),
+    });
+  }
+
+  // Build particles
+  for (let i = 0; i < CFG.particleCount; i++) {
+    particles.push({
+      x: random(width),
+      y: random(height),
+      r: random(0.5, 2.0),
+      nOff: random(10000),
+      vx: 0, vy: 0,
+      alpha: random(0.03, 0.18),
+      twinkle: random(0.015, 0.05),
+    });
+  }
+
+  fpsEl = document.getElementById('fps');
+
+  // Hydrate palette panel
+  const panel = document.getElementById('palettePanel');
+  for (const c of PALETTE) {
+    const sw = document.createElement('div');
+    sw.className = 'swatch';
+    sw.innerHTML = `
+      <div class="swatch-dot" style="background:${hsbaToCSS(c.h, c.s, c.b)}"></div>
+      <span class="swatch-label">${c.label}</span>
+    `;
+    panel.appendChild(sw);
+  }
+}
+
+// ============================================================
+// DRAW
+// ============================================================
+let jitterTable = [];
+
+function draw() {
+  background(232, 55, 8);
+
+  // Refresh jitter table periodically for organic "boiling" feel
+  if (frameCount % CFG.jitterRefresh === 0) {
+    jitterSeed = (jitterSeed + 1) % 10000;
+    randomSeed(jitterSeed);
+    const totalVerts = CFG.numBands * (CFG.bandVerts + 1) * 2;
+    jitterTable = [];
+    for (let i = 0; i < totalVerts; i++) {
+      jitterTable.push((Math.random() - 0.5) * CFG.jitterAmt * 2);
+    }
+    // Restore main seed for color consistency
+    randomSeed(CFG.seed);
+    noiseSeed(CFG.seed);
+  }
+
+  // ---- BANDS ----
+  let jIdx = 0;
+  for (const b of bands) {
+    jIdx = drawBand(b, jIdx);
+  }
+
+  // ---- PARTICLES ----
+  drawParticles();
+
+  // FPS
+  if (frameCount % 30 === 0) {
+    fpsEl.textContent = Math.round(frameRate()) + ' fps';
+  }
+}
+
+// ============================================================
+// BAND RENDERER
+// ============================================================
+function drawBand(b, jIdx) {
+  const t = frameCount * CFG.noiseSpeed * b.speed;
+  const p = PALETTE[b.pi];
+
+  // Slow vertical breathing
+  const breathe = 40 * noise(t * 0.2 + b.phase) - 20;
+  const yBase = b.yCenter + breathe;
+
+  // Hue drift
+  const hShift = 18 * noise(t * 0.08 + b.nOffX * 0.01);
+  const hue = (p.h + hShift) % 360;
+
+  const pts = CFG.bandVerts;
+  const tops = [];
+  const bots = [];
+
+  for (let i = 0; i <= pts; i++) {
+    const x = (i / pts) * width;
+    const nx = x * CFG.noiseScaleX;
+    const ny = yBase * CFG.noiseScaleX;
+
+    // Center displacement from noise
+    const cx = noise(nx + b.nOffX, ny, t * 0.35);
+    const cy = yBase + map(cx, 0.2, 0.8, -80, 80);
+
+    // Thickness
+    const thickNoise = noise(nx + b.nOffX + 200, ny + 200, t * 0.2 + 40);
+    const thick = b.baseH * (0.4 + thickNoise * 0.6);
+
+    // Hand-drawn jitter
+    const jx = jitterTable[jIdx++] || 0;
+    const jy = jitterTable[jIdx++] || 0;
+
+    tops.push({ x: x + jx, y: cy - thick * 0.5 + jy });
+    bots.push({ x: x + jx, y: cy + thick * 0.5 + jy });
+  }
+
+  noStroke();
+
+  // Main band (glow removed for perf — the displacement jitter + blend achieves organic feel)
+  fill(hue, p.s, p.b, b.alpha * 100);
+  beginShape();
+  for (const pt of tops) vertex(pt.x, pt.y);
+  for (let i = bots.length - 1; i >= 0; i--) vertex(bots[i].x, bots[i].y);
+  endShape(CLOSE);
+
+  return jIdx;
+}
+
+// ============================================================
+// PARTICLE SYSTEM
+// ============================================================
+function drawParticles() {
+  const t = frameCount * 0.002;
+  for (const pt of particles) {
+    const n = noise(pt.nOff + t, pt.x * 0.0015, pt.y * 0.0015);
+    const ang = n * TWO_PI * 2.5;
+    const spd = 0.3;
+    pt.vx += cos(ang) * spd * 0.015;
+    pt.vy += sin(ang) * spd * 0.015;
+    pt.vx *= 0.97;
+    pt.vy *= 0.97;
+    pt.x += pt.vx;
+    pt.y += pt.vy;
+
+    if (pt.x < -20) pt.x = width + 20;
+    if (pt.x > width + 20) pt.x = -20;
+    if (pt.y < -20) pt.y = height + 20;
+    if (pt.y > height + 20) pt.y = -20;
+
+    const twinkle = 0.4 + 0.6 * (0.5 + 0.5 * sin(frameCount * pt.twinkle + pt.nOff));
+    fill(0, 0, 100, pt.alpha * twinkle * 100);
+    noStroke();
+    circle(pt.x, pt.y, pt.r * twinkle);
+  }
+}
+
+// ============================================================
+// EVENTS
+// ============================================================
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  const pad = 40;
+  const usable = height - pad * 2;
+  for (let i = 0; i < bands.length; i++) {
+    bands[i].yCenter = pad + ((i + 1) / (bands.length + 1)) * usable;
+  }
+}
+
+function keyPressed() {
+  if (key === 's' || key === 'S') saveCanvas('spectral-veil', 'png');
+  if (key === ' ') { if (isLooping()) noLoop(); else loop(); }
+  if (key === 'r' || key === 'R') { randomSeed(millis()); noiseSeed(millis()); }
+}
+
+function touchMoved() { return false; }
+</script>
+</body>
+</html>
