@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<title>Warp Mesh</title>
+<script>p5.disableFriendlyErrors=true</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.3/p5.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#05050a}
+canvas{display:block}
+#info{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  z-index:10;pointer-events:none;user-select:none;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro','Helvetica Neue',system-ui,sans-serif;
+  font-size:11px;letter-spacing:.06em;color:rgba(255,255,255,0.15);
+  text-transform:uppercase;text-align:center;
+}
+</style>
+</head>
+<body>
+<div id="info">Warp Mesh · R = re-seed · S = save PNG</div>
+<script>
+/* ═══════════════════════════════════════
+   OKLCH → sRGB (Ottosson 2020)
+   ═══════════════════════════════════════ */
+function oklchToSrgb(l,c,h){
+  const hr=h*Math.PI/180;
+  const a=c*Math.cos(hr), b=c*Math.sin(hr);
+  const l_=l+0.3963377774*a+0.2158037573*b;
+  const m_=l-0.1055613458*a-0.0638541728*b;
+  const s_=l-0.0894841775*a-1.2914855480*b;
+  const cb=x=>{const s=x<0?-1:1;return s*Math.pow(Math.abs(x),3)};
+  const ll=cb(l_),mm=cb(m_),ss=cb(s_);
+  const rL= 4.0767416621*ll-3.3077115913*mm+0.2309699292*ss;
+  const gL=-1.2684380046*ll+2.6097574011*mm-0.3413193965*ss;
+  const bL=-0.0041960863*ll-0.7034186147*mm+1.7076147010*ss;
+  const g=x=>x<=0.0031308?12.92*x:1.055*Math.pow(x,1/2.4)-0.055;
+  return[Math.round(Math.max(0,Math.min(255,g(rL)*255))),
+         Math.round(Math.max(0,Math.min(255,g(gL)*255))),
+         Math.round(Math.max(0,Math.min(255,g(bL)*255)))];
+}
+
+function lerpHue(a,b,t){let d=b-a;if(d>180)d-=360;if(d<-180)d+=360;return((a+d*t)%360+360)%360}
+
+/* ═══════════════════════════════════════
+   FBM NOISE
+   ═══════════════════════════════════════ */
+function fbm(x,y,oct=4){
+  let v=0,amp=1,freq=1,sum=0;
+  for(let i=0;i<oct;i++){v+=noise(x*freq,y*freq)*amp;sum+=amp;amp*=0.5;freq*=2}
+  return v/sum;
+}
+
+/* ═══════════════════════════════════════
+   CONFIG
+   ═══════════════════════════════════════ */
+const CFG={
+  cols:70,
+  rows:45,
+  noiseScale:0.004,
+  noiseSpeed:0.00015,
+  amplitude:90,
+  flowAngle:0.0006,   // slow rotation of noise field
+  jitter:0.8,          // hand-drawn frame jitter
+  lineWeight:1.2,
+  opacity:0.55,
+  seed:Math.floor(Math.random()*99999),
+};
+
+/* ═══════════════════════════════════════
+   PALETTE — cool-to-warm via OKLCH
+   Maps displacement [0,1] → color
+   ═══════════════════════════════════════ */
+const PALETTE_STOPS=[
+  {t:0.0, L:0.45, C:0.10, H:250},  // deep indigo
+  {t:0.28,L:0.52, C:0.12, H:225},  // steel blue
+  {t:0.48,L:0.60, C:0.15, H:282},  // plum
+  {t:0.65,L:0.68, C:0.18, H:340},  // rose
+  {t:0.80,L:0.74, C:0.20, H:40},   // warm gold
+  {t:1.0, L:0.78, C:0.22, H:60},   // amber
+];
+
+function samplePalette(t){
+  t=Math.max(0,Math.min(1,t));
+  for(let i=0;i<PALETTE_STOPS.length-1;i++){
+    const a=PALETTE_STOPS[i],b=PALETTE_STOPS[i+1];
+    if(t>=a.t&&t<=b.t){
+      const f=(t-a.t)/(b.t-a.t);
+      return{
+        L:a.L+(b.L-a.L)*f,
+        C:a.C+(b.C-a.C)*f,
+        H:lerpHue(a.H,b.H,f),
+      };
+    }
+  }
+  return PALETTE_STOPS[PALETTE_STOPS.length-1];
+}
+
+/* ═══════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════ */
+let grid=[];       // undisplaced positions
+let displ=[];      // per-frame displacement values [0,1]
+let t=0;
+let bgCanvas;
+
+function setup(){
+  createCanvas(windowWidth,windowHeight);
+  pixelDensity(1);
+  colorMode(RGB,255);
+  strokeCap(ROUND);
+  initSeed();
+  initGrid();
+  bgCanvas=createGraphics(width,height);
+  bgCanvas.pixelDensity(1);
+  renderBg(bgCanvas);
+}
+
+function initSeed(){
+  randomSeed(CFG.seed);
+  noiseSeed(CFG.seed);
+}
+
+function initGrid(){
+  const dx=width/(CFG.cols+1);
+  const dy=height/(CFG.rows+1);
+  grid=[];
+  displ=[];
+  for(let r=0;r<CFG.rows+1;r++){
+    grid[r]=[];
+    displ[r]=[];
+    for(let c=0;c<CFG.cols+1;c++){
+      grid[r][c]={x:(c+1)*dx,y:(r+1)*dy};
+      displ[r][c]=0;
+    }
+  }
+}
+
+function renderBg(buf){
+  const w=buf.width,h=buf.height;
+  buf.noStroke();
+  // Deep radial gradient
+  for(let i=5;i>=0;i--){
+    const r=map(i,0,5,0.08,0.03);
+    const a=map(i,0,5,0.25,1);
+    buf.fill(2,2,10,a*255);
+    const rad=Math.min(w,h)*0.7*(1-i/6);
+    buf.ellipse(w*0.5,h*0.6,rad*2,rad*2);
+  }
+  buf.fill(3,2,8);
+  buf.rect(0,0,w,h);
+}
+
+/* ═══════════════════════════════════════
+   DRAW
+   ═══════════════════════════════════════ */
+function draw(){
+  t+=deltaTime*0.001;
+  background(0);
+
+  // Re-render bg occasionally (or use pre-rendered)
+  image(bgCanvas,0,0);
+
+  // Rotating noise offset
+  const angle=t*CFG.flowAngle;
+  const ox=Math.cos(angle)*200;
+  const oy=Math.sin(angle)*100;
+
+  // Update displacement field
+  for(let r=0;r<=CFG.rows;r++){
+    for(let c=0;c<=CFG.cols;c++){
+      const pt=grid[r][c];
+      // Three-octave noise for organic complexity
+      const n1=fbm(
+        (pt.x+ox)*CFG.noiseScale,
+        (pt.y+oy)*CFG.noiseScale,
+        3
+      );
+      const n2=noise(
+        pt.x*CFG.noiseScale*2.5+ox*0.7+t*CFG.noiseSpeed*0.5,
+        pt.y*CFG.noiseScale*2.5+oy*0.7+t*CFG.noiseSpeed*0.5
+      );
+      const n3=noise(
+        pt.x*CFG.noiseScale*5+ox*0.3+t*CFG.noiseSpeed*1.2,
+        pt.y*CFG.noiseScale*5+oy*0.3+t*CFG.noiseSpeed*1.2
+      );
+      // Blend: main displacement + detail layers
+      let d=n1*0.6+n2*0.25+n3*0.15;
+      // Add subtle hand-drawn jitter
+      d+=(noise(r*0.05,c*0.05,t*8)-0.5)*CFG.jitter*0.02;
+      // Stretch contrast to fill [0,1] range for richer palette
+      d = Math.pow(d, 0.6);
+      displ[r][c]=Math.max(0,Math.min(1,d));
+    }
+  }
+
+  // Draw horizontal lines — bottom-up for correct overlapping
+  // (lower rows = "valleys" drawn first, upper rows overlay)
+  noFill();
+  
+  for(let r=CFG.rows;r>=0;r--){
+    for(let c=0;c<CFG.cols;c++){
+      const d1=displ[r][c];
+      const d2=displ[r][c+1];
+      if(CFG.rows===0) continue;
+      
+      const pt1=grid[r][c];
+      const pt2=grid[r][c+1];
+      
+      // Displace horizontally for flowing effect
+      const warp1=(d1-0.5)*CFG.amplitude*0.6;
+      const warp2=(d2-0.5)*CFG.amplitude*0.6;
+      // Vertical displacement (main visual)
+      const yOff1=(d1-0.5)*CFG.amplitude;
+      const yOff2=(d2-0.5)*CFG.amplitude;
+      
+      const avgD=(d1+d2)/2;
+      const baseCol=samplePalette(avgD);
+      const midX=(pt1.x+warp1+pt2.x+warp2)/2;
+      const midY=(pt1.y+yOff1+pt2.y+yOff2)/2;
+      const hueNoise=noise(midX*0.0025+t*0.0008,midY*0.0025+t*0.0008+100);
+      const hueShift=(hueNoise-0.5)*50;
+      const finalH=((baseCol.H+hueShift)%360+360)%360;
+      const [cr,cg,cb]=oklchToSrgb(baseCol.L,baseCol.C,finalH);
+      stroke(cr,cg,cb,CFG.opacity*255);
+      strokeWeight(CFG.lineWeight);
+      
+      line(
+        pt1.x+warp1, pt1.y+yOff1,
+        pt2.x+warp2, pt2.y+yOff2
+      );
+    }
+  }
+
+  // Draw vertical lines — left-to-right
+  for(let c=0;c<=CFG.cols;c++){
+    for(let r=0;r<CFG.rows;r++){
+      const d1=displ[r][c];
+      const d2=displ[r+1][c];
+      
+      const pt1=grid[r][c];
+      const pt2=grid[r+1][c];
+      
+      const warp1=(d1-0.5)*CFG.amplitude*0.6;
+      const warp2=(d2-0.5)*CFG.amplitude*0.6;
+      const yOff1=(d1-0.5)*CFG.amplitude;
+      const yOff2=(d2-0.5)*CFG.amplitude;
+      
+      const avgD=(d1+d2)/2;
+      const baseCol=samplePalette(avgD);
+      const midX=(pt1.x+warp1+pt2.x+warp2)/2;
+      const midY=(pt1.y+yOff1+pt2.y+yOff2)/2;
+      const hueNoise=noise(midX*0.0025+t*0.0008,midY*0.0025+t*0.0008+100);
+      const hueShift=(hueNoise-0.5)*50;
+      const finalH=((baseCol.H+hueShift)%360+360)%360;
+      const [cr,cg,cb]=oklchToSrgb(baseCol.L,baseCol.C,finalH);
+      stroke(cr,cg,cb,CFG.opacity*255);
+      strokeWeight(CFG.lineWeight);
+      
+      line(
+        pt1.x+warp1, pt1.y+yOff1,
+        pt2.x+warp2, pt2.y+yOff2
+      );
+    }
+  }
+
+  // Draw vertices as glowing dots at displacement peaks
+  for(let r=0;r<=CFG.rows;r++){
+    for(let c=0;c<=CFG.cols;c++){
+      const d=displ[r][c];
+      const pt=grid[r][c];
+      if(d>0.55){
+        const intensity=map(d,0.55,1,0,0.45);
+        const col=samplePalette(d);
+        const [cr,cg,cb]=oklchToSrgb(col.L,col.C,col.H);
+        noStroke();
+        fill(cr,cg,cb,intensity*255);
+        const w=(d-0.5)*CFG.amplitude*0.6;
+        const yOff=(d-0.5)*CFG.amplitude;
+        const sz=map(d,0.55,1,1,3);
+        ellipse(pt.x+w,pt.y+yOff,sz,sz);
+      }
+    }
+  }
+}
+
+/* ═══════════════════════════════════════
+   EVENTS
+   ═══════════════════════════════════════ */
+function keyPressed(){
+  if(key==='s'||key==='S') saveCanvas('warp-mesh','png');
+  if(key==='r'||key==='R'){
+    CFG.seed=Math.floor(Math.random()*99999);
+    initSeed();
+    initGrid();
+  }
+}
+
+function windowResized(){
+  resizeCanvas(windowWidth,windowHeight);
+  bgCanvas.resizeCanvas(width,height);
+  renderBg(bgCanvas);
+  initGrid();
+}
+</script>
+</body>
+</html>
