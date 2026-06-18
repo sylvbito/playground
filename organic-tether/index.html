@@ -92,7 +92,7 @@ let frame=0, startTS=0;
 
 // ─── Helpers ────────────────────────────────────────────────────
 const ns='http://www.w3.org/2000/svg';
-const el=(tag,attrs)=>Object.assign(document.createElementNS(ns,tag),attrs);
+const el=(tag,attrs)=>{const e=document.createElementNS(ns,tag);for(const[k,v]of Object.entries(attrs))e.setAttribute(k,v);return e;};
 const oklch=(l,c,h,a=.85)=>`oklch(${l} ${c} ${h} / ${a})`;
 
 // ─── Init ─────────────────────────────────────────────────────
