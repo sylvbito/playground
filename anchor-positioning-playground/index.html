@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSS Anchor Positioning Playground</title>
+<style>
+  /* === RESET & BASE === */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  :root {
+    --bg: oklch(0.98 0 0);
+    --surface: oklch(1 0 0);
+    --surface2: oklch(0.96 0 0);
+    --text: oklch(0.15 0 0);
+    --text2: oklch(0.4 0 0);
+    --text3: oklch(0.6 0 0);
+    --border: oklch(0.88 0 0);
+    --accent: oklch(0.55 0.22 255);
+    --accent-hover: oklch(0.5 0.22 255);
+    --accent-light: oklch(0.9 0.05 255);
+    --success: oklch(0.6 0.2 155);
+    --danger: oklch(0.55 0.22 25);
+    --shadow: 0 1px 3px oklch(0 0 0 / 0.1), 0 1px 2px oklch(0 0 0 / 0.06);
+    --shadow-lg: 0 4px 12px oklch(0 0 0 / 0.15);
+    --radius: 8px;
+    --radius-sm: 4px;
+    --font: system-ui, -apple-system, sans-serif;
+    --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+  
+  .dark {
+    --bg: oklch(0.12 0 0);
+    --surface: oklch(0.17 0 0);
+    --surface2: oklch(0.2 0 0);
+    --text: oklch(0.9 0 0);
+    --text2: oklch(0.7 0 0);
+    --text3: oklch(0.5 0 0);
+    --border: oklch(0.22 0 0);
+    --accent: oklch(0.65 0.22 255);
+    --accent-hover: oklch(0.6 0.22 255);
+    --accent-light: oklch(0.22 0.08 255);
+    --shadow: 0 1px 3px oklch(0 0 0 / 0.3);
+    --shadow-lg: 0 4px 12px oklch(0 0 0 / 0.4);
+  }
+  
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* === HEADER === */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  header .badge {
+    font-size: 0.75rem;
+    color: var(--text3);
+  }
+  .theme-toggle {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--text2);
+    font-family: var(--font);
+    transition: background 0.15s;
+  }
+  .theme-toggle:hover { background: var(--border); }
+  
+  /* === MAIN LAYOUT === */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    grid-template-rows: 1fr;
+    min-height: 0;
+  }
+  @media (max-width: 768px) {
+    main {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr auto;
+    }
+  }
+  
+  /* === CANVAS === */
+  .canvas {
+    position: relative;
+    background: 
+      radial-gradient(circle, var(--border) 1px, transparent 1px);
+    background-size: 24px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    overflow: hidden;
+    border-right: 1px solid var(--border);
+  }
+  @media (max-width: 768px) {
+    .canvas {
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      min-height: 320px;
+    }
+  }
+  
+  /* === ANCHOR ELEMENT === */
+  .anchor-el {
+    anchor-name: --playground-anchor;
+    width: 100px;
+    height: 48px;
+    border-radius: var(--radius);
+    background: var(--accent);
+    color: white;
+    border: none;
+    font-family: var(--font);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: transform 0.1s, box-shadow 0.15s;
+    box-shadow: var(--shadow);
+    user-select: none;
+    position: relative;
+    z-index: 1;
+  }
+  .anchor-el:hover { transform: scale(1.03); box-shadow: var(--shadow-lg); }
+  .anchor-el:active { transform: scale(0.97); }
+  .anchor-el svg { width: 16px; height: 16px; flex-shrink: 0; }
+  
+  /* Anchor indicator dot */
+  .anchor-el::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: oklch(0.7 0.25 45);
+    border-radius: 50%;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 2px solid var(--surface);
+    box-shadow: 0 0 0 1px oklch(0.7 0.25 45 / 0.3);
+  }
+  
+  /* === POSITIONED ELEMENT === */
+  .target-el {
+    position: absolute;
+    position-anchor: --playground-anchor;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 16px;
+    z-index: 2;
+    min-width: 200px;
+    max-width: 280px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    font-size: 0.85rem;
+  }
+  .target-el.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  
+  .target-el h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .target-el p {
+    color: var(--text2);
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+  
+  /* === POSITION INDICATOR === */
+  .pos-label {
+    position: absolute;
+    font-size: 0.7rem;
+    color: var(--text3);
+    font-family: var(--mono);
+    background: var(--surface);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    pointer-events: none;
+    z-index: 3;
+    white-space: nowrap;
+  }
+  
+  /* === PANEL === */
+  .panel {
+    background: var(--surface);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow-y: auto;
+    max-height: calc(100dvh - 56px);
+  }
+  @media (max-width: 768px) {
+    .panel {
+      max-height: none;
+      border-top: 1px solid var(--border);
+    }
+  }
+  
+  .panel-section {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    background: var(--surface2);
+  }
+  .panel-section h2 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text3);
+    margin-bottom: 10px;
+  }
+  
+  /* === CONTROLS === */
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .control-group:last-child { margin-bottom: 0; }
+  
+  .control-group label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .control-group select,
+  .control-group input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 0.82rem;
+  }
+  .control-group select:focus,
+  .control-group input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+  }
+  
+  .range-row {
+    display: grid;
+    grid-template-columns: 1fr 40px;
+    gap: 8px;
+    align-items: center;
+  }
+  .range-row input[type="range"] {
+    width: 100%;
+  }
+  .range-row .value {
+    font-size: 0.75rem;
+    color: var(--text2);
+    font-family: var(--mono);
+    text-align: right;
+  }
+  
+  /* === FALLBACK LIST === */
+  .fallback-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .fallback-chip {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 12px;
+    background: var(--accent-light);
+    color: var(--accent);
+    cursor: pointer;
+    border: 1px solid transparent;
+    font-family: var(--mono);
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .fallback-chip:hover { border-color: var(--accent); }
+  .fallback-chip.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  
+  /* === CSS OUTPUT === */
+  .css-output {
+    background: oklch(0.08 0 0);
+    color: oklch(0.9 0.05 155);
+    border-radius: var(--radius);
+    padding: 12px;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow-x: auto;
+    max-height: 250px;
+    overflow-y: auto;
+    position: relative;
+  }
+  .dark .css-output {
+    background: oklch(0.06 0 0);
+  }
+  
+  .copy-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 4px 10px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: background 0.15s;
+  }
+  .copy-btn:hover { background: var(--accent-hover); }
+  .copy-btn.copied { background: var(--success); }
+  
+  /* === POSITION GRID SELECTOR === */
+  .position-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 3px;
+    margin-top: 6px;
+  }
+  .pos-cell {
+    aspect-ratio: 1;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text3);
+    transition: all 0.15s;
+    user-select: none;
+    background: var(--surface);
+    font-family: var(--mono);
+    line-height: 1.1;
+    text-align: center;
+    padding: 2px;
+  }
+  .pos-cell:hover { border-color: var(--accent); background: var(--accent-light); }
+  .pos-cell.selected {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  
+  /* === SUPPORT NOTICE === */
+  .support-notice {
+    background: oklch(0.9 0.1 80);
+    border: 1px solid oklch(0.8 0.15 80);
+    border-radius: var(--radius);
+    padding: 12px;
+    font-size: 0.8rem;
+    color: oklch(0.3 0.1 80);
+    display: none;
+  }
+  .dark .support-notice {
+    background: oklch(0.2 0.05 80);
+    border-color: oklch(0.25 0.08 80);
+    color: oklch(0.8 0.1 80);
+  }
+  
+  /* === RESPONSIVE === */
+  @media (max-width: 480px) {
+    .canvas { min-height: 240px; }
+    .target-el { min-width: 160px; max-width: 220px; }
+    .panel { padding: 10px; gap: 10px; }
+    .panel-section { padding: 10px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>CSS Anchor Positioning Playground</h1>
+    <span class="badge">Visual tool for position-area, fallbacks & insets</span>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">🌓 Theme</button>
+</header>
+
+<main>
+  <!-- CANVAS -->
+  <div class="canvas" id="canvas">
+    <button class="anchor-el" id="anchorBtn" aria-label="Toggle tooltip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Anchor
+    </button>
+    
+    <div class="target-el visible" id="targetEl">
+      <h3>Positioned Element</h3>
+      <p>This element uses CSS Anchor Positioning to stay tethered to the anchor button. Try different position-area values.</p>
+    </div>
+  </div>
+  
+  <!-- CONTROL PANEL -->
+  <div class="panel" id="panel">
+    <!-- Support notice -->
+    <div class="support-notice" id="supportNotice">
+      ⚠️ Your browser doesn't support CSS Anchor Positioning. This playground requires Chrome 125+, Firefox 129+, or Safari 17.4+.
+    </div>
+    
+    <!-- Position Area -->
+    <div class="panel-section">
+      <h2>Position Area</h2>
+      <div class="position-grid" id="positionGrid"></div>
+    </div>
+    
+    <!-- Nudge -->
+    <div class="panel-section">
+      <h2>Gap</h2>
+      <p style="font-size:0.72rem;color:var(--text3);margin-bottom:6px">Spacing between anchor and positioned element. Automatically pushes outward.</p>
+      <div class="control-group">
+        <div class="range-row">
+          <label>Gap</label>
+          <span class="value" id="gapVal">12px</span>
+        </div>
+        <input type="range" id="gapSlider" min="0" max="60" value="12" step="1">
+      </div>
+    </div>
+    
+    <!-- Position Try Fallbacks -->
+    <div class="panel-section">
+      <h2>Fallback Order</h2>
+      <p style="font-size:0.72rem;color:var(--text3);margin-bottom:6px">Click to toggle. Drag to reorder (desktop). First active = primary.</p>
+      <div class="fallback-list" id="fallbackList"></div>
+    </div>
+    
+    <!-- Anchor Name -->
+    <div class="panel-section">
+      <h2>Anchor Name</h2>
+      <div class="control-group">
+        <label>anchor-name</label>
+        <input type="text" id="anchorName" value="--playground-anchor" style="font-family:var(--mono)">
+      </div>
+    </div>
+    
+    <!-- Generated CSS -->
+    <div class="panel-section" style="position:relative">
+      <h2>Generated CSS</h2>
+      <div class="css-output" id="cssOutput">
+        <button class="copy-btn" id="copyBtn">Copy</button>
+        <code id="cssCode"></code>
+      </div>
+    </div>
+    
+    <!-- Reset -->
+    <button id="resetBtn" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text2);font-family:var(--font);font-size:0.85rem;cursor:pointer;">Reset to Defaults</button>
+  </div>
+</main>
+
+<script>
+(function() {
+  'use strict';
+  
+  // === SUPPORT CHECK ===
+  const supportsAnchor = CSS.supports('position-area', 'top') || CSS.supports('inset-area', 'top');
+  const supportNotice = document.getElementById('supportNotice');
+  if (!supportsAnchor) {
+    supportNotice.style.display = 'block';
+    document.querySelectorAll('.panel-section, #resetBtn').forEach(el => el.style.opacity = '0.4');
+  }
+  
+  // === DOM REFS ===
+  const canvas = document.getElementById('canvas');
+  const anchorBtn = document.getElementById('anchorBtn');
+  const targetEl = document.getElementById('targetEl');
+  const cssCode = document.getElementById('cssCode');
+  const copyBtn = document.getElementById('copyBtn');
+  const anchorNameInput = document.getElementById('anchorName');
+  const positionGrid = document.getElementById('positionGrid');
+  const fallbackList = document.getElementById('fallbackList');
+  const resetBtn = document.getElementById('resetBtn');
+  
+  // === STATE ===
+  const POSITIONS = [
+    'top', 'bottom', 'left', 'right',
+    'top left', 'top right', 'bottom left', 'bottom right',
+    'left top', 'left bottom', 'right top', 'right bottom',
+    'center', 'span-top', 'span-bottom', 'span-left', 'span-right'
+  ];
+  
+  // Group positions into a 5x4 grid for the visual selector (5 rows, 4 cols)
+  // We'll show 12 main positions in a 3x4 grid
+  const GRID_POSITIONS = [
+    'top left',    'top',    'top right',
+    'left',        'center', 'right',
+    'bottom left', 'bottom', 'bottom right',
+  ];
+  
+  // Extended positions for fallback list
+  const EXTENDED_POSITIONS = [
+    'top left', 'top', 'top right',
+    'left top', 'center', 'right top',
+    'left', null, 'right',
+    'left bottom', 'bottom', 'right bottom',
+    'bottom left', 'span-top', 'bottom right',
+    'span-bottom', 'span-left', 'span-right',
+    'top center', 'bottom center', 'left center', 'right center'
+  ].filter(Boolean);
+  
+  let state = {
+    positionArea: 'top',
+    fallbacks: ['bottom', 'left', 'right'],
+    gap: 12,
+    anchorName: '--playground-anchor',
+    visible: true
+  };
+  
+  // === APPLY STYLES TO POSITIONED ELEMENT ===
+  function applyStyles() {
+    const { positionArea, fallbacks, gap, anchorName } = state;
+    
+    // Set anchor-name on the anchor element
+    anchorBtn.style.anchorName = anchorName;
+    
+    // Build position-area (try both property names for compat)
+    const area = positionArea;
+    targetEl.style.setProperty('position-area', area);
+    targetEl.style.setProperty('inset-area', area); // older name
+    
+    // Set position-anchor
+    targetEl.style.setProperty('position-anchor', anchorName);
+    
+    // Build position-try-fallbacks
+    if (fallbacks.length > 0) {
+      let fallbackCSS = fallbacks.map((pos, i) => `--fb-${i}`).join(', ');
+      updatePositionTryRules(fallbacks);
+      targetEl.style.setProperty('position-try-fallbacks', fallbackCSS);
+      targetEl.style.setProperty('position-try-order', 'most-width');
+    } else {
+      targetEl.style.setProperty('position-try-fallbacks', 'none');
+    }
+    
+    // Smart gap: push outward from anchor based on position-area
+    const dir = getGapDirection(positionArea);
+    const tx = dir.x * gap;
+    const ty = dir.y * gap;
+    targetEl.style.transform = `translate(${tx}px, ${ty}px)`;
+    
+    updateGeneratedCSS();
+  }
+  
+  // Return {x, y} multipliers for gap direction based on position-area
+  function getGapDirection(area) {
+    // x: -1 = push left, 0 = none, +1 = push right
+    // y: -1 = push up, 0 = none, +1 = push down
+    switch (area) {
+      case 'top': case 'top center': return { x: 0, y: -1 };
+      case 'bottom': case 'bottom center': return { x: 0, y: 1 };
+      case 'left': case 'left center': return { x: -1, y: 0 };
+      case 'right': case 'right center': return { x: 1, y: 0 };
+      case 'top left': return { x: -1, y: -1 };
+      case 'top right': return { x: 1, y: -1 };
+      case 'bottom left': return { x: -1, y: 1 };
+      case 'bottom right': return { x: 1, y: 1 };
+      case 'center': return { x: 0, y: 0 };
+      default: return { x: 0, y: 0 };
+    }
+  }
+  
+  // === MANAGE @position-try RULES ===
+  let styleSheet = null;
+  function getStyleSheet() {
+    if (!styleSheet) {
+      styleSheet = document.createElement('style');
+      styleSheet.id = 'position-try-styles';
+      document.head.appendChild(styleSheet);
+    }
+    return styleSheet;
+  }
+  
+  function updatePositionTryRules(fallbacks) {
+    const sheet = getStyleSheet();
+    let css = '';
+    fallbacks.forEach((pos, i) => {
+      css += `@position-try --fb-${i} {\n  position-area: ${pos};\n}\n`;
+    });
+    sheet.textContent = css;
+  }
+  
+  // === UPDATE GENERATED CSS ===
+  function updateGeneratedCSS() {
+    const { positionArea, fallbacks, gap, anchorName } = state;
+    
+    let css = `/* Anchor element */\n`;
+    css += `.anchor {\n  anchor-name: ${anchorName};\n}\n\n`;
+    css += `/* Positioned element — using position-area */\n`;
+    css += `.target {\n`;
+    css += `  position: absolute;\n`;
+    css += `  position-anchor: ${anchorName};\n`;
+    css += `  position-area: ${positionArea};\n`;
+    
+    if (gap > 0) {
+      const dir = getGapDirection(positionArea);
+      const tx = dir.x * gap;
+      const ty = dir.y * gap;
+      css += `  translate: ${tx}px ${ty}px; /* gap from anchor */\n`;
+    }
+    
+    if (fallbacks.length > 0) {
+      css += `  position-try-fallbacks: ${fallbacks.map((f, i) => `--fb-${i}`).join(', ')};\n`;
+      css += `  position-try-order: most-width;\n`;
+      css += `}\n\n`;
+      css += `/* Fallback definitions */\n`;
+      fallbacks.forEach((pos, i) => {
+        css += `@position-try --fb-${i} {\n  position-area: ${pos};\n}\n`;
+      });
+    } else {
+      css += `}\n`;
+    }
+    
+    // anchor()-based alternative
+    css += `\n/* Alternative: anchor() function (instead of position-area) */\n`;
+    css += `/*\n.target {\n`;
+    css += `  position: absolute;\n`;
+    css += `  position-anchor: ${anchorName};\n`;
+    const area = positionArea;
+    if (area === 'top') {
+      css += `  bottom: anchor(top${gap > 0 ? `, ${gap}px` : ''});\n`;
+      css += `  left: anchor(center);\n`;
+      css += `  translate: -50%;\n`;
+    } else if (area === 'bottom') {
+      css += `  top: anchor(bottom${gap > 0 ? `, ${gap}px` : ''});\n`;
+      css += `  left: anchor(center);\n`;
+      css += `  translate: -50%;\n`;
+    } else if (area === 'left') {
+      css += `  right: anchor(left${gap > 0 ? `, -${gap}px` : ''});\n`;
+      css += `  top: anchor(center);\n`;
+      css += `  translate: 0 -50%;\n`;
+    } else if (area === 'right') {
+      css += `  left: anchor(right${gap > 0 ? `, ${gap}px` : ''});\n`;
+      css += `  top: anchor(center);\n`;
+      css += `  translate: 0 -50%;\n`;
+    } else if (area === 'top left') {
+      css += `  bottom: anchor(top${gap > 0 ? `, ${gap}px` : ''});\n`;
+      css += `  right: anchor(left${gap > 0 ? `, -${gap}px` : ''});\n`;
+    } else if (area === 'top right') {
+      css += `  bottom: anchor(top${gap > 0 ? `, ${gap}px` : ''});\n`;
+      css += `  left: anchor(right${gap > 0 ? `, ${gap}px` : ''});\n`;
+    } else if (area === 'bottom left') {
+      css += `  top: anchor(bottom${gap > 0 ? `, ${gap}px` : ''});\n`;
+      css += `  right: anchor(left${gap > 0 ? `, -${gap}px` : ''});\n`;
+    } else if (area === 'bottom right') {
+      css += `  top: anchor(bottom${gap > 0 ? `, ${gap}px` : ''});\n`;
+      css += `  left: anchor(right${gap > 0 ? `, ${gap}px` : ''});\n`;
+    } else if (area === 'center') {
+      css += `  top: anchor(center);\n`;
+      css += `  left: anchor(center);\n`;
+      css += `  translate: -50% -50%;\n`;
+    } else {
+      css += `  /* see MDN for anchor() mapping of '${area}' */\n`;
+    }
+    css += `}\n*/\n`;
+    
+    cssCode.textContent = css;
+  }
+  
+  // === BUILD POSITION GRID ===
+  function buildPositionGrid() {
+    positionGrid.innerHTML = '';
+    GRID_POSITIONS.forEach(pos => {
+      const cell = document.createElement('button');
+      cell.className = 'pos-cell';
+      cell.textContent = pos;
+      cell.dataset.pos = pos;
+      cell.addEventListener('click', () => selectPosition(pos));
+      positionGrid.appendChild(cell);
+    });
+    updateGridSelection();
+  }
+  
+  function updateGridSelection() {
+    positionGrid.querySelectorAll('.pos-cell').forEach(cell => {
+      cell.classList.toggle('selected', cell.dataset.pos === state.positionArea);
+    });
+  }
+  
+  function selectPosition(pos) {
+    state.positionArea = pos;
+    updateGridSelection();
+    applyStyles();
+  }
+  
+  // === BUILD FALLBACK LIST ===
+  function buildFallbackList() {
+    fallbackList.innerHTML = '';
+    EXTENDED_POSITIONS.forEach(pos => {
+      // Skip null placeholders
+      if (!pos) {
+        const spacer = document.createElement('span');
+        spacer.style.width = '4px';
+        fallbackList.appendChild(spacer);
+        return;
+      }
+      
+      const chip = document.createElement('button');
+      chip.className = 'fallback-chip';
+      chip.textContent = pos;
+      chip.dataset.pos = pos;
+      
+      const isActive = state.fallbacks.includes(pos);
+      if (isActive) chip.classList.add('active');
+      
+      chip.addEventListener('click', () => {
+        toggleFallback(pos);
+      });
+      
+      fallbackList.appendChild(chip);
+    });
+  }
+  
+  function toggleFallback(pos) {
+    const idx = state.fallbacks.indexOf(pos);
+    if (idx === -1) {
+      state.fallbacks.push(pos);
+    } else {
+      state.fallbacks.splice(idx, 1);
+    }
+    updateFallbackUI();
+    applyStyles();
+  }
+  
+  function updateFallbackUI() {
+    fallbackList.querySelectorAll('.fallback-chip').forEach(chip => {
+      chip.classList.toggle('active', state.fallbacks.includes(chip.dataset.pos));
+    });
+  }
+  
+  // === TOGGLE TARGET VISIBILITY ===
+  function toggleVisibility() {
+    state.visible = !state.visible;
+    targetEl.classList.toggle('visible', state.visible);
+  }
+  
+  // === RESET ===
+  function reset() {
+    state = {
+      positionArea: 'top',
+      fallbacks: ['bottom', 'left', 'right'],
+      gap: 12,
+      anchorName: '--playground-anchor',
+      visible: true
+    };
+    
+    document.getElementById('gapSlider').value = 12;
+    document.getElementById('gapVal').textContent = '12px';
+    anchorNameInput.value = '--playground-anchor';
+    
+    updateGridSelection();
+    updateFallbackUI();
+    targetEl.classList.add('visible');
+    applyStyles();
+  }
+  
+  // === COPY ===
+  function copyCSS() {
+    const css = cssCode.textContent;
+    navigator.clipboard.writeText(css).then(() => {
+      copyBtn.textContent = 'Copied!';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1500);
+    }).catch(() => {
+      // Fallback: select text
+      const range = document.createRange();
+      range.selectNode(cssCode);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+    });
+  }
+  
+  // === THEME ===
+  function toggleTheme() {
+    document.documentElement.classList.toggle('dark');
+    const isDark = document.documentElement.classList.contains('dark');
+    localStorage.setItem('anchor-playground-theme', isDark ? 'dark' : 'light');
+  }
+  
+  function loadTheme() {
+    const saved = localStorage.getItem('anchor-playground-theme');
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  }
+  
+  // === EVENT LISTENERS ===
+  anchorBtn.addEventListener('click', toggleVisibility);
+  
+  document.getElementById('gapSlider').addEventListener('input', (e) => {
+    state.gap = parseInt(e.target.value);
+    document.getElementById('gapVal').textContent = state.gap + 'px';
+    applyStyles();
+  });
+  
+  anchorNameInput.addEventListener('input', (e) => {
+    state.anchorName = e.target.value || '--playground-anchor';
+    applyStyles();
+  });
+  
+  copyBtn.addEventListener('click', copyCSS);
+  document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+  resetBtn.addEventListener('click', reset);
+  
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 's' || e.key === 'S') {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      e.preventDefault();
+      copyCSS();
+    }
+  });
+  
+  // === INIT ===
+  loadTheme();
+  buildPositionGrid();
+  buildFallbackList();
+  applyStyles();
+  
+  // Initial state: set correct values
+  document.getElementById('gapSlider').value = 12;
+  document.getElementById('gapVal').textContent = '12px';
+  updateFallbackUI();
+  updateGridSelection();
+  
+  console.log('CSS Anchor Positioning Playground ready ✓');
+  console.log('Anchor Positioning supported:', supportsAnchor);
+  
+})();
+</script>
+</body>
+</html>
