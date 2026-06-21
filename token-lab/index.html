@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Token Lab — Design Token Playground</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: oklch(0.13 0.02 260);
+    --surface: oklch(0.17 0.02 260);
+    --surface2: oklch(0.21 0.02 260);
+    --border: oklch(0.28 0.02 260);
+    --text: oklch(0.92 0.01 260);
+    --text2: oklch(0.68 0.02 260);
+    --text3: oklch(0.48 0.02 260);
+    --accent: oklch(0.65 0.2 260);
+    --accent2: oklch(0.55 0.22 290);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --gap: 12px;
+    --gap-lg: 20px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+  }
+
+  header {
+    margin-bottom: 2rem;
+  }
+  header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  header p {
+    color: var(--text2);
+    font-size: 0.95rem;
+    margin-top: 0.3rem;
+  }
+
+  /* Input Section */
+  .input-section {
+    display: flex;
+    gap: var(--gap);
+    margin-bottom: var(--gap-lg);
+    flex-wrap: wrap;
+  }
+  .input-section input[type="text"] {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.7rem 0.9rem;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 0.95rem;
+    font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-section input[type="text"]:focus {
+    border-color: var(--accent);
+  }
+  .input-section input[type="color"] {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    padding: 2px;
+    background: var(--surface);
+  }
+  .input-section input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  .input-section input[type="color"]::-webkit-color-swatch {
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+  }
+  .btn {
+    padding: 0.7rem 1.2rem;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  .btn:hover { border-color: var(--accent); background: var(--surface2); }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 600;
+  }
+  .btn-primary:hover { opacity: 0.9; background: var(--accent); }
+  .btn-sm { padding: 0.35rem 0.7rem; font-size: 0.8rem; }
+
+  /* Swatch */
+  .swatch-area {
+    display: flex;
+    gap: var(--gap-lg);
+    align-items: center;
+    margin-bottom: var(--gap-lg);
+    flex-wrap: wrap;
+  }
+  .swatch {
+    width: 100px;
+    height: 100px;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    flex-shrink: 0;
+    transition: background-color 0.3s;
+  }
+  .swatch-info {
+    flex: 1;
+    min-width: 200px;
+  }
+  .swatch-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+  .swatch-meta {
+    font-size: 0.85rem;
+    color: var(--text2);
+    display: flex;
+    gap: var(--gap);
+    flex-wrap: wrap;
+  }
+  .swatch-meta span {
+    background: var(--surface);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-family: 'SF Mono', monospace;
+    font-size: 0.8rem;
+  }
+
+  /* Formats Grid */
+  .section-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text3);
+    margin-bottom: var(--gap);
+    margin-top: var(--gap-lg);
+  }
+  .formats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: var(--gap);
+    margin-bottom: var(--gap-lg);
+  }
+  .format-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.8rem 0.9rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .format-card:hover { border-color: var(--accent); }
+  .format-card .label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    margin-bottom: 0.25rem;
+  }
+  .format-card .value {
+    font-family: 'SF Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--text);
+    word-break: break-all;
+  }
+  .format-card .copied {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.6rem;
+    font-size: 0.7rem;
+    color: var(--accent);
+    opacity: 0;
+    transition: opacity 0.15s;
+    pointer-events: none;
+  }
+  .format-card .copied.show { opacity: 1; }
+
+  /* Relative Colors */
+  .relative-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
+    margin-bottom: var(--gap-lg);
+  }
+  .relative-chip {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .relative-chip:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .relative-chip .mini-swatch {
+    width: 100%;
+    height: 36px;
+    border-radius: 4px;
+    margin-bottom: 0.25rem;
+    transition: background-color 0.3s;
+  }
+  .relative-chip .chip-label {
+    font-size: 0.7rem;
+    color: var(--text2);
+    font-weight: 500;
+  }
+
+  /* Contrast Section */
+  .contrast-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--gap);
+    margin-bottom: var(--gap-lg);
+  }
+  .contrast-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.8rem;
+    text-align: center;
+  }
+  .contrast-card .pair-label {
+    font-size: 0.75rem;
+    color: var(--text3);
+    margin-bottom: 0.3rem;
+  }
+  .contrast-card .ratio {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'SF Mono', monospace;
+  }
+  .contrast-card .badges {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    margin-top: 0.3rem;
+    flex-wrap: wrap;
+  }
+  .badge {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  .badge-aaa { background: oklch(0.45 0.15 145); color: #000; }
+  .badge-aa { background: oklch(0.55 0.15 95); color: #000; }
+  .badge-fail { background: oklch(0.45 0.15 25); color: #fff; }
+  .custom-bg-row {
+    display: flex;
+    gap: var(--gap);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .custom-bg-row input[type="text"] {
+    flex: 1;
+    min-width: 160px;
+    padding: 0.5rem 0.7rem;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 0.85rem;
+    font-family: 'SF Mono', monospace;
+  }
+
+  /* CSS Export */
+  .css-block {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    font-family: 'SF Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--text);
+    position: relative;
+  }
+  .css-block .copy-btn {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+  }
+
+  /* History */
+  .history-strip {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: var(--gap);
+  }
+  .history-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .history-dot:hover { transform: scale(1.15); border-color: var(--accent); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.85rem;
+    color: var(--text);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    z-index: 100;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-4px);
+  }
+
+  /* Keyboard hint */
+  .kb-hint {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    font-size: 0.7rem;
+    color: var(--text3);
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+  .kb-hint.show { opacity: 1; }
+
+  /* Mobile */
+  @media (max-width: 480px) {
+    .app { padding: 1.2rem 0.8rem 3rem; }
+    header h1 { font-size: 1.4rem; }
+    .swatch { width: 72px; height: 72px; }
+    .formats-grid { grid-template-columns: 1fr 1fr; }
+    .relative-grid { grid-template-columns: repeat(4, 1fr); }
+    .contrast-grid { grid-template-columns: 1fr 1fr; }
+    .section-title { margin-top: 1.2rem; }
+  }
+
+  @media (max-width: 360px) {
+    .formats-grid { grid-template-columns: 1fr; }
+    .relative-grid { grid-template-columns: repeat(3, 1fr); }
+    .contrast-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Timeline / empty states */
+  .empty-state {
+    text-align: center;
+    padding: 2rem 0;
+    color: var(--text3);
+    font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Token Lab</h1>
+    <p>Design token playground — convert colors, generate CSS relative recipes, check contrast.</p>
+  </header>
+
+  <!-- Input -->
+  <div class="input-section">
+    <input type="color" id="picker" value="#3b82f6" aria-label="Color picker">
+    <input type="text" id="colorInput" placeholder="Paste any color: #hex, rgb(), hsl(), oklch(), or named…" value="#3b82f6" aria-label="Color value input">
+    <button class="btn btn-primary" id="applyBtn">Apply</button>
+    <button class="btn" id="randomBtn" title="Random color">🎲</button>
+    <button class="btn" id="clearHistoryBtn" title="Clear history">Clear</button>
+  </div>
+
+  <!-- History -->
+  <div class="history-strip" id="historyStrip"></div>
+
+  <!-- Swatch -->
+  <div class="swatch-area">
+    <div class="swatch" id="mainSwatch"></div>
+    <div class="swatch-info">
+      <div class="swatch-name" id="swatchName">—</div>
+      <div class="swatch-meta" id="swatchMeta"></div>
+    </div>
+  </div>
+
+  <!-- Formats -->
+  <div class="section-title">Color Formats</div>
+  <div class="formats-grid" id="formatsGrid"></div>
+
+  <!-- Relative Colors -->
+  <div class="section-title">CSS Relative Color Recipes</div>
+  <div class="relative-grid" id="relativeGrid"></div>
+
+  <!-- Contrast -->
+  <div class="section-title">WCAG Contrast</div>
+  <div class="contrast-grid" id="contrastGrid"></div>
+  <div class="custom-bg-row" style="margin-bottom: var(--gap);">
+    <input type="text" id="customBgInput" placeholder="Custom background color…" aria-label="Custom background color">
+    <button class="btn btn-sm" id="checkCustomBg">Check</button>
+    <span id="customContrastResult" style="font-size:0.85rem;color:var(--text2);"></span>
+  </div>
+
+  <!-- CSS Export -->
+  <div class="section-title">CSS Custom Properties</div>
+  <div class="css-block" id="cssExport"></div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+  <div class="kb-hint" id="kbHint">Press S to copy OKLCH · C to copy CSS</div>
+</div>
+
+<script>
+// ─── Color Conversion Core ───────────────────────────────────────────────────
+
+function hexToRgb(hex) {
+  hex = hex.replace(/^#/, '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  const int = parseInt(hex, 16);
+  return { r: (int >> 16) & 255, g: (int >> 8) & 255, b: int & 255 };
+}
+
+function rgbToHex(r, g, b) {
+  return '#' + [r, g, b].map(x => Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, '0')).join('');
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function hslToRgb(h, s, l) {
+  h /= 360; s /= 100; l /= 100;
+  if (s === 0) return { r: l * 255, g: l * 255, b: l * 255 };
+  const hue2rgb = (p, q, t) => {
+    if (t < 0) t += 1; if (t > 1) t -= 1;
+    if (t < 1/6) return p + (q - p) * 6 * t;
+    if (t < 1/2) return q;
+    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    return p;
+  };
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  return { r: hue2rgb(p, q, h + 1/3) * 255, g: hue2rgb(p, q, h) * 255, b: hue2rgb(p, q, h - 1/3) * 255 };
+}
+
+// Named colors (CSS Level 4 — subset of most common)
+const NAMED_COLORS = {
+  aliceblue: '#f0f8ff', antiquewhite: '#faebd7', aqua: '#00ffff', aquamarine: '#7fffd4', azure: '#f0ffff',
+  beige: '#f5f5dc', bisque: '#ffe4c4', black: '#000000', blanchedalmond: '#ffebcd', blue: '#0000ff',
+  blueviolet: '#8a2be2', brown: '#a52a2a', burlywood: '#deb887', cadetblue: '#5f9ea0', chartreuse: '#7fff00',
+  chocolate: '#d2691e', coral: '#ff7f50', cornflowerblue: '#6495ed', cornsilk: '#fff8dc', crimson: '#dc143c',
+  cyan: '#00ffff', darkblue: '#00008b', darkcyan: '#008b8b', darkgoldenrod: '#b8860b', darkgray: '#a9a9a9',
+  darkgreen: '#006400', darkgrey: '#a9a9a9', darkkhaki: '#bdb76b', darkmagenta: '#8b008b', darkolivegreen: '#556b2f',
+  darkorange: '#ff8c00', darkorchid: '#9932cc', darkred: '#8b0000', darksalmon: '#e9967a', darkseagreen: '#8fbc8f',
+  darkslateblue: '#483d8b', darkslategray: '#2f4f4f', darkslategrey: '#2f4f4f', darkturquoise: '#00ced1',
+  darkviolet: '#9400d3', deeppink: '#ff1493', deepskyblue: '#00bfff', dimgray: '#696969', dimgrey: '#696969',
+  dodgerblue: '#1e90ff', firebrick: '#b22222', floralwhite: '#fffaf0', forestgreen: '#228b22', fuchsia: '#ff00ff',
+  gainsboro: '#dcdcdc', ghostwhite: '#f8f8ff', gold: '#ffd700', goldenrod: '#daa520', gray: '#808080',
+  green: '#008000', greenyellow: '#adff2f', grey: '#808080', honeydew: '#f0fff0', hotpink: '#ff69b4',
+  indianred: '#cd5c5c', indigo: '#4b0082', ivory: '#fffff0', khaki: '#f0e68c', lavender: '#e6e6fa',
+  lavenderblush: '#fff0f5', lawngreen: '#7cfc00', lemonchiffon: '#fffacd', lightblue: '#add8e6', lightcoral: '#f08080',
+  lightcyan: '#e0ffff', lightgoldenrodyellow: '#fafad2', lightgray: '#d3d3d3', lightgreen: '#90ee90',
+  lightgrey: '#d3d3d3', lightpink: '#ffb6c1', lightsalmon: '#ffa07a', lightseagreen: '#20b2aa', lightskyblue: '#87cefa',
+  lightslategray: '#778899', lightslategrey: '#778899', lightsteelblue: '#b0c4de', lightyellow: '#ffffe0',
+  lime: '#00ff00', limegreen: '#32cd32', linen: '#faf0e6', magenta: '#ff00ff', maroon: '#800000',
+  mediumaquamarine: '#66cdaa', mediumblue: '#0000cd', mediumorchid: '#ba55d3', mediumpurple: '#9370db',
+  mediumseagreen: '#3cb371', mediumslateblue: '#7b68ee', mediumspringgreen: '#00fa9a', mediumturquoise: '#48d1cc',
+  mediumvioletred: '#c71585', midnightblue: '#191970', mintcream: '#f5fffa', mistyrose: '#ffe4e1', moccasin: '#ffe4b5',
+  navajowhite: '#ffdead', navy: '#000080', oldlace: '#fdf5e6', olive: '#808000', olivedrab: '#6b8e23',
+  orange: '#ffa500', orangered: '#ff4500', orchid: '#da70d6', palegoldenrod: '#eee8aa', palegreen: '#98fb98',
+  paleturquoise: '#afeeee', palevioletred: '#db7093', papayawhip: '#ffefd5', peachpuff: '#ffdab9', peru: '#cd853f',
+  pink: '#ffc0cb', plum: '#dda0dd', powderblue: '#b0e0e6', purple: '#800080', rebeccapurple: '#663399',
+  red: '#ff0000', rosybrown: '#bc8f8f', royalblue: '#4169e1', saddlebrown: '#8b4513', salmon: '#fa8072',
+  sandybrown: '#f4a460', seagreen: '#2e8b57', seashell: '#fff5ee', sienna: '#a0522d', silver: '#c0c0c0',
+  skyblue: '#87ceeb', slateblue: '#6a5acd', slategray: '#708090', slategrey: '#708090', snow: '#fffafa',
+  springgreen: '#00ff7f', steelblue: '#4682b4', tan: '#d2b48c', teal: '#008080', thistle: '#d8bfd8',
+  tomato: '#ff6347', turquoise: '#40e0d0', violet: '#ee82ee', wheat: '#f5deb3', white: '#ffffff', whitesmoke: '#f5f5f5',
+  yellow: '#ffff00', yellowgreen: '#9acd32', transparent: '#00000000'
+};
+
+function parseColor(str) {
+  str = str.trim().toLowerCase();
+  // Named colors
+  if (NAMED_COLORS[str]) return { hex: NAMED_COLORS[str] };
+  // Hex
+  const hexMatch = str.match(/^#([0-9a-f]{3,8})$/);
+  if (hexMatch) return { hex: '#' + hexMatch[1] };
+  // rgb / rgba
+  const rgbMatch = str.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+))?\s*\)/);
+  if (rgbMatch) {
+    const r = parseInt(rgbMatch[1]), g = parseInt(rgbMatch[2]), b = parseInt(rgbMatch[3]);
+    return { hex: rgbToHex(r, g, b), r, g, b };
+  }
+  // hsl / hsla
+  const hslMatch = str.match(/hsla?\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*(?:,\s*([\d.]+))?\s*\)/);
+  if (hslMatch) {
+    const h = parseInt(hslMatch[1]), s = parseInt(hslMatch[2]), l = parseInt(hslMatch[3]);
+    const rgb = hslToRgb(h, s, l);
+    return { hex: rgbToHex(rgb.r, rgb.g, rgb.b), r: rgb.r, g: rgb.g, b: rgb.b };
+  }
+  // oklch
+  const oklchMatch = str.match(/oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)/);
+  if (oklchMatch) {
+    const l = parseFloat(oklchMatch[1]), c = parseFloat(oklchMatch[2]), h = parseFloat(oklchMatch[3]);
+    return { oklch: { l, c, h } };
+  }
+  // lch
+  const lchMatch = str.match(/lch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)/);
+  if (lchMatch) {
+    const l = parseFloat(lchMatch[1]), c = parseFloat(lchMatch[2]), h = parseFloat(lchMatch[3]);
+    // LCH -> OKLab -> XYZ -> sRGB
+    return { lch: { l, c, h } };
+  }
+  return null;
+}
+
+// ─── sRGB ↔ lRGB (gamma) ───────────────────────────────────────────────────
+function srgbToLinear(c) { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+function linearToSrgb(c) { return c <= 0.0031308 ? c * 12.92 * 255 : (1.055 * Math.pow(c, 1/2.4) - 0.055) * 255; }
+
+// ─── Matrices (Björn Ottosson) ─────────────────────────────────────────────
+// sRGB linear → LMS
+const RGB2LMS = [
+  [ 0.4122214708, 0.5363325363, 0.0514459929 ],
+  [ 0.2119034982, 0.6806995451, 0.1073969566 ],
+  [ 0.0883024619, 0.2817188376, 0.6299787005 ]
+];
+// LMS → linear sRGB
+const LMS2RGB = [
+  [ 4.0767416621, -3.3077115913,  0.2309699292 ],
+  [-1.2684380046,  2.6097574011, -0.3413193965 ],
+  [-0.0041960863, -0.7034186147,  1.7076147010 ]
+];
+// LMS' (cube-rooted) → OKLab
+const LMSP2OKLAB = [
+  [ 0.2104542553,  0.7936177850, -0.0040720468 ],
+  [ 1.9779984951, -2.4285922050,  0.4505937099 ],
+  [ 0.0259040371,  0.7827717662, -0.8086757660 ]
+];
+// OKLab → LMS'
+const OKLAB2LMSP = [
+  [ 1.0000000000,  0.3963377774,  0.2158037573 ],
+  [ 1.0000000000, -0.1055613458, -0.0638541728 ],
+  [ 1.0000000000, -0.0894841775, -1.2914855480 ]
+];
+// sRGB → XYZ D65 (for CIE Lab/LCH)
+const RGB2XYZ = [
+  [ 0.4124564, 0.3575761, 0.1804375 ],
+  [ 0.2126729, 0.7151522, 0.0721750 ],
+  [ 0.0193339, 0.1191920, 0.9503041 ]
+];
+const XYZ2RGB = [
+  [ 3.2404542, -1.5371385, -0.4985314 ],
+  [-0.9692660,  1.8760108,  0.0415560 ],
+  [ 0.0556434, -0.2040259,  1.0572252 ]
+];
+
+// ─── sRGB → OKLCH (correct pipeline) ───────────────────────────────────────
+function rgbToOklch(r, g, b) {
+  // Step 1: sRGB → linear
+  const rl = srgbToLinear(r), gl = srgbToLinear(g), bl = srgbToLinear(b);
+  // Step 2: Linear RGB → LMS
+  const L = RGB2LMS[0][0]*rl + RGB2LMS[0][1]*gl + RGB2LMS[0][2]*bl;
+  const M = RGB2LMS[1][0]*rl + RGB2LMS[1][1]*gl + RGB2LMS[1][2]*bl;
+  const S = RGB2LMS[2][0]*rl + RGB2LMS[2][1]*gl + RGB2LMS[2][2]*bl;
+  // Step 3: LMS → LMS' (cube root)
+  const Lp = Math.cbrt(L), Mp = Math.cbrt(M), Sp = Math.cbrt(S);
+  // Step 4: LMS' → OKLab
+  const okL = LMSP2OKLAB[0][0]*Lp + LMSP2OKLAB[0][1]*Mp + LMSP2OKLAB[0][2]*Sp;
+  const oka = LMSP2OKLAB[1][0]*Lp + LMSP2OKLAB[1][1]*Mp + LMSP2OKLAB[1][2]*Sp;
+  const okb = LMSP2OKLAB[2][0]*Lp + LMSP2OKLAB[2][1]*Mp + LMSP2OKLAB[2][2]*Sp;
+  // Step 5: OKLab → OKLCH
+  const C = Math.sqrt(oka*oka + okb*okb);
+  let H = Math.atan2(okb, oka) * 180 / Math.PI;
+  if (H < 0) H += 360;
+  return { l: okL, c: C, h: H };
+}
+
+// ─── OKLCH → sRGB (correct pipeline) ───────────────────────────────────────
+function oklchToRgb(l, c, h) {
+  // Step 1: OKLCH → OKLab
+  const hRad = h * Math.PI / 180;
+  const oka = c * Math.cos(hRad);
+  const okb = c * Math.sin(hRad);
+  // Step 2: OKLab → LMS'
+  const Lp = OKLAB2LMSP[0][0]*l + OKLAB2LMSP[0][1]*oka + OKLAB2LMSP[0][2]*okb;
+  const Mp = OKLAB2LMSP[1][0]*l + OKLAB2LMSP[1][1]*oka + OKLAB2LMSP[1][2]*okb;
+  const Sp = OKLAB2LMSP[2][0]*l + OKLAB2LMSP[2][1]*oka + OKLAB2LMSP[2][2]*okb;
+  // Step 3: LMS' → LMS (cube)
+  const L = Lp*Lp*Lp, M = Mp*Mp*Mp, S = Sp*Sp*Sp;
+  // Step 4: LMS → linear sRGB
+  const rl = LMS2RGB[0][0]*L + LMS2RGB[0][1]*M + LMS2RGB[0][2]*S;
+  const gl = LMS2RGB[1][0]*L + LMS2RGB[1][1]*M + LMS2RGB[1][2]*S;
+  const bl = LMS2RGB[2][0]*L + LMS2RGB[2][1]*M + LMS2RGB[2][2]*S;
+  // Step 5: linear sRGB → sRGB
+  return {
+    r: Math.max(0, Math.min(255, Math.round(linearToSrgb(rl)))),
+    g: Math.max(0, Math.min(255, Math.round(linearToSrgb(gl)))),
+    b: Math.max(0, Math.min(255, Math.round(linearToSrgb(bl))))
+  };
+}
+
+// ─── sRGB ↔ XYZ D65 (for CIE Lab/LCH conversion) ──────────────────────────
+function rgbToXyzD65(r, g, b) {
+  const rl = srgbToLinear(r), gl = srgbToLinear(g), bl = srgbToLinear(b);
+  return {
+    x: RGB2XYZ[0][0]*rl + RGB2XYZ[0][1]*gl + RGB2XYZ[0][2]*bl,
+    y: RGB2XYZ[1][0]*rl + RGB2XYZ[1][1]*gl + RGB2XYZ[1][2]*bl,
+    z: RGB2XYZ[2][0]*rl + RGB2XYZ[2][1]*gl + RGB2XYZ[2][2]*bl
+  };
+}
+function xyzD65ToRgb(x, y, z) {
+  const rl = XYZ2RGB[0][0]*x + XYZ2RGB[0][1]*y + XYZ2RGB[0][2]*z;
+  const gl = XYZ2RGB[1][0]*x + XYZ2RGB[1][1]*y + XYZ2RGB[1][2]*z;
+  const bl = XYZ2RGB[2][0]*x + XYZ2RGB[2][1]*y + XYZ2RGB[2][2]*z;
+  return {
+    r: Math.max(0, Math.min(255, Math.round(linearToSrgb(rl)))),
+    g: Math.max(0, Math.min(255, Math.round(linearToSrgb(gl)))),
+    b: Math.max(0, Math.min(255, Math.round(linearToSrgb(bl))))
+  };
+}
+
+function lchToRgb(l, c, h) {
+  // CIE LCH(ab) — for input parsing. Convert to Lab, then XYZ, then sRGB.
+  const hRad = h * Math.PI / 180;
+  const a = c * Math.cos(hRad);
+  const b = c * Math.sin(hRad);
+  // CIE Lab to XYZ (D65)
+  const fy = (l + 16) / 116;
+  const fx = fy + a / 500;
+  const fz = fy - b / 200;
+  const delta = 6/29;
+  const delta3 = delta*delta*delta;
+  const xr = fx*fx*fx > delta3 ? fx*fx*fx : (fx - 16/116) / 7.787;
+  const yr = l > 8 ? fy*fy*fy : l / 903.3;
+  const zr = fz*fz*fz > delta3 ? fz*fz*fz : (fz - 16/116) / 7.787;
+  // D65 reference white
+  const x = xr * 0.95047, y = yr * 1.0, z = zr * 1.08883;
+  return xyzD65ToRgb(x, y, z);
+}
+
+// Relative luminance for WCAG
+function srgbToRelativeLuminance(r, g, b) {
+  const rs = srgbToLinear(r), gs = srgbToLinear(g), bs = srgbToLinear(b);
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+
+function contrastRatio(l1, l2) {
+  const lighter = Math.max(l1, l2), darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+// ─── Color Object ────────────────────────────────────────────────────────────
+
+function buildColorData(r, g, b) {
+  const hex = rgbToHex(r, g, b);
+  const hsl = rgbToHsl(r, g, b);
+  const oklch = rgbToOklch(r, g, b);
+  const lum = srgbToRelativeLuminance(r, g, b);
+  return { r, g, b, hex, hsl, oklch, lum };
+}
+
+// ─── Relative Color Recipes ───────────────────────────────────────────────────
+
+function generateRelativeRecipes(baseOklch) {
+  const { l, c, h } = baseOklch;
+  return [
+    { label: 'Base', l: l, c: c, h: h, css: `oklch(from var(--base) l c h)` },
+    { label: 'Lighter +10', l: Math.min(1, l + 0.1), c: c, h: h, css: `oklch(from var(--base) calc(l + 0.1) c h)` },
+    { label: 'Lighter +20', l: Math.min(1, l + 0.2), c: c, h: h, css: `oklch(from var(--base) calc(l + 0.2) c h)` },
+    { label: 'Lighter +30', l: Math.min(1, l + 0.3), c: c, h: h, css: `oklch(from var(--base) calc(l + 0.3) c h)` },
+    { label: 'Darker −10', l: Math.max(0, l - 0.1), c: c, h: h, css: `oklch(from var(--base) calc(l - 0.1) c h)` },
+    { label: 'Darker −20', l: Math.max(0, l - 0.2), c: c, h: h, css: `oklch(from var(--base) calc(l - 0.2) c h)` },
+    { label: 'Darker −30', l: Math.max(0, l - 0.3), c: c, h: h, css: `oklch(from var(--base) calc(l - 0.3) c h)` },
+    { label: 'More vivid', l: l, c: Math.min(0.4, c * 1.4), h: h, css: `oklch(from var(--base) l calc(c * 1.4) h)` },
+    { label: 'Muted', l: l, c: Math.max(0.01, c * 0.5), h: h, css: `oklch(from var(--base) l calc(c * 0.5) h)` },
+    { label: 'Complement', l: l, c: c, h: (h + 180) % 360, css: `oklch(from var(--base) l c calc(h + 180))` },
+    { label: 'Analog +30°', l: l, c: c, h: (h + 30) % 360, css: `oklch(from var(--base) l c calc(h + 30))` },
+    { label: 'Analog −30°', l: l, c: c, h: (h - 30 + 360) % 360, css: `oklch(from var(--base) l c calc(h - 30))` },
+  ];
+}
+
+// ─── App State ────────────────────────────────────────────────────────────────
+
+let currentColor = buildColorData(59, 130, 246); // #3b82f6 — default blue
+let history = JSON.parse(localStorage.getItem('tokenlab_history') || '[]');
+
+function saveHistory(hex) {
+  history = history.filter(h => h !== hex);
+  history.unshift(hex);
+  if (history.length > 24) history.length = 24;
+  localStorage.setItem('tokenlab_history', JSON.stringify(history));
+  renderHistory();
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+
+function renderAll() {
+  const c = currentColor;
+  const oklch = c.oklch;
+
+  // Swatch
+  document.getElementById('mainSwatch').style.backgroundColor = c.hex;
+  document.getElementById('swatchName').textContent = c.hex;
+  document.getElementById('swatchMeta').innerHTML = `
+    <span>OKLCH ${oklch.l.toFixed(3)} ${oklch.c.toFixed(3)} ${oklch.h.toFixed(1)}°</span>
+    <span>HSL ${c.hsl.h}° ${c.hsl.s}% ${c.hsl.l}%</span>
+  `;
+
+  // Picker sync
+  document.getElementById('picker').value = c.hex;
+
+  // Formats Grid
+  const formats = [
+    { label: 'HEX', value: c.hex },
+    { label: 'RGB', value: `rgb(${c.r}, ${c.g}, ${c.b})` },
+    { label: 'HSL', value: `hsl(${c.hsl.h}, ${c.hsl.s}%, ${c.hsl.l}%)` },
+    { label: 'OKLCH', value: `oklch(${oklch.l.toFixed(4)} ${oklch.c.toFixed(4)} ${oklch.h.toFixed(1)})` },
+    { label: 'LCH (CIE)', value: (() => {
+      // CIE LCH from sRGB
+
+      // Use the main conversion path
+      const xyz = rgbToXyzD65(c.r, c.g, c.b);
+      const fy = (xyz.y > 0.008856) ? Math.cbrt(xyz.y) : 7.787 * xyz.y + 16/116;
+      const fx = (xyz.x / 0.95047 > 0.008856) ? Math.cbrt(xyz.x / 0.95047) : 7.787 * (xyz.x/0.95047) + 16/116;
+      const fz = (xyz.z / 1.08883 > 0.008856) ? Math.cbrt(xyz.z / 1.08883) : 7.787 * (xyz.z/1.08883) + 16/116;
+      const L = 116 * fy - 16;
+      const a = 500 * (fx - fy);
+      const b = 200 * (fy - fz);
+      const C = Math.sqrt(a*a + b*b);
+      let H = Math.atan2(b, a) * 180 / Math.PI;
+      if (H < 0) H += 360;
+      return `lch(${L.toFixed(1)} ${C.toFixed(2)} ${H.toFixed(1)})`;
+    })() },
+    { label: 'Display P3', value: (() => {
+      const rl = srgbToLinear(c.r), gl = srgbToLinear(c.g), bl = srgbToLinear(c.b);
+      return `color(display-p3 ${rl.toFixed(4)} ${gl.toFixed(4)} ${bl.toFixed(4)})`;
+    })() },
+  ];
+
+  const grids = document.getElementById('formatsGrid');
+  grids.innerHTML = formats.map((f, i) => `
+    <div class="format-card" onclick="copyFormat(${i})" title="Click to copy">
+      <div class="label">${f.label}</div>
+      <div class="value">${f.value}</div>
+      <div class="copied" id="copied${i}">Copied!</div>
+    </div>
+  `).join('');
+
+  // Relative Colors
+  const recipes = generateRelativeRecipes(oklch);
+  const relGrid = document.getElementById('relativeGrid');
+  relGrid.innerHTML = recipes.map((r, i) => {
+    const rgb = oklchToRgb(r.l, r.c, r.h);
+    const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+    return `
+      <div class="relative-chip" onclick="copyRelative('${r.css.replace(/'/g, "\\'")}')" title="Click to copy CSS">
+        <div class="mini-swatch" style="background-color:${hex}"></div>
+        <div class="chip-label">${r.label}</div>
+      </div>
+    `;
+  }).join('');
+
+  // Contrast
+  const lum = c.lum;
+  const onWhite = contrastRatio(1, lum);
+  const onBlack = contrastRatio(lum, 0);
+  const onSelf = contrastRatio(lum, lum);
+
+  function badge(ratio) {
+    if (ratio >= 7) return '<span class="badge badge-aaa">AAA</span>';
+    if (ratio >= 4.5) return '<span class="badge badge-aa">AA</span>';
+    return '<span class="badge badge-fail">Fail</span>';
+  }
+
+  const contrastGrid = document.getElementById('contrastGrid');
+  contrastGrid.innerHTML = `
+    <div class="contrast-card">
+      <div class="pair-label">On White</div>
+      <div class="ratio" style="color:${onWhite >= 4.5 ? 'oklch(0.7 0.15 145)' : 'oklch(0.7 0.15 25)'}">${onWhite.toFixed(2)}:1</div>
+      <div class="badges">${badge(onWhite)} ${onWhite >= 3 ? '<span class="badge badge-aa">AA Large</span>' : '<span class="badge badge-fail">Fail</span>'}</div>
+    </div>
+    <div class="contrast-card">
+      <div class="pair-label">On Black</div>
+      <div class="ratio" style="color:${onBlack >= 4.5 ? 'oklch(0.7 0.15 145)' : 'oklch(0.7 0.15 25)'}">${onBlack.toFixed(2)}:1</div>
+      <div class="badges">${badge(onBlack)} ${onBlack >= 3 ? '<span class="badge badge-aa">AA Large</span>' : '<span class="badge badge-fail">Fail</span>'}</div>
+    </div>
+    <div class="contrast-card">
+      <div class="pair-label">On Surface</div>
+      <div class="ratio" style="color:${contrastRatio(lum, 0.17) >= 4.5 ? 'oklch(0.7 0.15 145)' : 'oklch(0.7 0.15 25)'}">${contrastRatio(lum, 0.17).toFixed(2)}:1</div>
+      <div class="badges">${badge(contrastRatio(lum, 0.17))} ${contrastRatio(lum, 0.17) >= 3 ? '<span class="badge badge-aa">AA Large</span>' : '<span class="badge badge-fail">Fail</span>'}</div>
+    </div>
+  `;
+
+  // CSS Export
+  const cssVars = `:root {
+  /* Primary color */
+  --color-primary: oklch(${oklch.l.toFixed(4)} ${oklch.c.toFixed(4)} ${oklch.h.toFixed(1)});
+  --color-primary-hex: ${c.hex};
+
+  /* Relative tints & shades */
+  --color-primary-lighter: oklch(from var(--color-primary) calc(l + 0.15) c h);
+  --color-primary-light: oklch(from var(--color-primary) calc(l + 0.08) c h);
+  --color-primary-dark: oklch(from var(--color-primary) calc(l - 0.12) c h);
+  --color-primary-darker: oklch(from var(--color-primary) calc(l - 0.2) c h);
+
+  /* Saturation variants */
+  --color-primary-vivid: oklch(from var(--color-primary) l calc(c * 1.3) h);
+  --color-primary-muted: oklch(from var(--color-primary) l calc(c * 0.6) h);
+
+  /* Complementary / analogous */
+  --color-accent: oklch(from var(--color-primary) l c calc(h + 180));
+  --color-analogous-up: oklch(from var(--color-primary) l c calc(h + 30));
+  --color-analogous-down: oklch(from var(--color-primary) l c calc(h - 30));
+}`;
+
+  document.getElementById('cssExport').innerHTML = cssVars + `<button class="btn btn-sm copy-btn" onclick="copyCSS()">Copy</button>`;
+}
+
+function renderHistory() {
+  const strip = document.getElementById('historyStrip');
+  strip.innerHTML = history.map(hex => `
+    <div class="history-dot" style="background-color:${hex}" onclick="setColor('${hex}')" title="${hex}"></div>
+  `).join('');
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+
+function setColor(hex, addToHistory = false) {
+  const rgb = hexToRgb(hex);
+  currentColor = buildColorData(rgb.r, rgb.g, rgb.b);
+  if (addToHistory) saveHistory(hex);
+  renderAll();
+}
+
+function applyInput() {
+  const val = document.getElementById('colorInput').value.trim();
+  if (!val) return;
+  const parsed = parseColor(val);
+  if (!parsed) { showToast('Could not parse color'); return; }
+
+  if (parsed.oklch) {
+    const rgb = oklchToRgb(parsed.oklch.l, parsed.oklch.c, parsed.oklch.h);
+    currentColor = buildColorData(rgb.r, rgb.g, rgb.b);
+  } else if (parsed.lch) {
+    const rgb = lchToRgb(parsed.lch.l, parsed.lch.c, parsed.lch.h);
+    currentColor = buildColorData(rgb.r, rgb.g, rgb.b);
+  } else if (parsed.r !== undefined) {
+    currentColor = buildColorData(parsed.r, parsed.g, parsed.b);
+  } else {
+    const rgb = hexToRgb(parsed.hex);
+    currentColor = buildColorData(rgb.r, rgb.g, rgb.b);
+  }
+  saveHistory(currentColor.hex);
+  document.getElementById('colorInput').value = currentColor.hex;
+  renderAll();
+}
+
+function copyFormat(i) {
+  const formats = document.querySelectorAll('#formatsGrid .value');
+  if (formats[i]) {
+    navigator.clipboard.writeText(formats[i].textContent).then(() => {
+      const el = document.getElementById('copied' + i);
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 1200);
+      showToast('Copied!');
+    });
+  }
+}
+
+function copyRelative(css) {
+  navigator.clipboard.writeText(css).then(() => showToast('CSS copied!'));
+}
+
+function copyCSS() {
+  const block = document.getElementById('cssExport').textContent.replace('Copy', '').trim();
+  navigator.clipboard.writeText(block).then(() => showToast('CSS custom properties copied!'));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timeout);
+  t._timeout = setTimeout(() => t.classList.remove('show'), 1500);
+}
+
+function randomColor() {
+  const r = Math.floor(Math.random() * 256);
+  const g = Math.floor(Math.random() * 256);
+  const b = Math.floor(Math.random() * 256);
+  const hex = rgbToHex(r, g, b);
+  document.getElementById('colorInput').value = hex;
+  setColor(hex, true);
+}
+
+function checkCustomContrast() {
+  const bgVal = document.getElementById('customBgInput').value.trim();
+  if (!bgVal) return;
+  const parsed = parseColor(bgVal);
+  if (!parsed) { showToast('Could not parse background'); return; }
+
+  let bgRgb;
+  if (parsed.oklch) {
+    bgRgb = oklchToRgb(parsed.oklch.l, parsed.oklch.c, parsed.oklch.h);
+  } else if (parsed.r !== undefined) {
+    bgRgb = { r: parsed.r, g: parsed.g, b: parsed.b };
+  } else {
+    bgRgb = hexToRgb(parsed.hex);
+  }
+
+  const bgLum = srgbToRelativeLuminance(bgRgb.r, bgRgb.g, bgRgb.b);
+  const ratio = contrastRatio(currentColor.lum, bgLum);
+  const result = document.getElementById('customContrastResult');
+  let rating = ratio >= 7 ? '✅ AAA' : ratio >= 4.5 ? '✅ AA' : ratio >= 3 ? '⚠️ AA Large only' : '❌ Fail';
+  result.innerHTML = `<strong>${ratio.toFixed(2)}:1</strong> ${rating}`;
+}
+
+// ─── Keyboard ─────────────────────────────────────────────────────────────────
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 's' || e.key === 'S') {
+    e.preventDefault();
+    const oklch = currentColor.oklch;
+    navigator.clipboard.writeText(`oklch(${oklch.l.toFixed(4)} ${oklch.c.toFixed(4)} ${oklch.h.toFixed(1)})`).then(() => showToast('OKLCH copied! (S)'));
+  }
+  if (e.key === 'c' || e.key === 'C') {
+    e.preventDefault();
+    copyCSS();
+  }
+  if (e.key === 'r' || e.key === 'R') {
+    e.preventDefault();
+    randomColor();
+  }
+  if (e.key === 'h' || e.key === 'H') {
+    e.preventDefault();
+    document.getElementById('kbHint').classList.toggle('show');
+  }
+});
+
+// ─── Event Listeners ──────────────────────────────────────────────────────────
+
+document.getElementById('applyBtn').addEventListener('click', applyInput);
+document.getElementById('colorInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') applyInput(); });
+document.getElementById('picker').addEventListener('input', (e) => {
+  document.getElementById('colorInput').value = e.target.value;
+  setColor(e.target.value, true);
+});
+document.getElementById('randomBtn').addEventListener('click', randomColor);
+document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+  history = [];
+  localStorage.removeItem('tokenlab_history');
+  renderHistory();
+  showToast('History cleared');
+});
+document.getElementById('checkCustomBg').addEventListener('click', checkCustomContrast);
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+// Parse URL hash for shared colors
+if (window.location.hash) {
+  const hashColor = window.location.hash.slice(1);
+  document.getElementById('colorInput').value = hashColor;
+  applyInput();
+} else {
+  setColor('#3b82f6', true);
+}
+renderHistory();
+</script>
+</body>
+</html>
