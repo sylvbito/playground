@@ -187,7 +187,7 @@ body {
   position: relative;
   display: inline-flex;
 }
-.tooltip-btn { anchor-name: --tt-anchor; }
+.tooltip-btn:first-child { anchor-name: --tt-anchor; }
 .tooltip-content {
   position: absolute;
   position-anchor: --tt-anchor;
@@ -422,6 +422,30 @@ body {
 </style>
 </head>
 <body>
+
+<!-- Browser compatibility warning (hidden if Popover API supported) -->
+<style>
+.browser-banner {
+  display: none;
+  background: oklch(0.7 0.2 50 / 0.15);
+  border-bottom: 1px solid oklch(0.7 0.2 50 / 0.25);
+  color: oklch(0.85 0.15 50);
+  text-align: center;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+}
+.browser-banner strong { font-weight: 700; }
+</style>
+<div class="browser-banner" id="browser-banner">
+  ⚠ Your browser doesn't support the <strong>Popover API</strong>. 
+  These interactive demos require Chrome 125+, Edge 125+, Safari 17.4+, or Firefox 129+.
+</div>
+<script>
+if (typeof HTMLElement !== 'undefined' && 'popover' in HTMLElement.prototype) {
+  document.getElementById('browser-banner').remove();
+}
+</script>
 
 <div class="container">
 
