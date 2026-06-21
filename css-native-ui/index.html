@@ -184,7 +184,6 @@ body {
    PATTERN 1: TOOLTIP
    ============================================ */
 .tooltip-wrapper {
-  position: relative;
   display: inline-flex;
 }
 .tooltip-btn:first-child { anchor-name: --tt-anchor; }
@@ -405,6 +404,9 @@ body {
    ANCHOR POSITIONING FALLBACK
    ============================================ */
 @supports not (anchor-name: --test) {
+  .tooltip-wrapper {
+    position: relative;
+  }
   .tooltip-content {
     bottom: calc(100% + 8px);
     left: 50%;
