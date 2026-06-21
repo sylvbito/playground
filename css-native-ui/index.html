@@ -271,23 +271,25 @@ body {
    PATTERN 3: ANIMATED DIALOG
    ============================================ */
 .dialog-overlay[popover] {
-  position: fixed;
-  inset: 0;
   margin: 0;
   border: none;
   padding: 0;
+  background: oklch(0 0 0 / 0);
+  transition: background 0.25s;
+  transition-behavior: allow-discrete;
+}
+.dialog-overlay[popover]:popover-open {
+  position: fixed;
+  inset: 0;
   width: 100dvw;
   height: 100dvh;
   max-width: none;
   max-height: none;
-  background: oklch(0 0 0 / 0);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.25s;
-  transition-behavior: allow-discrete;
+  background: oklch(0 0 0 / 0.6);
 }
-.dialog-overlay[popover]:popover-open { background: oklch(0 0 0 / 0.6); }
 @starting-style { .dialog-overlay[popover]:popover-open { background: oklch(0 0 0 / 0); } }
 
 .dialog-overlay::backdrop {
