@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Work — Transition Kit</title>
+<meta name="view-transition" content="same-origin">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --parchment: #fdfdf7;
+  --ink: #000;
+  --ink-soft: #333;
+  --ink-muted: #666;
+  --sky: #0096f7;
+  --sky-hover: #007acc;
+  --sky-subtle: rgba(0,150,247,0.08);
+  --sand: #f5f0e8;
+  --sand-border: #e8e0d2;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+  --font: 'Manrope', system-ui, -apple-system, sans-serif;
+  --max-w: 960px;
+}
+
+/* === VIEW TRANSITIONS === */
+@view-transition { navigation: auto; }
+
+/* Custom slide animation */
+::view-transition-old(root) {
+  animation: 0.4s cubic-bezier(0.4, 0, 0.2, 1) slide-to-left both;
+}
+::view-transition-new(root) {
+  animation: 0.4s cubic-bezier(0.4, 0, 0.2, 1) slide-from-right both;
+}
+@keyframes slide-to-left { to { transform: translateX(-30px); opacity: 0; } }
+@keyframes slide-from-right { from { transform: translateX(30px); opacity: 0; } }
+
+/* Apply saved transition preference if set by configurator */
+/* Note: sessionStorage styles must be injected via JS since CSS can't read it */
+
+/* Shared element morphs */
+.nav-logo { view-transition-name: nav-logo; }
+.hero-badge { view-transition-name: hero-badge; }
+
+/* === RESET & BASE === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: var(--font);
+  font-weight: 300;
+  background: var(--parchment);
+  color: var(--ink);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* === NAV === */
+.nav {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.nav-logo {
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-decoration: none;
+}
+.nav-links { display: flex; gap: 1.5rem; align-items: center; }
+.nav-links a {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--ink-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.nav-links a:hover, .nav-links a.active { color: var(--ink); }
+
+/* === HERO === */
+.hero {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+.hero-badge {
+  display: inline-block;
+  background: var(--sky-subtle);
+  color: var(--sky);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 100px;
+  margin-bottom: 1rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.hero-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-bottom: 0.75rem;
+}
+.hero-sub {
+  font-size: 1rem;
+  color: var(--ink-muted);
+  max-width: 500px;
+  margin: 0 auto;
+  font-weight: 300;
+}
+
+/* === SECTION === */
+.section {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+.section-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+.section-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+}
+.section-header p { color: var(--ink-muted); font-size: 0.9375rem; font-weight: 300; }
+
+/* === WORK GRID === */
+.work-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+.work-card {
+  background: white;
+  border: 1px solid var(--sand-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s;
+  text-decoration: none;
+  color: var(--ink);
+  display: block;
+}
+.work-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--sky);
+  transform: translateY(-2px);
+}
+.work-card-image {
+  height: 180px;
+  background: var(--sand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+}
+.work-card-body { padding: 1.25rem; }
+.work-card-body h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; }
+.work-card-body p { font-size: 0.8125rem; color: var(--ink-muted); font-weight: 300; line-height: 1.5; }
+.work-card-tag {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--sky);
+  background: var(--sky-subtle);
+  padding: 0.125rem 0.5rem;
+  border-radius: 100px;
+  margin-top: 0.75rem;
+}
+
+/* === TRANSITION NOTE === */
+.transition-note {
+  background: white;
+  border: 1.5px solid var(--sky);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.transition-note h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+.transition-note p { font-size: 0.8125rem; color: var(--ink-muted); font-weight: 300; }
+.transition-note code {
+  background: var(--sky-subtle);
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+.back-link { display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 1rem; font-size: 0.875rem; color: var(--sky); text-decoration: none; font-weight: 600; }
+.back-link:hover { color: var(--sky-hover); }
+
+/* === FOOTER === */
+.footer {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 1.5rem;
+  text-align: center;
+  border-top: 1px solid var(--sand-border);
+}
+.footer p { font-size: 0.75rem; color: var(--ink-muted); font-weight: 300; }
+.footer a { color: var(--sky); text-decoration: none; }
+
+@media (max-width: 768px) {
+  .hero-title { font-size: 1.75rem; }
+  .work-grid { grid-template-columns: 1fr; }
+  .section { padding: 2rem 1.25rem; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="index.html" class="nav-logo">Transition Kit</a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="work.html" class="active">Work</a>
+    <a href="about.html">About</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <span class="hero-badge">Case Studies</span>
+  <h1 class="hero-title">Our work</h1>
+  <p class="hero-sub">Notice the slide transition when you navigate? And the badge morphing? That's cross-document view transitions.</p>
+</header>
+
+<section class="section">
+  <div class="work-grid">
+    <a href="about.html" class="work-card">
+      <div class="work-card-image" style="background:linear-gradient(135deg, #0096f7, #00c6ff);">🌐</div>
+      <div class="work-card-body">
+        <h3>Fintech Dashboard Redesign</h3>
+        <p>Complete UI overhaul with OKLCH-based design tokens and native CSS components.</p>
+        <span class="work-card-tag">Design System</span>
+      </div>
+    </a>
+    <div class="work-card">
+      <div class="work-card-image" style="background:linear-gradient(135deg, #7c4dff, #b388ff);">📱</div>
+      <div class="work-card-body">
+        <h3>Local Business Concept Site</h3>
+        <p>Multi-page concept site with cross-document view transitions. Samara design tokens.</p>
+        <span class="work-card-tag">Concept Site</span>
+      </div>
+    </div>
+    <div class="work-card">
+      <div class="work-card-image" style="background:linear-gradient(135deg, #ff6d00, #ffab40);">🎨</div>
+      <div class="work-card-body">
+        <h3>E-commerce Product Pages</h3>
+        <p>Product listing to detail page transitions with shared-element image morphs.</p>
+        <span class="work-card-tag">E-commerce</span>
+      </div>
+    </div>
+    <div class="work-card">
+      <div class="work-card-image" style="background:linear-gradient(135deg, #00c853, #69f0ae);">🔧</div>
+      <div class="work-card-body">
+        <h3>SaaS Onboarding Flow</h3>
+        <p>Multi-step onboarding with slide transitions between steps — no JavaScript router needed.</p>
+        <span class="work-card-tag">SaaS</span>
+      </div>
+    </div>
+    <div class="work-card">
+      <div class="work-card-image" style="background:linear-gradient(135deg, #d500f9, #e040fb);">📊</div>
+      <div class="work-card-body">
+        <h3>Analytics Platform</h3>
+        <p>Data-heavy dashboard with crossfade transitions between report views.</p>
+        <span class="work-card-tag">Analytics</span>
+      </div>
+    </div>
+    <div class="work-card">
+      <div class="work-card-image" style="background:linear-gradient(135deg, #ff1744, #ff5252);">🏢</div>
+      <div class="work-card-body">
+        <h3>Corporate Site Rebuild</h3>
+        <p>Five-page corporate site with custom slide transitions. Zero JS, instant navigation feel.</p>
+        <span class="work-card-tag">Corporate</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="transition-note">
+    <h3>🔬 What's happening here</h3>
+    <p>This page uses <code>::view-transition-old(root)</code> and <code>::view-transition-new(root)</code> with a custom slide animation. The <code>.nav-logo</code> and <code>.hero-badge</code> elements have <code>view-transition-name</code> set on both pages — so they animate between their positions during navigation.</p>
+    <p style="margin-top:0.75rem;">Navigate back to Home. Watch the logo and badge morph. Then head to About for a different transition style.</p>
+    <a href="index.html" class="back-link">← Back to Home</a>
+    <span style="margin:0 0.75rem;color:var(--sand-border);">|</span>
+    <a href="about.html" class="back-link">About page →</a>
+  </div>
+</section>
+
+<footer class="footer">
+  <p>Built with <a href="https://developer.chrome.com/docs/web-platform/view-transitions" target="_blank" rel="noopener">cross-document view transitions</a> · Part of the <a href="https://sylvbito.github.io/playground/">playground</a></p>
+</footer>
+
+<script>
+// Apply saved transition preference from configurator
+(function() {
+  const type = sessionStorage.getItem('vt-pref');
+  const dur = sessionStorage.getItem('vt-dur');
+  if (!type) return;
+
+  const animations = {
+    fade: {
+      old: `::view-transition-old(root) { animation: ${dur || 400}ms fade-out both; }
+::view-transition-new(root) { animation: ${dur || 400}ms fade-in both; }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes fade-in { from { opacity: 0; } }`
+    },
+    slide: {
+      old: `::view-transition-old(root) { animation: ${dur || 400}ms slide-to-left both; }
+::view-transition-new(root) { animation: ${dur || 400}ms slide-from-right both; }
+@keyframes slide-to-left { to { transform: translateX(-30px); opacity: 0; } }
+@keyframes slide-from-right { from { transform: translateX(30px); opacity: 0; } }`
+    },
+    'slide-right': {
+      old: `::view-transition-old(root) { animation: ${dur || 400}ms slide-to-right both; }
+::view-transition-new(root) { animation: ${dur || 400}ms slide-from-left both; }
+@keyframes slide-to-right { to { transform: translateX(30px); opacity: 0; } }
+@keyframes slide-from-left { from { transform: translateX(-30px); opacity: 0; } }`
+    },
+    'scale-up': {
+      old: `::view-transition-old(root) { animation: ${dur || 400}ms scale-down both; }
+::view-transition-new(root) { animation: ${dur || 400}ms scale-up both; }
+@keyframes scale-down { to { transform: scale(0.95); opacity: 0; } }
+@keyframes scale-up { from { transform: scale(1.05); opacity: 0; } }`
+    },
+    'scale-down': {
+      old: `::view-transition-old(root) { animation: ${dur || 400}ms scale-up both; }
+::view-transition-new(root) { animation: ${dur || 400}ms scale-down both; }
+@keyframes scale-up { to { transform: scale(1.05); opacity: 0; } }
+@keyframes scale-down { from { transform: scale(0.95); opacity: 0; } }`
+    }
+  };
+
+  const css = animations[type];
+  if (css) {
+    const style = document.createElement('style');
+    style.textContent = css.old;
+    document.head.appendChild(style);
+  }
+})();
+</script>
+
+</body>
+</html>
