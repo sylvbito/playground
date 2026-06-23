@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>text-box-trim — Typography Alignment Debugger</title>
+<style>
+/* ============================================
+   DESIGN TOKENS
+   ============================================ */
+:root {
+  --bg: oklch(0.985 0 0);
+  --surface: oklch(1 0 0);
+  --surface2: oklch(0.965 0 0);
+  --text: oklch(0.15 0 0);
+  --text2: oklch(0.40 0 0);
+  --text3: oklch(0.60 0 0);
+  --border: oklch(0.88 0 0);
+  --accent: oklch(0.55 0.22 255);
+  --accent-hover: oklch(0.48 0.22 255);
+  --accent-light: oklch(0.92 0.05 255);
+  --danger: oklch(0.58 0.22 22);
+  --danger-light: oklch(0.92 0.04 22);
+  --success: oklch(0.60 0.18 155);
+  --warning: oklch(0.70 0.16 85);
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.06);
+  --shadow-md: 0 4px 12px oklch(0 0 0 / 0.08);
+  --radius: 10px;
+  --radius-sm: 6px;
+  --font: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+.dark {
+  --bg: oklch(0.115 0 0);
+  --surface: oklch(0.16 0 0);
+  --surface2: oklch(0.20 0 0);
+  --text: oklch(0.92 0 0);
+  --text2: oklch(0.65 0 0);
+  --text3: oklch(0.45 0 0);
+  --border: oklch(0.24 0 0);
+  --accent: oklch(0.65 0.22 255);
+  --accent-hover: oklch(0.58 0.22 255);
+  --accent-light: oklch(0.20 0.08 255);
+  --danger: oklch(0.62 0.20 22);
+  --danger-light: oklch(0.20 0.06 22);
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.2);
+  --shadow-md: 0 4px 12px oklch(0 0 0 / 0.3);
+}
+
+/* ============================================
+   RESET & BASE
+   ============================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+header h1 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+header .badge {
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: var(--accent-light);
+  color: var(--accent);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.theme-btn, .info-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text2);
+  transition: all 0.15s;
+  line-height: 1;
+}
+.theme-btn:hover, .info-btn:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* ============================================
+   MAIN LAYOUT
+   ============================================ */
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  main {
+    flex-direction: row;
+    overflow: hidden;
+  }
+}
+
+/* ============================================
+   CONTROLS PANEL
+   ============================================ */
+.controls {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .controls {
+    width: 300px;
+    max-height: calc(100dvh - 57px);
+  }
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-group label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.control-group select,
+.control-group input[type="range"],
+.control-group input[type="text"] {
+  font-family: var(--font);
+  font-size: 0.9rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.control-group select:focus,
+.control-group input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.control-group input[type="range"] {
+  padding: 0;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.range-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.range-row input[type="range"] { flex: 1; }
+.range-row .range-value {
+  font-size: 0.8rem;
+  font-family: var(--mono);
+  color: var(--text2);
+  min-width: 36px;
+  text-align: right;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+.toggle-row span {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.toggle-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 22px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  left: 3px; top: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle-switch input:checked + .toggle-slider {
+  background: var(--accent);
+}
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(18px);
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2px 0;
+}
+
+/* ============================================
+   PREVIEW AREA
+   ============================================ */
+.preview {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  position: relative;
+  min-height: 400px;
+  background:
+    radial-gradient(circle at 25% 30%, oklch(0.55 0.04 255 / 0.06), transparent 50%),
+    radial-gradient(circle at 75% 70%, oklch(0.55 0.04 200 / 0.05), transparent 50%),
+    var(--bg);
+}
+
+.preview-label {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  font-size: 0.7rem;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+/* The container being debugged */
+.demo-container {
+  position: relative;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s;
+  min-width: 120px;
+  background: var(--surface);
+}
+
+.demo-container.measuring {
+  border-color: var(--accent);
+}
+
+/* The text span */
+.demo-text {
+  line-height: 1;
+  white-space: nowrap;
+  position: relative;
+  transition: all 0.2s;
+}
+
+/* Overhang zones */
+.overhang-top, .overhang-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, height 0.1s;
+}
+
+.overhang-top {
+  background: oklch(0.58 0.22 22 / 0.15);
+  border-bottom: 1px dashed oklch(0.58 0.22 22 / 0.4);
+}
+
+.overhang-bottom {
+  background: oklch(0.58 0.22 22 / 0.15);
+  border-top: 1px dashed oklch(0.58 0.22 22 / 0.4);
+}
+
+/* Guide lines */
+.guide-cap {
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  height: 0;
+  border-top: 1px dashed oklch(0.55 0.22 255 / 0.5);
+  pointer-events: none;
+  transition: all 0.1s;
+}
+.guide-baseline {
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  height: 0;
+  border-top: 1px dashed oklch(0.60 0.18 155 / 0.5);
+  pointer-events: none;
+  transition: all 0.1s;
+}
+
+.guide-label {
+  position: absolute;
+  right: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 8px;
+  font-family: var(--mono);
+  color: var(--text3);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Measurement annotations */
+.measure {
+  position: absolute;
+  font-size: 9px;
+  font-family: var(--mono);
+  color: var(--text3);
+  pointer-events: none;
+  transition: all 0.1s;
+}
+
+/* Status indicator */
+.preview-status {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  color: var(--text3);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.preview-status .metric {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.preview-status .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.preview-status .dot.cap { background: oklch(0.55 0.22 255 / 0.6); }
+.preview-status .dot.base { background: oklch(0.60 0.18 155 / 0.6); }
+.preview-status .dot.over { background: oklch(0.58 0.22 22 / 0.6); }
+
+/* ============================================
+   CODE OUTPUT
+   ============================================ */
+.code-panel {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 16px 20px;
+  flex-shrink: 0;
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.code-header h3 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.copy-btn {
+  font-family: var(--font);
+  font-size: 0.78rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 5px 14px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+.copy-btn:hover { background: var(--accent-hover); }
+.copy-btn.copied { background: var(--success); }
+
+.code-block {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.7;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--text);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.code-comment { color: var(--text3); }
+.code-property { color: var(--accent); }
+.code-value { color: var(--success); }
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 767px) {
+  .controls {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px;
+  }
+  .control-group {
+    flex: 1 1 120px;
+    min-width: 100px;
+  }
+  .control-group.full-width {
+    flex: 1 1 100%;
+  }
+  .preview {
+    min-height: 300px;
+    padding: 30px 14px;
+  }
+  .preview-status {
+    bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+/* ============================================
+   TOOLTIP
+   ============================================ */
+.info-tooltip {
+  display: none;
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  max-width: 340px;
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.info-tooltip.visible { display: block; }
+.info-tooltip p { margin-bottom: 8px; color: var(--text2); }
+.info-tooltip p:last-child { margin-bottom: 0; }
+.info-tooltip strong { color: var(--text); }
+.info-tooltip .overhang-swatch {
+  display: inline-block;
+  width: 12px; height: 12px;
+  background: oklch(0.58 0.22 22 / 0.3);
+  border-radius: 2px;
+  vertical-align: middle;
+  margin: 0 2px;
+}
+
+@media (max-width: 767px) {
+  .info-tooltip {
+    top: auto;
+    bottom: 20px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+}
+
+/* ============================================
+   FONT LOADING INDICATOR
+   ============================================ */
+.font-loading {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>
+    text-box-trim
+    <span class="badge">Chrome 133+</span>
+  </h1>
+  <div class="header-actions">
+    <button class="info-btn" id="infoBtn" aria-label="What is text-box-trim?" title="What is this?">?</button>
+    <button class="theme-btn" id="themeBtn" aria-label="Toggle dark mode">🌓</button>
+  </div>
+</header>
+
+<div class="info-tooltip" id="infoTooltip">
+  <p><strong>Every font has invisible space</strong> above capital letters and below the baseline — the "leading overhang."</p>
+  <p>It makes perfect vertical centering impossible. Your 48px button with 16px text is <em>never</em> perfectly centered because the text's bounding box is taller than the glyphs.</p>
+  <p>The <span class="overhang-swatch"></span> red zones show this hidden space.</p>
+  <p><strong>text-box-trim</strong> removes it — one CSS line, exact centering, graceful fallback.</p>
+</div>
+
+<main>
+  <!-- CONTROLS -->
+  <aside class="controls" id="controls">
+    <div class="control-group">
+      <label for="fontSelect">Font Family</label>
+      <select id="fontSelect">
+        <optgroup label="System Fonts">
+          <option value="system-ui">System UI</option>
+          <option value="Arial">Arial</option>
+          <option value="Georgia">Georgia</option>
+          <option value="'Times New Roman'">Times New Roman</option>
+          <option value="'Courier New'">Courier New</option>
+          <option value="Verdana">Verdana</option>
+          <option value="'Trebuchet MS'">Trebuchet MS</option>
+          <option value="Impact">Impact</option>
+        </optgroup>
+        <optgroup label="Google Fonts">
+          <option value="Inter">Inter</option>
+          <option value="Roboto">Roboto</option>
+          <option value="'Open Sans'">Open Sans</option>
+          <option value="Lato">Lato</option>
+          <option value="Montserrat">Montserrat</option>
+          <option value="'Playfair Display'">Playfair Display</option>
+          <option value="'Source Serif 4'">Source Serif 4</option>
+          <option value="'DM Sans'">DM Sans</option>
+          <option value="'Space Grotesk'">Space Grotesk</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label for="fontSize">Font Size</label>
+      <div class="range-row">
+        <input type="range" id="fontSize" min="10" max="72" value="18">
+        <span class="range-value" id="fontSizeVal">18px</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label for="containerH">Container Height</label>
+      <div class="range-row">
+        <input type="range" id="containerH" min="24" max="200" value="56">
+        <span class="range-value" id="containerHVal">56px</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label for="containerW">Container Width</label>
+      <div class="range-row">
+        <input type="range" id="containerW" min="80" max="500" value="200">
+        <span class="range-value" id="containerWVal">200px</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label for="textInput">Text Content</label>
+      <input type="text" id="textInput" value="Button Text" maxlength="40">
+    </div>
+
+    <hr class="divider">
+
+    <div class="control-group">
+      <label>Visualization</label>
+      <div class="toggle-row">
+        <span>Show overhang</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="showOverhang" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span>Show guides</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="showGuides" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span>Show measurements</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="showMeasures" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="control-group">
+      <label>text-box-trim</label>
+      <div class="toggle-row">
+        <span style="font-weight:600;color:var(--accent)">Apply trim</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="applyTrim">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <p style="font-size:0.7rem;color:var(--text3);margin-top:4px;">
+        Toggles <code>text-box: trim-both cap alphabetic</code>
+      </p>
+    </div>
+  </aside>
+
+  <!-- PREVIEW -->
+  <section class="preview" id="previewArea">
+    <span class="preview-label">Live Preview</span>
+
+    <div class="demo-container" id="demoContainer">
+      <span class="demo-text" id="demoText">Button Text</span>
+    </div>
+
+    <div class="preview-status" id="previewStatus">
+      <span class="metric">
+        <span class="dot cap"></span> Cap height
+      </span>
+      <span class="metric">
+        <span class="dot base"></span> Baseline
+      </span>
+      <span class="metric">
+        <span class="dot over"></span> Overhang
+      </span>
+    </div>
+  </section>
+</main>
+
+<!-- CODE OUTPUT -->
+<section class="code-panel" id="codePanel">
+  <div class="code-header">
+    <h3>Generated CSS</h3>
+    <button class="copy-btn" id="copyBtn">Copy</button>
+  </div>
+  <pre class="code-block" id="codeBlock"></pre>
+</section>
+
+<script>
+// ============================================
+// STATE
+// ============================================
+const state = {
+  fontFamily: 'system-ui',
+  fontSize: 18,
+  containerH: 56,
+  containerW: 200,
+  textContent: 'Button Text',
+  showOverhang: true,
+  showGuides: true,
+  showMeasures: true,
+  applyTrim: false,
+};
+
+const loadedFonts = new Set(['system-ui', 'Arial', 'Georgia', "'Times New Roman'", "'Courier New'", 'Verdana', "'Trebuchet MS'", 'Impact']);
+
+// ============================================
+// DOM REFS
+// ============================================
+const demoContainer = document.getElementById('demoContainer');
+const demoText = document.getElementById('demoText');
+const codeBlock = document.getElementById('codeBlock');
+const copyBtn = document.getElementById('copyBtn');
+
+// ============================================
+// FONT LOADING
+// ============================================
+async function loadFont(family) {
+  const clean = family.replace(/['"]/g, '');
+  if (loadedFonts.has(family)) return true;
+
+  // Try to load via Google Fonts
+  try {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = `https://fonts.googleapis.com/css2?family=${clean.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
+    document.head.appendChild(link);
+
+    await document.fonts.load(`1em ${family}`);
+    loadedFonts.add(family);
+    return true;
+  } catch (e) {
+    // Font might still be available if installed locally
+    try {
+      await document.fonts.load(`1em ${family}`);
+      loadedFonts.add(family);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+// ============================================
+// FONT METRICS (Canvas API)
+// ============================================
+function getFontMetrics(family, size) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const fontStr = `${size}px ${family}`;
+  ctx.font = fontStr;
+
+  // Use characters that exercise ascenders and descenders
+  const text = 'HpxAgqyj';
+  const metrics = ctx.measureText(text);
+
+  const fbAscent = metrics.fontBoundingBoxAscent;
+  const fbDescent = metrics.fontBoundingBoxDescent;
+  const abAscent = metrics.actualBoundingBoxAscent;
+  const abDescent = metrics.actualBoundingBoxDescent;
+
+  // These APIs might not be in all browsers — graceful fallback
+  if (fbAscent === undefined || fbDescent === undefined) {
+    // Fallback: estimate from actual bounds + typical ratios
+    const estOverhangTop = abAscent * 0.20;
+    const estOverhangBottom = abDescent * 0.25;
+    return {
+      fontAscent: abAscent + estOverhangTop,
+      fontDescent: abDescent + estOverhangBottom,
+      actualAscent: abAscent,
+      actualDescent: abDescent,
+      overhangTop: estOverhangTop,
+      overhangBottom: estOverhangBottom,
+      totalHeight: abAscent + abDescent + estOverhangTop + estOverhangBottom,
+      glyphHeight: abAscent + abDescent,
+      hasPreciseMetrics: false,
+    };
+  }
+
+  return {
+    fontAscent: fbAscent,
+    fontDescent: fbDescent,
+    actualAscent: abAscent,
+    actualDescent: abDescent,
+    overhangTop: fbAscent - abAscent,
+    overhangBottom: fbDescent - abDescent,
+    totalHeight: fbAscent + fbDescent,
+    glyphHeight: abAscent + abDescent,
+    hasPreciseMetrics: true,
+  };
+}
+
+// ============================================
+// RENDER PREVIEW
+// ============================================
+function render() {
+  const {
+    fontFamily, fontSize, containerH, containerW,
+    textContent, showOverhang, showGuides, showMeasures, applyTrim,
+  } = state;
+
+  // Update container
+  demoContainer.style.width = containerW + 'px';
+  demoContainer.style.height = containerH + 'px';
+  demoContainer.classList.toggle('measuring', showGuides || showOverhang);
+
+  // Update text
+  demoText.style.fontFamily = fontFamily;
+  demoText.style.fontSize = fontSize + 'px';
+  demoText.textContent = textContent;
+
+  // Apply or remove text-box-trim
+  if (applyTrim) {
+    demoText.style.textBox = 'trim-both cap alphabetic';
+    demoText.style.textBoxEdge = 'cap alphabetic';
+    demoText.style.textBoxTrim = 'trim-both';
+  } else {
+    demoText.style.textBox = '';
+    demoText.style.textBoxEdge = '';
+    demoText.style.textBoxTrim = '';
+  }
+
+  // Get font metrics
+  const metrics = getFontMetrics(fontFamily, fontSize);
+
+  // Remove old overlays
+  demoContainer.querySelectorAll('.overhang-top, .overhang-bottom, .guide-cap, .guide-baseline, .measure').forEach(el => el.remove());
+
+  if (!applyTrim && (showOverhang || showGuides)) {
+    // Wait a frame for layout
+    requestAnimationFrame(() => {
+      const containerRect = demoContainer.getBoundingClientRect();
+      const textRect = demoText.getBoundingClientRect();
+
+      // The text span's position within the container
+      const textTop = textRect.top - containerRect.top;
+      const textHeight = textRect.height;
+
+      // Calculate overhang proportions
+      const totalFontH = metrics.totalHeight || textHeight;
+      const overhangTopRatio = metrics.overhangTop / totalFontH;
+      const overhangBottomRatio = metrics.overhangBottom / totalFontH;
+
+      const overhangTopPx = textHeight * overhangTopRatio;
+      const overhangBottomPx = textHeight * overhangBottomRatio;
+
+      // Overhang zones
+      if (showOverhang && (overhangTopPx > 0.5 || overhangBottomPx > 0.5)) {
+        // Top overhang
+        const topEl = document.createElement('div');
+        topEl.className = 'overhang-top';
+        topEl.style.top = textTop + 'px';
+        topEl.style.left = '0px';
+        topEl.style.width = containerW + 'px';
+        topEl.style.height = Math.max(overhangTopPx, 0) + 'px';
+        demoContainer.appendChild(topEl);
+
+        // Bottom overhang
+        const bottomEl = document.createElement('div');
+        bottomEl.className = 'overhang-bottom';
+        bottomEl.style.top = (textTop + textHeight - overhangBottomPx) + 'px';
+        bottomEl.style.left = '0px';
+        bottomEl.style.width = containerW + 'px';
+        bottomEl.style.height = Math.max(overhangBottomPx, 0) + 'px';
+        demoContainer.appendChild(bottomEl);
+      }
+
+      // Guide lines
+      if (showGuides) {
+        const capLineY = textTop + overhangTopPx;
+        const capEl = document.createElement('div');
+        capEl.className = 'guide-cap';
+        capEl.style.top = capLineY + 'px';
+        capEl.style.width = (containerW + 16) + 'px';
+        demoContainer.appendChild(capEl);
+
+        const baseLineY = textTop + textHeight - overhangBottomPx;
+        const baseEl = document.createElement('div');
+        baseEl.className = 'guide-baseline';
+        baseEl.style.top = baseLineY + 'px';
+        baseEl.style.width = (containerW + 16) + 'px';
+        demoContainer.appendChild(baseEl);
+      }
+
+      // Measurements
+      if (showMeasures) {
+        const measureStyle = 'position:absolute;font-size:9px;font-family:var(--mono);color:var(--text3);pointer-events:none;left:' + (containerW + 10) + 'px;';
+
+        if (overhangTopPx > 0.5) {
+          const mTop = document.createElement('div');
+          mTop.className = 'measure';
+          mTop.style.cssText = measureStyle + 'top:' + (textTop + overhangTopPx / 2 - 6) + 'px;';
+          mTop.textContent = '↕ ' + overhangTopPx.toFixed(1) + 'px over';
+          demoContainer.appendChild(mTop);
+        }
+
+        if (overhangBottomPx > 0.5) {
+          const mBot = document.createElement('div');
+          mBot.className = 'measure';
+          mBot.style.cssText = measureStyle + 'top:' + (textTop + textHeight - overhangBottomPx / 2 - 6) + 'px;';
+          mBot.textContent = '↕ ' + overhangBottomPx.toFixed(1) + 'px over';
+          demoContainer.appendChild(mBot);
+        }
+      }
+    });
+  }
+
+  // Update status bar
+  const totalOverhang = applyTrim ? 0 : (metrics.overhangTop + metrics.overhangBottom);
+  const overStr = applyTrim ? '0px (trimmed)' : totalOverhang.toFixed(1) + 'px';
+  document.getElementById('previewStatus').innerHTML = `
+    <span class="metric"><span class="dot cap"></span> Cap: ${metrics.actualAscent.toFixed(1)}px</span>
+    <span class="metric"><span class="dot base"></span> Base: ${metrics.actualDescent.toFixed(1)}px</span>
+    <span class="metric"><span class="dot over"></span> Overhang: ${overStr}</span>
+    ${!metrics.hasPreciseMetrics ? '<span style="font-size:0.65rem;color:var(--warning)">⚠ Est.</span>' : ''}
+  `;
+
+  // Update code
+  renderCode();
+}
+
+// ============================================
+// CODE GENERATION
+// ============================================
+function renderCode() {
+  const { fontFamily, fontSize, containerH, containerW, textContent, applyTrim } = state;
+
+  let html = '<!-- Container -->\n';
+  html += `<div class="btn">\n  <span>${textContent}</span>\n</div>\n`;
+
+  let css = '/* Container */\n';
+  css += `.btn {\n`;
+  css += `  width: ${containerW}px;\n`;
+  css += `  height: ${containerH}px;\n`;
+  css += `  display: flex;\n`;
+  css += `  align-items: center;\n`;
+  css += `  justify-content: center;\n`;
+  css += `  font-family: ${fontFamily};\n`;
+  css += `  font-size: ${fontSize}px;\n`;
+  css += `  line-height: 1;\n`;
+  if (applyTrim) {
+    css += `\n  /* Kill the invisible overhang */\n`;
+    css += `  text-box: trim-both cap alphabetic;\n`;
+  }
+  css += `}\n`;
+
+  if (applyTrim) {
+    css += `\n/* Fallback for non-supporting browsers */\n`;
+    css += `@supports not (text-box-trim: trim-both) {\n`;
+    css += `  .btn {\n`;
+    css += `    /* Text will have a few px of extra space above/below.\n`;
+    css += `       Acceptable — the best possible fallback. */\n`;
+    css += `  }\n`;
+    css += `}\n`;
+  } else {
+    css += `\n/* 😬 Text is NOT perfectly centered.\n`;
+    css += `   The font's bounding box includes invisible\n`;
+    css += `   space above caps and below the baseline. */\n`;
+    css += `\n/* Fix: add one line */\n`;
+    css += `/* text-box: trim-both cap alphabetic; */\n`;
+  }
+
+  codeBlock.innerHTML = syntaxHighlight(html + '\n' + css);
+}
+
+function syntaxHighlight(code) {
+  return code
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="code-comment">$1</span>')
+    .replace(/(\/\/.*)/g, '<span class="code-comment">$1</span>')
+    .replace(/([@\w-]+(?=\s*:))/gm, '<span class="code-property">$1</span>')
+    .replace(/(:\s*)([^;{]+)/g, '$1<span class="code-value">$2</span>');
+}
+
+// ============================================
+// EVENT HANDLERS
+// ============================================
+document.getElementById('fontSelect').addEventListener('change', async (e) => {
+  const family = e.target.value;
+  if (!loadedFonts.has(family)) {
+    demoText.classList.add('font-loading');
+    const ok = await loadFont(family);
+    if (!ok) {
+      // Fall back to system-ui silently
+      state.fontFamily = 'system-ui';
+      e.target.value = 'system-ui';
+    } else {
+      state.fontFamily = family;
+    }
+  } else {
+    state.fontFamily = family;
+  }
+  render();
+});
+
+document.getElementById('fontSize').addEventListener('input', (e) => {
+  state.fontSize = parseInt(e.target.value);
+  document.getElementById('fontSizeVal').textContent = state.fontSize + 'px';
+  render();
+});
+
+document.getElementById('containerH').addEventListener('input', (e) => {
+  state.containerH = parseInt(e.target.value);
+  document.getElementById('containerHVal').textContent = state.containerH + 'px';
+  render();
+});
+
+document.getElementById('containerW').addEventListener('input', (e) => {
+  state.containerW = parseInt(e.target.value);
+  document.getElementById('containerWVal').textContent = state.containerW + 'px';
+  render();
+});
+
+document.getElementById('textInput').addEventListener('input', (e) => {
+  state.textContent = e.target.value || 'Button Text';
+  render();
+});
+
+document.getElementById('showOverhang').addEventListener('change', (e) => {
+  state.showOverhang = e.target.checked;
+  render();
+});
+
+document.getElementById('showGuides').addEventListener('change', (e) => {
+  state.showGuides = e.target.checked;
+  render();
+});
+
+document.getElementById('showMeasures').addEventListener('change', (e) => {
+  state.showMeasures = e.target.checked;
+  render();
+});
+
+document.getElementById('applyTrim').addEventListener('change', (e) => {
+  state.applyTrim = e.target.checked;
+  render();
+});
+
+// Copy button
+copyBtn.addEventListener('click', () => {
+  const text = codeBlock.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    copyBtn.textContent = 'Copied!';
+    copyBtn.classList.add('copied');
+    setTimeout(() => {
+      copyBtn.textContent = 'Copy';
+      copyBtn.classList.remove('copied');
+    }, 1500);
+  });
+});
+
+// Dark mode toggle
+const themeBtn = document.getElementById('themeBtn');
+themeBtn.addEventListener('click', () => {
+  document.documentElement.classList.toggle('dark');
+  const isDark = document.documentElement.classList.contains('dark');
+  themeBtn.textContent = isDark ? '☀️' : '🌓';
+  localStorage.setItem('text-box-trim-theme', isDark ? 'dark' : 'light');
+});
+
+// Info tooltip
+const infoBtn = document.getElementById('infoBtn');
+const infoTooltip = document.getElementById('infoTooltip');
+infoBtn.addEventListener('click', () => {
+  infoTooltip.classList.toggle('visible');
+});
+document.addEventListener('click', (e) => {
+  if (!infoTooltip.contains(e.target) && e.target !== infoBtn) {
+    infoTooltip.classList.remove('visible');
+  }
+});
+
+// Keyboard: S to copy
+document.addEventListener('keydown', (e) => {
+  if ((e.key === 's' || e.key === 'S') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
+    e.preventDefault();
+    const text = codeBlock.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      copyBtn.textContent = 'Copied!';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1500);
+    });
+  }
+});
+
+// ============================================
+// INIT
+// ============================================
+function init() {
+  // Restore theme
+  const saved = localStorage.getItem('text-box-trim-theme');
+  if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.classList.add('dark');
+    themeBtn.textContent = '☀️';
+  }
+
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
