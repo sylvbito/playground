@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relative — CSS Relative Color Palette Builder</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: oklch(0.13 0.02 260);
+    --surface: oklch(0.17 0.02 260);
+    --surface2: oklch(0.21 0.02 260);
+    --border: oklch(0.26 0.02 260);
+    --text: oklch(0.92 0.01 260);
+    --text2: oklch(0.68 0.02 260);
+    --text3: oklch(0.45 0.02 260);
+    --accent: oklch(0.65 0.2 260);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  .logo {
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: -0.02em;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .logo span { color: var(--text2); font-weight: 400; }
+
+  .input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .color-swatch-btn {
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    background: var(--base-color, oklch(0.65 0.2 260));
+    flex-shrink: 0;
+    transition: border-color 0.15s;
+  }
+  .color-swatch-btn:hover { border-color: var(--accent); }
+  #colorPicker { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+  #hexInput {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.45rem 0.7rem;
+    border-radius: var(--radius-sm);
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 0.85rem;
+    width: 8rem;
+    transition: border-color 0.15s;
+  }
+  #hexInput:focus { outline: none; border-color: var(--accent); }
+  .random-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 0.45rem 0.7rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .random-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  .space-toggle {
+    display: flex;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .space-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .space-btn.active { background: var(--accent); color: white; }
+
+  .main {
+    flex: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.5rem;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  @media (max-width: 800px) {
+    .main { grid-template-columns: 1fr; }
+    .header-inner { justify-content: center; }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .panel-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  .variant {
+    display: grid;
+    grid-template-columns: 2.8rem 1fr 5rem;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    transition: background 0.15s;
+  }
+  .variant:hover { background: var(--surface2); }
+  .variant-swatch {
+    width: 2.8rem;
+    height: 2.2rem;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+  }
+  .variant-info { min-width: 0; }
+  .variant-name {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 0.15rem;
+  }
+  .variant-css {
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 0.7rem;
+    color: var(--text3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .variant-slider {
+    width: 100%;
+    accent-color: var(--accent);
+    height: 4px;
+  }
+
+  .preview-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .preview-card-img {
+    height: 140px;
+    transition: background 0.3s;
+  }
+  .preview-card-body { padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem; }
+  .preview-card-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    transition: color 0.3s;
+    color: var(--text);
+  }
+  .preview-card-text {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    transition: color 0.3s;
+    color: var(--text2);
+  }
+  .preview-btn {
+    display: inline-block;
+    padding: 0.55rem 1.2rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    align-self: flex-start;
+  }
+  .preview-btn:hover { filter: brightness(1.12); }
+
+  .export-panel {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+  }
+  .export-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+  .copy-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 0.45rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .copy-btn:hover { opacity: 0.85; }
+  .copy-btn.copied { background: oklch(0.5 0.16 160); }
+  #exportCode {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 0.78rem;
+    color: var(--text2);
+    white-space: pre-wrap;
+    overflow-x: auto;
+    max-height: 300px;
+    overflow-y: auto;
+    line-height: 1.6;
+    tab-size: 2;
+  }
+  .token-line { display: flex; gap: 1rem; }
+  .token-name { color: var(--accent); min-width: 24ch; }
+  .token-value { color: var(--text); }
+
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: white;
+    padding: 0.6rem 1.5rem;
+    border-radius: 2rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">relative <span>— palette builder</span></div>
+    <div class="input-group">
+      <button class="color-swatch-btn" id="swatchBtn" aria-label="Open color picker" title="Open color picker"></button>
+      <input type="color" id="colorPicker" aria-label="Color picker">
+      <input type="text" id="hexInput" placeholder="#3b82f6" maxlength="7" aria-label="Hex color">
+      <button class="random-btn" id="randomBtn" title="Random color">&#8635;</button>
+    </div>
+    <div class="space-toggle">
+      <button class="space-btn active" data-space="oklch">OKLCH</button>
+      <button class="space-btn" data-space="hsl">HSL</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="panel" id="palettePanel">
+    <div class="panel-title">Palette Variants</div>
+    <div id="variants"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Live Preview</div>
+    <div class="preview-card" id="previewCard">
+      <div class="preview-card-img" id="previewImg"></div>
+      <div class="preview-card-body">
+        <div class="preview-card-title" id="previewTitle">Design System Component</div>
+        <div class="preview-card-text" id="previewText">
+          This card uses your generated palette. Hover states, borders, and backgrounds are all derived from a single base color using CSS relative color syntax — not hand-picked hex values.
+        </div>
+        <button class="preview-btn" id="previewBtn">Call to Action</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="export-panel">
+    <div class="export-header">
+      <div class="panel-title" style="margin-bottom:0">CSS Custom Properties — Press S to copy</div>
+      <button class="copy-btn" id="copyBtn">Copy CSS</button>
+    </div>
+    <div id="exportCode"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Copied!</div>
+
+<script>
+// ── OKLCH Conversion (Ottosson matrices, verified round-trip) ──
+
+function srgbToLinear(c) {
+  c /= 255;
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+function rgbToOklch(r, g, b) {
+  const rl = srgbToLinear(r), gl = srgbToLinear(g), bl = srgbToLinear(b);
+  // RGB → LMS
+  const Lm = 0.4122214708*rl + 0.5363325363*gl + 0.0514459929*bl;
+  const Mm = 0.2119034982*rl + 0.6806995451*gl + 0.1073969566*bl;
+  const Sm = 0.0883024619*rl + 0.2817188376*gl + 0.6299787005*bl;
+  // LMS → LMS' (cube root)
+  const Lp = Math.cbrt(Lm), Mp = Math.cbrt(Mm), Sp = Math.cbrt(Sm);
+  // LMS' → OKLab
+  const okL = 0.2104542553*Lp + 0.7936177850*Mp - 0.0040720468*Sp;
+  const oka = 1.9779984951*Lp - 2.4285922050*Mp + 0.4505937099*Sp;
+  const okb = 0.0259040371*Lp + 0.7827717662*Mp - 0.8086757660*Sp;
+  // OKLab → OKLCH
+  const C = Math.sqrt(oka*oka + okb*okb);
+  let H = Math.atan2(okb, oka) * 180 / Math.PI;
+  if (H < 0) H += 360;
+  return { l: okL, c: C, h: H };
+}
+
+function oklchToRgb(l, c, h) {
+  const hRad = (h % 360) * Math.PI / 180;
+  const oka = c * Math.cos(hRad);
+  const okb = c * Math.sin(hRad);
+  // OKLab → LMS'
+  const Lp = 1.0*l + 0.3963377774*oka + 0.2158037573*okb;
+  const Mp = 1.0*l - 0.1055613458*oka - 0.0638541728*okb;
+  const Sp = 1.0*l - 0.0894841775*oka - 1.2914855480*okb;
+  // LMS' → LMS (cube)
+  const Lm = Lp*Lp*Lp, Mm = Mp*Mp*Mp, Sm = Sp*Sp*Sp;
+  // LMS → linear sRGB
+  const rl = 4.0767416621*Lm - 3.3077115913*Mm + 0.2309699292*Sm;
+  const gl = -1.2684380046*Lm + 2.6097574011*Mm - 0.3413193965*Sm;
+  const bl = -0.0041960863*Lm - 0.7034186147*Mm + 1.7076147010*Sm;
+  // linear → sRGB
+  function toSrgb(c) {
+    if (c < 0) return 0;
+    if (c > 1) return 255;
+    return Math.round((c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1/2.4) - 0.055) * 255);
+  }
+  return { r: toSrgb(rl), g: toSrgb(gl), b: toSrgb(bl) };
+}
+
+function hexToRgb(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!m) return null;
+  return { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) };
+}
+
+function rgbToHex(r, g, b) {
+  return '#' + [r,g,b].map(c => Math.max(0,Math.min(255,c)).toString(16).padStart(2,'0')).join('');
+}
+
+function oklchToHex(l, c, h) {
+  const {r, g, b} = oklchToRgb(l, c, h);
+  return rgbToHex(r, g, b);
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h, s, l = (max + min) / 2;
+  if (max === min) { h = s = 0; }
+  else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { h: Math.round(h*360), s: +(s*100).toFixed(1), l: +(l*100).toFixed(1) };
+}
+
+function hslToRgb(h, s, l) {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => {
+    const k = (n + h / 30) % 12;
+    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+  };
+  return {
+    r: Math.round(f(0) * 255),
+    g: Math.round(f(8) * 255),
+    b: Math.round(f(4) * 255)
+  };
+}
+
+// ── Variant definitions ──
+const VARIANTS = [
+  { id: 'base',      name: 'Base',         lDelta: 0,   oklchLD: 0,     oklchCF: 1,   oklchHD: 0,   usage: 'primary' },
+  { id: 'hover',     name: 'Hover',        lDelta: -8,  oklchLD: -0.06, oklchCF: 1.05, oklchHD: 0,   usage: 'hover' },
+  { id: 'active',    name: 'Active',       lDelta: -14, oklchLD: -0.10, oklchCF: 0.95, oklchHD: 0,   usage: 'active' },
+  { id: 'muted',     name: 'Muted BG',     lDelta: 35,  oklchLD: 0.42,  oklchCF: 0.18, oklchHD: 0,   usage: 'bg' },
+  { id: 'subtle',    name: 'Subtle BG',    lDelta: 38,  oklchLD: 0.48,  oklchCF: 0.10, oklchHD: 0,   usage: 'bg' },
+  { id: 'border',    name: 'Border',       lDelta: 25,  oklchLD: 0.32,  oklchCF: 0.25, oklchHD: 0,   usage: 'border' },
+  { id: 'text-on',   name: 'Text on Base', lDelta: 0,   oklchLD: 0,     oklchCF: 0,   oklchHD: 0,   usage: 'text' },
+  { id: 'accent2',   name: 'Complement',   lDelta: -5,  oklchLD: 0.02,  oklchCF: 0.9,  oklchHD: 180, usage: 'accent' },
+];
+
+// ── State ──
+let currentHex = '#3b82f6';
+let currentOklch = null;
+let currentHsl = null;
+let colorSpace = 'oklch';
+let variantDeltas = {};
+
+function initDeltas() {
+  VARIANTS.forEach(v => {
+    variantDeltas[v.id] = {
+      lDelta: v.lDelta,
+      oklchLD: v.oklchLD,
+      oklchCF: v.oklchCF,
+    };
+  });
+}
+
+function render() {
+  const rgb = hexToRgb(currentHex);
+  if (!rgb) return;
+  currentOklch = rgbToOklch(rgb.r, rgb.g, rgb.b);
+  currentHsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+
+  document.getElementById('swatchBtn').style.background = currentHex;
+  document.getElementById('hexInput').value = currentHex;
+  document.getElementById('colorPicker').value = currentHex;
+  document.documentElement.style.setProperty('--base-color', currentHex);
+
+  renderVariants();
+  renderPreview();
+  renderExport();
+}
+
+function buildOklchCSS(baseVar, lDelta, cFactor, hDelta) {
+  let parts = [`from ${baseVar}`];
+  if (lDelta !== 0) parts.push(`calc(l ${lDelta > 0 ? '+' : '-'} ${Math.abs(lDelta).toFixed(3)})`);
+  else parts.push('l');
+  if (cFactor !== 1) parts.push(`calc(c * ${cFactor.toFixed(2)})`);
+  else parts.push('c');
+  if (hDelta !== 0) parts.push(`calc(h ${hDelta > 0 ? '+' : '-'} ${Math.abs(hDelta).toFixed(1)})`);
+  else parts.push('h');
+  return `oklch(${parts.join(' ')})`;
+}
+
+function buildHslCSS(baseVar, lDelta, sDelta) {
+  let parts = [`from ${baseVar}`];
+  parts.push('h');
+  if (sDelta !== 0) parts.push(`calc(s ${sDelta > 0 ? '+' : '-'} ${Math.abs(sDelta)})`);
+  else parts.push('s');
+  if (lDelta !== 0) parts.push(`calc(l ${lDelta > 0 ? '+' : '-'} ${Math.abs(lDelta)})`);
+  else parts.push('l');
+  return `hsl(${parts.join(' ')})`;
+}
+
+function renderVariants() {
+  const container = document.getElementById('variants');
+  const useOklch = colorSpace === 'oklch';
+  const baseVar = 'var(--color-primary)';
+
+  container.innerHTML = VARIANTS.map(v => {
+    const deltas = variantDeltas[v.id];
+    const lD = useOklch ? deltas.oklchLD : deltas.lDelta;
+    const cf = deltas.oklchCF;
+
+    let swatchHex;
+    if (v.id === 'text-on') {
+      swatchHex = currentOklch.l > 0.55 ? '#111111' : '#ffffff';
+    } else if (useOklch) {
+      const newL = Math.max(0, Math.min(1, currentOklch.l + lD));
+      const newC = Math.max(0, Math.min(0.4, currentOklch.c * cf));
+      const newH = (currentOklch.h + v.oklchHD) % 360;
+      swatchHex = oklchToHex(newL, newC, newH);
+    } else {
+      const newL = Math.max(0, Math.min(100, currentHsl.l + lD));
+      swatchHex = rgbToHex(...Object.values(hslToRgb(currentHsl.h, currentHsl.s, newL)));
+    }
+
+    const cssCode = useOklch
+      ? buildOklchCSS(baseVar, lD, cf, v.oklchHD)
+      : buildHslCSS(baseVar, lD, 0);
+
+    return `
+      <div class="variant">
+        <div class="variant-swatch" style="background:${swatchHex}"></div>
+        <div class="variant-info">
+          <div class="variant-name">${v.name}</div>
+          <div class="variant-css" title="${cssCode.replace(/"/g, '&quot;')}">${cssCode}</div>
+        </div>
+        <input type="range" class="variant-slider"
+          min="${useOklch ? '-0.3' : '-40'}" max="${useOklch ? '0.7' : '50'}"
+          step="${useOklch ? '0.01' : '1'}"
+          value="${useOklch ? deltas.oklchLD : deltas.lDelta}"
+          data-variant="${v.id}"
+          data-type="${useOklch ? 'oklchLD' : 'lDelta'}"
+          title="Lightness shift">
+      </div>`;
+  }).join('');
+
+  container.querySelectorAll('.variant-slider').forEach(slider => {
+    slider.addEventListener('input', (e) => {
+      const vid = e.target.dataset.variant;
+      const type = e.target.dataset.type;
+      variantDeltas[vid][type] = parseFloat(e.target.value);
+      render();
+    });
+  });
+}
+
+function renderPreview() {
+  const img = document.getElementById('previewImg');
+  const title = document.getElementById('previewTitle');
+  const btn = document.getElementById('previewBtn');
+
+  const mutedHex = oklchToHex(
+    currentOklch.l + 0.42,
+    currentOklch.c * 0.18,
+    currentOklch.h
+  );
+
+  img.style.background = `linear-gradient(135deg, ${currentHex}30, ${mutedHex})`;
+  title.style.color = currentHex;
+  btn.style.background = currentHex;
+  btn.style.color = currentOklch.l > 0.55 ? '#111' : '#fff';
+
+  const hoverHex = oklchToHex(
+    currentOklch.l - 0.06,
+    currentOklch.c * 1.05,
+    currentOklch.h
+  );
+  btn.onmouseenter = () => { btn.style.background = hoverHex; };
+  btn.onmouseleave = () => { btn.style.background = currentHex; };
+}
+
+function renderExport() {
+  const useOklch = colorSpace === 'oklch';
+  const codeEl = document.getElementById('exportCode');
+  const baseVar = 'var(--color-primary)';
+
+  let lines = [];
+  lines.push(':root {');
+
+  if (useOklch) {
+    const baseCSS = `oklch(${currentOklch.l.toFixed(3)} ${currentOklch.c.toFixed(4)} ${currentOklch.h.toFixed(1)})`;
+    lines.push(`  --color-primary: ${baseCSS};`);
+  } else {
+    const baseCSS = `hsl(${currentHsl.h} ${currentHsl.s}% ${currentHsl.l}%)`;
+    lines.push(`  --color-primary: ${baseCSS};`);
+  }
+
+  VARIANTS.filter(v => v.id !== 'base').forEach(v => {
+    const deltas = variantDeltas[v.id];
+    const lD = useOklch ? deltas.oklchLD : deltas.lDelta;
+    const cf = deltas.oklchCF;
+    const cssCode = useOklch
+      ? buildOklchCSS(baseVar, lD, cf, v.oklchHD)
+      : buildHslCSS(baseVar, lD, 0);
+    lines.push(`  --color-primary-${v.id}: ${cssCode};`);
+  });
+
+  lines.push('}');
+
+  codeEl.innerHTML = lines.map(l => {
+    const trimmed = l.trim();
+    const prefix = l.match(/^(\s*)/)[0];
+    if (trimmed.startsWith('--')) {
+      const colon = trimmed.indexOf(':');
+      const name = trimmed.substring(0, colon);
+      const value = trimmed.substring(colon + 1).trim().replace(/;$/, '');
+      return `<div class="token-line"><span class="token-name">${prefix}${name}:</span><span class="token-value">${value};</span></div>`;
+    }
+    return `<div style="color:var(--text3)">${l}</div>`;
+  }).join('\n');
+}
+
+// ── Event handlers ──
+document.getElementById('hexInput').addEventListener('input', (e) => {
+  let val = e.target.value.trim();
+  if (!val.startsWith('#')) val = '#' + val;
+  if (/^#[0-9a-f]{6}$/i.test(val)) {
+    currentHex = val.toLowerCase();
+    initDeltas();
+    render();
+  }
+});
+
+document.getElementById('colorPicker').addEventListener('input', (e) => {
+  currentHex = e.target.value;
+  initDeltas();
+  render();
+});
+
+document.getElementById('swatchBtn').addEventListener('click', () => {
+  document.getElementById('colorPicker').click();
+});
+
+document.getElementById('randomBtn').addEventListener('click', () => {
+  const r = Math.floor(Math.random() * 256);
+  const g = Math.floor(Math.random() * 256);
+  const b = Math.floor(Math.random() * 256);
+  currentHex = rgbToHex(r, g, b);
+  initDeltas();
+  render();
+});
+
+document.querySelectorAll('.space-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.space-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    colorSpace = btn.dataset.space;
+    initDeltas();
+    render();
+  });
+});
+
+function copyCSS() {
+  const codeEl = document.getElementById('exportCode');
+  const text = codeEl.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy CSS';
+      btn.classList.remove('copied');
+    }, 1500);
+    showToast('CSS copied to clipboard');
+  });
+}
+
+document.getElementById('copyBtn').addEventListener('click', copyCSS);
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 's' && !e.ctrlKey && !e.metaKey && !e.altKey && document.activeElement === document.body) {
+    e.preventDefault();
+    copyCSS();
+  }
+});
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => toast.classList.remove('show'), 1800);
+}
+
+// ── Init ──
+initDeltas();
+render();
+</script>
+</body>
+</html>
