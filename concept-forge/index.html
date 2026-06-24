@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Concept Forge — Higher Ground Melbourne CBD Brunch & Dining</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cf-bg:#1a1a2e;
+  --cf-surface:#16213e;
+  --cf-text:#e8e8e8;
+  --cf-text-secondary:#a0a0b8;
+  --cf-accent:#7c5ce7;
+  --cf-accent-hover:#9370ff;
+  --cf-border:#2a2a4a;
+  --cf-radius:10px;
+}
+body{
+  font-family:system-ui,-apple-system,sans-serif;
+  background:var(--cf-bg);
+  color:var(--cf-text);
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+/* Header */
+.cf-header{
+  background:var(--cf-surface);
+  border-bottom:1px solid var(--cf-border);
+  padding:0.75rem 1.5rem;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-shrink:0;
+}
+.cf-title{
+  font-size:1.1rem;
+  font-weight:700;
+  display:flex;
+  align-items:center;
+  gap:0.75rem;
+}
+.cf-title span{color:var(--cf-accent)}
+.cf-source{
+  font-size:0.8rem;
+  color:var(--cf-text-secondary);
+  max-width:300px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+/* Tabs */
+.cf-tabs{
+  display:flex;
+  background:var(--cf-surface);
+  border-bottom:1px solid var(--cf-border);
+  flex-shrink:0;
+  overflow-x:auto;
+}
+.tab{
+  flex:1;
+  min-width:120px;
+  padding:0.85rem 1.25rem;
+  background:none;
+  border:none;
+  border-bottom:3px solid transparent;
+  color:var(--cf-text-secondary);
+  font-size:0.9rem;
+  font-weight:600;
+  cursor:pointer;
+  transition:all 0.2s;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:0.15rem;
+  white-space:nowrap;
+}
+.tab:hover{color:var(--cf-text);background:rgba(255,255,255,0.03)}
+.tab.active{color:var(--cf-accent);border-bottom-color:var(--cf-accent)}
+.tab-subtitle{font-size:0.7rem;font-weight:400;color:var(--cf-text-secondary);opacity:0.7}
+/* Views */
+.cf-views{
+  flex:1;
+  display:flex;
+  overflow:hidden;
+}
+.cf-view{
+  flex:1;
+  position:relative;
+  overflow:hidden;
+}
+.cf-view.hidden{display:none}
+.cf-view iframe{
+  width:100%;
+  height:100%;
+  border:none;
+}
+/* Split mode */
+.cf-views.split .cf-view{flex:0 0 50%}
+.cf-views.split .cf-view:not(.split-visible){display:none}
+.cf-views.split .cf-view.split-visible{display:block}
+/* Controls */
+.cf-controls{
+  display:flex;
+  gap:0.5rem;
+  align-items:center;
+}
+.cf-btn{
+  padding:0.5em 1em;
+  border-radius:6px;
+  border:1px solid var(--cf-border);
+  background:var(--cf-surface);
+  color:var(--cf-text);
+  font-size:0.8rem;
+  cursor:pointer;
+  transition:all 0.15s;
+}
+.cf-btn:hover{background:var(--cf-border)}
+.cf-btn.active{background:var(--cf-accent);border-color:var(--cf-accent);color:#fff}
+/* Toolbar */
+.cf-toolbar{
+  background:var(--cf-surface);
+  border-top:1px solid var(--cf-border);
+  padding:0.5rem 1.5rem;
+  display:flex;
+  align-items:center;
+  gap:1rem;
+  flex-shrink:0;
+  font-size:0.8rem;
+}
+.cf-toolbar .concept-name{font-weight:600;color:var(--cf-accent)}
+.cf-toolbar .layout-list{color:var(--cf-text-secondary)}
+.cf-toolbar .layout-list span{margin:0 0.25rem;padding:0.15em 0.5em;background:var(--cf-bg);border-radius:4px;font-size:0.75rem}
+/* Responsive */
+@media(max-width:768px){
+  .cf-header{padding:0.6rem 1rem;flex-wrap:wrap;gap:0.5rem}
+  .cf-source{max-width:180px;font-size:0.7rem}
+  .cf-controls{gap:0.25rem}
+  .cf-btn{font-size:0.7rem;padding:0.4em 0.7em}
+  .tab{padding:0.65rem 0.75rem;font-size:0.8rem;min-width:80px}
+}
+</style>
+</head>
+<body>
+<header class="cf-header">
+  <div class="cf-title">⚡ <span>Concept Forge</span> · Higher Ground Melbourne CBD Brunch & Dining</div>
+  <div class="cf-controls">
+    <button class="cf-btn" id="btn-single" title="Single concept view">Single</button>
+    <button class="cf-btn" id="btn-split" title="Split comparison">Split</button>
+    <button class="cf-btn" id="btn-export" title="Export tokens">Export CSS</button>
+  </div>
+  <div class="cf-source">from https://highergroundmelbourne.com.au/</div>
+</header>
+<nav class="cf-tabs" id="tabs">
+  <button class="tab active" data-concept="original">Original<span class="tab-subtitle">Original</span></button>
+<button class="tab" data-concept="warm">Warm<span class="tab-subtitle">Warm Editorial</span></button>
+<button class="tab" data-concept="cool">Cool<span class="tab-subtitle">Swiss Modern</span></button>
+<button class="tab" data-concept="bold">Bold<span class="tab-subtitle">Brutalist Grotesk</span></button>
+<button class="tab" data-concept="minimal">Minimal<span class="tab-subtitle">Soft Humanist</span></button>
+</nav>
+<div class="cf-views" id="views">
+  <div class="cf-view" data-concept="original" id="view-original"><iframe id="iframe-original" srcdoc="" sandbox="allow-scripts allow-same-origin" loading="lazy"></iframe></div><div class="cf-view hidden" data-concept="warm" id="view-warm"><iframe id="iframe-warm" srcdoc="" sandbox="allow-scripts allow-same-origin" loading="lazy"></iframe></div><div class="cf-view hidden" data-concept="cool" id="view-cool"><iframe id="iframe-cool" srcdoc="" sandbox="allow-scripts allow-same-origin" loading="lazy"></iframe></div><div class="cf-view hidden" data-concept="bold" id="view-bold"><iframe id="iframe-bold" srcdoc="" sandbox="allow-scripts allow-same-origin" loading="lazy"></iframe></div><div class="cf-view hidden" data-concept="minimal" id="view-minimal"><iframe id="iframe-minimal" srcdoc="" sandbox="allow-scripts allow-same-origin" loading="lazy"></iframe></div>
+</div>
+<footer class="cf-toolbar" id="toolbar">
+  <span class="concept-name">Original</span> ·
+  <span class="font-info">Original</span> ·
+  <span class="layout-list">Sections: <span>nav</span><span>hero</span><span>features</span><span>testimonials</span><span>cta</span><span>footer</span></span>
+</footer>
+
+<script>
+// Concept data
+const CONCEPTS = [
+  {
+    "id": "original",
+    "name": "Original",
+    "description": "As extracted from Higher Ground Melbourne CBD Brunch & Dining",
+    "font_pairing": "Original",
+    "layout": [
+      "nav",
+      "hero",
+      "features",
+      "testimonials",
+      "cta",
+      "footer"
+    ],
+    "tokens": {
+      "colors": {
+        "background": "#fff",
+        "surface": "#fff",
+        "surface_alt": "#f7f7f7",
+        "text": "#212224",
+        "text_secondary": "#-40-42-46",
+        "primary": "#1b4731",
+        "primary_hover": "#0f291c",
+        "accent": "#ff5526",
+        "border": "#e5e5e5"
+      },
+      "typography": {
+        "heading_font": "Fira Sans",
+        "body_font": "Liberation Mono",
+        "heading_weight": "700",
+        "body_weight": "400",
+        "scale_ratio": "1.25",
+        "body_size": "1rem"
+      },
+      "spacing": {
+        "section": "5rem",
+        "component": "2rem",
+        "element": "1rem",
+        "tight": "0.5rem",
+        "border_radius": "3px"
+      }
+    }
+  },
+  {
+    "id": "warm",
+    "name": "Warm",
+    "description": "Rotated toward reds and oranges — evokes warmth, hospitality, and energy",
+    "font_pairing": "Warm Editorial",
+    "layout": [
+      "nav",
+      "hero",
+      "testimonials",
+      "features",
+      "cta",
+      "footer"
+    ],
+    "tokens": {
+      "colors": {
+        "background": "#fff",
+        "surface": "#ffffff",
+        "surface_alt": "#f9f9f9",
+        "text": "#212224",
+        "text_secondary": "#83868d",
+        "primary": "#1b4743",
+        "primary_hover": "#0f2927",
+        "accent": "#ffaf25",
+        "border": "#eaeaea"
+      },
+      "typography": {
+        "heading_font": "DM Serif Display",
+        "body_font": "DM Sans",
+        "heading_weight": "400",
+        "body_weight": "400",
+        "scale_ratio": "1.25",
+        "body_size": "1rem"
+      },
+      "spacing": {
+        "section": "5rem",
+        "component": "2rem",
+        "element": "1rem",
+        "tight": "0.5rem",
+        "border_radius": "4px"
+      }
+    }
+  },
+  {
+    "id": "cool",
+    "name": "Cool",
+    "description": "Shifted toward blues and teals — calm, professional, and trustworthy",
+    "font_pairing": "Swiss Modern",
+    "layout": [
+      "nav",
+      "hero",
+      "features",
+      "cta",
+      "testimonials",
+      "footer"
+    ],
+    "tokens": {
+      "colors": {
+        "background": "#ffffff",
+        "surface": "#ffffff",
+        "surface_alt": "#fcfcfc",
+        "text": "#212224",
+        "text_secondary": "#83868d",
+        "primary": "#471b26",
+        "primary_hover": "#290f16",
+        "accent": "#2599ff",
+        "border": "#eaeaea"
+      },
+      "typography": {
+        "heading_font": "Inter",
+        "body_font": "Inter",
+        "heading_weight": "600",
+        "body_weight": "400",
+        "scale_ratio": "1.2",
+        "body_size": "1rem"
+      },
+      "spacing": {
+        "section": "6rem",
+        "component": "2.5rem",
+        "element": "1rem",
+        "tight": "0.5rem",
+        "border_radius": "3px"
+      }
+    }
+  },
+  {
+    "id": "bold",
+    "name": "Bold",
+    "description": "High contrast, saturated colours, and strong typography — makes a statement",
+    "font_pairing": "Brutalist Grotesk",
+    "layout": [
+      "nav",
+      "hero",
+      "cta",
+      "features",
+      "testimonials",
+      "footer"
+    ],
+    "tokens": {
+      "colors": {
+        "background": "#f2f2f2",
+        "surface": "#f7f7f7",
+        "surface_alt": "#eaeaea",
+        "text": "#ffffff",
+        "text_secondary": "#b2b2b2",
+        "primary": "#115031",
+        "primary_hover": "#061d12",
+        "accent": "#ff5425",
+        "border": "#d8d8d8"
+      },
+      "typography": {
+        "heading_font": "Archivo Black",
+        "body_font": "Archivo",
+        "heading_weight": "900",
+        "body_weight": "400",
+        "scale_ratio": "1.333",
+        "body_size": "1rem"
+      },
+      "spacing": {
+        "section": "4rem",
+        "component": "1.5rem",
+        "element": "0.75rem",
+        "tight": "0.5rem",
+        "border_radius": "3px"
+      }
+    }
+  },
+  {
+    "id": "minimal",
+    "name": "Minimal",
+    "description": "Soft palette, generous whitespace, and refined typography — quiet confidence",
+    "font_pairing": "Soft Humanist",
+    "layout": [
+      "nav",
+      "hero",
+      "testimonials",
+      "cta",
+      "features",
+      "footer"
+    ],
+    "tokens": {
+      "colors": {
+        "background": "#ffffff",
+        "surface": "#ffffff",
+        "surface_alt": "#f9f9f9",
+        "text": "#080809",
+        "text_secondary": "#-58-5b-61",
+        "primary": "#27533d",
+        "primary_hover": "#1e4130",
+        "accent": "#ef6944",
+        "border": "#ffffff"
+      },
+      "typography": {
+        "heading_font": "Plus Jakarta Sans",
+        "body_font": "Plus Jakarta Sans",
+        "heading_weight": "600",
+        "body_weight": "400",
+        "scale_ratio": "1.15",
+        "body_size": "1rem"
+      },
+      "spacing": {
+        "section": "7rem",
+        "component": "3rem",
+        "element": "1.25rem",
+        "tight": "0.75rem",
+        "border_radius": "4px"
+      }
+    }
+  }
+];
+const CONCEPT_PAGES = {
+"original": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n<title>Higher Ground Melbourne CBD Brunch & Dining \u2014 Original</title>\n<style>\n@import url(\"https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400..700&family=Liberation+Mono:wght@400;700&display=swap\");\n:root{\n    --font-heading: 'Fira Sans', sans-serif;\n    --font-body: 'Liberation Mono', sans-serif;\n    --font-heading-weight: 700;\n    --font-body-weight: 400;\n    --color-background: #fff;\n    --color-surface: #fff;\n    --color-surface-alt: #f7f7f7;\n    --color-text: #212224;\n    --color-text-secondary: #-40-42-46;\n    --color-primary: #1b4731;\n    --color-primary-hover: #0f291c;\n    --color-accent: #ff5526;\n    --color-border: #e5e5e5;\n    --spacing-section: 5rem;\n    --spacing-component: 2rem;\n    --spacing-element: 1rem;\n    --spacing-tight: 0.5rem;\n    --border-radius: 3px;\n}\n*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}\nbody{\n  font-family:var(--font-body);\n  font-weight:var(--font-body-weight);\n  font-size:1rem;\n  background:var(--color-background);\n  color:var(--color-text);\n  -webkit-font-smoothing:antialiased;\n  line-height:1.6;\n}\nimg{max-width:100%;height:auto}\n.section-nav{background:var(--color-background);border-bottom:1px solid var(--color-border);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100}.nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:1rem var(--spacing-component);gap:var(--spacing-component)}.nav-logo{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:1.25rem;color:var(--color-text);text-decoration:none}.nav-links{display:flex;gap:var(--spacing-element);list-style:none;margin:0;padding:0}.nav-links a{font-family:var(--font-body);font-size:0.9rem;color:var(--color-text-secondary);text-decoration:none;transition:color 0.2s}.nav-links a:hover{color:var(--color-text)}.nav-cta{font-family:var(--font-body);font-weight:600;font-size:0.875rem;padding:.6em 1.4em;background:var(--color-primary);color:#fff;border:none;border-radius:var(--border-radius);cursor:pointer;transition:background 0.2s}.nav-cta:hover{background:var(--color-primary-hover)}@media(max-width:768px){.nav-links{display:none}}\n.section-hero{padding:var(--spacing-section) var(--spacing-component);display:flex;align-items:center;min-height:70vh;background:var(--color-background)}.hero-content{max-width:720px}.hero-title{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(2rem,5vw,3.5rem);color:var(--color-text);line-height:1.1;margin:0 0 1rem}.hero-subtitle{font-family:var(--font-body);font-size:1.125rem;color:var(--color-text-secondary);line-height:1.6;margin:0 0 2rem}.hero-actions{display:flex;gap:var(--spacing-element);flex-wrap:wrap}.hero-cta{font-family:var(--font-body);font-weight:600;font-size:1rem;padding:.75em 2em;border-radius:var(--border-radius);cursor:pointer;transition:all 0.2s;border:none}.hero-cta--primary{background:var(--color-primary);color:#fff}.hero-cta--primary:hover{background:var(--color-primary-hover);transform:translateY(-1px)}.hero-cta--secondary{background:transparent;color:var(--color-text);border:2px solid var(--color-border)}@media(max-width:768px){.section-hero{min-height:60vh;padding:3rem 1.5rem}}\n.section-features{padding:var(--spacing-section) var(--spacing-component);background:var(--color-surface)}.features-inner{max-width:1200px;margin:0 auto}.features-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.25rem);color:var(--color-text);text-align:center;margin:0 0 3rem}.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--spacing-component)}.feature-card{background:var(--color-background);padding:2rem;border-radius:var(--border-radius);border:1px solid var(--color-border)}.feature-title{font-family:var(--font-heading);font-weight:600;font-size:1.25rem;color:var(--color-text);margin:0 0 0.75rem}.feature-desc{font-family:var(--font-body);font-size:1rem;color:var(--color-text-secondary);line-height:1.6;margin:0}@media(max-width:768px){.features-grid{grid-template-columns:1fr}}\n.section-testimonials{padding:var(--spacing-section) var(--spacing-component);background:var(--color-background)}.testimonials-inner{max-width:1200px;margin:0 auto}.testimonials-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.25rem);color:var(--color-text);text-align:center;margin:0 0 3rem}.testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--spacing-component)}.testimonial-card{background:var(--color-surface);padding:2rem;border-radius:var(--border-radius);border:1px solid var(--color-border)}.testimonial-text{font-family:var(--font-body);font-size:1rem;color:var(--color-text);line-height:1.7;margin:0 0 1.5rem;font-style:italic}.testimonial-author{display:flex;flex-direction:column;gap:.25rem;font-family:var(--font-body)}.testimonial-author strong{color:var(--color-text);font-size:.9rem}.testimonial-author span{color:var(--color-text-secondary);font-size:.8rem}@media(max-width:768px){.testimonials-grid{grid-template-columns:1fr}}\n.section-cta{padding:var(--spacing-section) var(--spacing-component);background:var(--color-primary);text-align:center}.cta-inner{max-width:700px;margin:0 auto}.cta-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.5rem);color:#fff;margin:0 0 1rem}.cta-subtitle{font-family:var(--font-body);font-size:1.125rem;color:rgba(255,255,255,0.85);line-height:1.6;margin:0 0 2rem}.cta-button{font-family:var(--font-body);font-weight:700;font-size:1.125rem;padding:.85em 2.5em;background:#fff;color:var(--color-primary);border:none;border-radius:var(--border-radius);cursor:pointer;transition:all 0.2s}.cta-button:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,0,0,0.15)}\n.section-footer{padding:var(--spacing-section) var(--spacing-component) 2rem;background:var(--color-surface);border-top:1px solid var(--color-border)}.footer-inner{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;gap:3rem;flex-wrap:wrap}.footer-logo{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:1.25rem;color:var(--color-text)}.footer-tagline{font-family:var(--font-body);font-size:.9rem;color:var(--color-text-secondary);margin:.5rem 0 0}.footer-links{display:flex;gap:4rem}.footer-col{display:flex;flex-direction:column;gap:.5rem}.footer-col h4{font-family:var(--font-body);font-weight:600;font-size:.85rem;color:var(--color-text);margin:0 0 .25rem;text-transform:uppercase;letter-spacing:.05em}.footer-col a{font-family:var(--font-body);font-size:.9rem;color:var(--color-text-secondary);text-decoration:none}.footer-col a:hover{color:var(--color-primary)}.footer-bottom{max-width:1200px;margin:3rem auto 0;padding-top:1.5rem;border-top:1px solid var(--color-border);text-align:center}.footer-bottom p{font-family:var(--font-body);font-size:.8rem;color:var(--color-text-secondary);margin:0}@media(max-width:768px){.footer-inner{flex-direction:column;gap:2rem}.footer-links{gap:2rem}}\n\n</style>\n</head>\n<body>\n<nav class=\"section-nav\">\n  <div class=\"nav-inner\">\n    <a href=\"#\" class=\"nav-logo\">Higher Ground Melbourne CBD Brunch & Dining</a>\n    <ul class=\"nav-links\">\n      <li><a href=\"#\">About</a></li>\n      <li><a href=\"#\">Services</a></li>\n      <li><a href=\"#\">Contact</a></li>\n    </ul>\n    <button class=\"nav-cta\">Book</button>\n  </div>\n</nav>\n<section class=\"section-hero\">\n  <div class=\"hero-content\">\n    <h1 class=\"hero-title\">Higher Ground Melbourne CBD Brunch & Dining</h1>\n    <p class=\"hero-subtitle\">650 Little Bourke St, Melbourne VIC 3000</p>\n    <div class=\"hero-actions\">\n      <button class=\"hero-cta hero-cta--primary\">Book</button>\n      <button class=\"hero-cta hero-cta--secondary\">Learn More</button>\n    </div>\n  </div>\n</section>\n<section class=\"section-features\">\n  <div class=\"features-inner\">\n    <h2 class=\"features-heading\">What We Offer</h2>\n    <div class=\"features-grid\">\n    <div class=\"feature-card\">\n      <h3 class=\"feature-title\">A place for vibrant mornings, indulgent lunches, and sociabl</h3>\n      <p class=\"feature-desc\">Curated breakfast service, vibrant long lunches and elevated drinks set the tempo for an experience that feels both iconic and intimate.</p>\n    </div>\n    <div class=\"feature-card\">\n      <h3 class=\"feature-title\">An iconic dining room, always in demand</h3>\n      <p class=\"feature-desc\">Sunlight floods through towering arched windows as the room hums with energy. Conversations rise beneath six-storey ceilings. Coffee pours fast. Plate</p>\n    </div>\n    <div class=\"feature-card\">\n      <h3 class=\"feature-title\">For private events that demand scale, atmosphere and impact</h3>\n      <p class=\"feature-desc\">Higher Ground captures the pulse of Melbourne dining \u2013 bold flavours, refined Australian influence, an award-winning coffee program, and a dining room</p>\n    </div>\n    </div>\n  </div>\n</section>\n<section class=\"section-testimonials\">\n  <div class=\"testimonials-inner\">\n    <h2 class=\"testimonials-heading\">What People Say</h2>\n    <div class=\"testimonials-grid\">\n    <div class=\"testimonial-card\">\n      <p class=\"testimonial-text\">\"Absolutely exceptional experience. The team at Higher Ground Melbourne CBD Brunch & Dining went above and beyond.\"</p>\n      <div class=\"testimonial-author\">\n        <strong>Sarah M.</strong>\n        <span>Regular Client</span>\n      </div>\n    </div>\n    <div class=\"testimonial-card\">\n      <p class=\"testimonial-text\">\"I've been coming here for years and it never disappoints. Consistent quality.\"</p>\n      <div class=\"testimonial-author\">\n        <strong>James K.</strong>\n        <span>Customer</span>\n      </div>\n    </div>\n    <div class=\"testimonial-card\">\n      <p class=\"testimonial-text\">\"The attention to detail is remarkable. Highly recommend to everyone.\"</p>\n      <div class=\"testimonial-author\">\n        <strong>Elena R.</strong>\n        <span>First-time Visitor</span>\n      </div>\n    </div>\n    </div>\n  </div>\n</section>\n<section class=\"section-cta\">\n  <div class=\"cta-inner\">\n    <h2 class=\"cta-heading\">Ready to Experience the Difference?</h2>\n    <p class=\"cta-subtitle\">Join hundreds of satisfied customers. Let's build something great together.</p>\n    <button class=\"cta-button\">Book</button>\n  </div>\n</section>\n<footer class=\"section-footer\">\n  <div class=\"footer-inner\">\n    <div class=\"footer-brand\">\n      <div class=\"footer-logo\">Higher Ground Melbourne CBD Brunch & Dining</div>\n      <p class=\"footer-tagline\">Creating exceptional experiences.</p>\n    </div>\n    <div class=\"footer-links\">\n      <div class=\"footer-col\">\n        <h4>Navigate</h4>\n        <a href=\"#\">About</a><a href=\"#\">Services</a><a href=\"#\">Contact</a>\n      </div>\n      <div class=\"footer-col\">\n        <h4>Connect</h4>\n        <a href=\"#\">Instagram</a><a href=\"#\">Facebook</a><a href=\"#\">LinkedIn</a>\n      </div>\n    </div>\n  </div>\n  <div class=\"footer-bottom\">\n    <p>&copy; 2026 Higher Ground Melbourne CBD Brunch & Dining. All rights reserved.</p>\n  </div>\n</footer>\n\n</body>\n</html>",
+"warm": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n<title>Higher Ground Melbourne CBD Brunch & Dining \u2014 Warm</title>\n<style>\n@import url(\"https://fonts.googleapis.com/css2?family=DM+Serif+Display:wght@400&family=DM+Sans:wght@400;700&display=swap\");\n:root{\n    --font-heading: 'DM Serif Display', sans-serif;\n    --font-body: 'DM Sans', sans-serif;\n    --font-heading-weight: 400;\n    --font-body-weight: 400;\n    --color-background: #fff;\n    --color-surface: #ffffff;\n    --color-surface-alt: #f9f9f9;\n    --color-text: #212224;\n    --color-text-secondary: #83868d;\n    --color-primary: #1b4743;\n    --color-primary-hover: #0f2927;\n    --color-accent: #ffaf25;\n    --color-border: #eaeaea;\n    --spacing-section: 5rem;\n    --spacing-component: 2rem;\n    --spacing-element: 1rem;\n    --spacing-tight: 0.5rem;\n    --border-radius: 4px;\n}\n*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}\nbody{\n  font-family:var(--font-body);\n  font-weight:var(--font-body-weight);\n  font-size:1rem;\n  background:var(--color-background);\n  color:var(--color-text);\n  -webkit-font-smoothing:antialiased;\n  line-height:1.6;\n}\nimg{max-width:100%;height:auto}\n.section-nav{background:var(--color-background);border-bottom:1px solid var(--color-border);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100}.nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:1rem var(--spacing-component);gap:var(--spacing-component)}.nav-logo{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:1.25rem;color:var(--color-text);text-decoration:none}.nav-links{display:flex;gap:var(--spacing-element);list-style:none;margin:0;padding:0}.nav-links a{font-family:var(--font-body);font-size:0.9rem;color:var(--color-text-secondary);text-decoration:none;transition:color 0.2s}.nav-links a:hover{color:var(--color-text)}.nav-cta{font-family:var(--font-body);font-weight:600;font-size:0.875rem;padding:.6em 1.4em;background:var(--color-primary);color:#fff;border:none;border-radius:var(--border-radius);cursor:pointer;transition:background 0.2s}.nav-cta:hover{background:var(--color-primary-hover)}@media(max-width:768px){.nav-links{display:none}}\n.section-hero{padding:var(--spacing-section) var(--spacing-component);display:flex;align-items:center;min-height:70vh;background:var(--color-background)}.hero-content{max-width:720px}.hero-title{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(2rem,5vw,3.5rem);color:var(--color-text);line-height:1.1;margin:0 0 1rem}.hero-subtitle{font-family:var(--font-body);font-size:1.125rem;color:var(--color-text-secondary);line-height:1.6;margin:0 0 2rem}.hero-actions{display:flex;gap:var(--spacing-element);flex-wrap:wrap}.hero-cta{font-family:var(--font-body);font-weight:600;font-size:1rem;padding:.75em 2em;border-radius:var(--border-radius);cursor:pointer;transition:all 0.2s;border:none}.hero-cta--primary{background:var(--color-primary);color:#fff}.hero-cta--primary:hover{background:var(--color-primary-hover);transform:translateY(-1px)}.hero-cta--secondary{background:transparent;color:var(--color-text);border:2px solid var(--color-border)}@media(max-width:768px){.section-hero{min-height:60vh;padding:3rem 1.5rem}}\n.section-testimonials{padding:var(--spacing-section) var(--spacing-component);background:var(--color-background)}.testimonials-inner{max-width:1200px;margin:0 auto}.testimonials-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.25rem);color:var(--color-text);text-align:center;margin:0 0 3rem}.testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--spacing-component)}.testimonial-card{background:var(--color-surface);padding:2rem;border-radius:var(--border-radius);border:1px solid var(--color-border)}.testimonial-text{font-family:var(--font-body);font-size:1rem;color:var(--color-text);line-height:1.7;margin:0 0 1.5rem;font-style:italic}.testimonial-author{display:flex;flex-direction:column;gap:.25rem;font-family:var(--font-body)}.testimonial-author strong{color:var(--color-text);font-size:.9rem}.testimonial-author span{color:var(--color-text-secondary);font-size:.8rem}@media(max-width:768px){.testimonials-grid{grid-template-columns:1fr}}\n.section-features{padding:var(--spacing-section) var(--spacing-component);background:var(--color-surface)}.features-inner{max-width:1200px;margin:0 auto}.features-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.25rem);color:var(--color-text);text-align:center;margin:0 0 3rem}.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--spacing-component)}.feature-card{background:var(--color-background);padding:2rem;border-radius:var(--border-radius);border:1px solid var(--color-border)}.feature-title{font-family:var(--font-heading);font-weight:600;font-size:1.25rem;color:var(--color-text);margin:0 0 0.75rem}.feature-desc{font-family:var(--font-body);font-size:1rem;color:var(--color-text-secondary);line-height:1.6;margin:0}@media(max-width:768px){.features-grid{grid-template-columns:1fr}}\n.section-cta{padding:var(--spacing-section) var(--spacing-component);background:var(--color-primary);text-align:center}.cta-inner{max-width:700px;margin:0 auto}.cta-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.5rem);color:#fff;margin:0 0 1rem}.cta-subtitle{font-family:var(--font-body);font-size:1.125rem;color:rgba(255,255,255,0.85);line-height:1.6;margin:0 0 2rem}.cta-button{font-family:var(--font-body);font-weight:700;font-size:1.125rem;padding:.85em 2.5em;background:#fff;color:var(--color-primary);border:none;border-radius:var(--border-radius);cursor:pointer;transition:all 0.2s}.cta-button:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,0,0,0.15)}\n.section-footer{padding:var(--spacing-section) var(--spacing-component) 2rem;background:var(--color-surface);border-top:1px solid var(--color-border)}.footer-inner{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;gap:3rem;flex-wrap:wrap}.footer-logo{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:1.25rem;color:var(--color-text)}.footer-tagline{font-family:var(--font-body);font-size:.9rem;color:var(--color-text-secondary);margin:.5rem 0 0}.footer-links{display:flex;gap:4rem}.footer-col{display:flex;flex-direction:column;gap:.5rem}.footer-col h4{font-family:var(--font-body);font-weight:600;font-size:.85rem;color:var(--color-text);margin:0 0 .25rem;text-transform:uppercase;letter-spacing:.05em}.footer-col a{font-family:var(--font-body);font-size:.9rem;color:var(--color-text-secondary);text-decoration:none}.footer-col a:hover{color:var(--color-primary)}.footer-bottom{max-width:1200px;margin:3rem auto 0;padding-top:1.5rem;border-top:1px solid var(--color-border);text-align:center}.footer-bottom p{font-family:var(--font-body);font-size:.8rem;color:var(--color-text-secondary);margin:0}@media(max-width:768px){.footer-inner{flex-direction:column;gap:2rem}.footer-links{gap:2rem}}\n\n</style>\n</head>\n<body>\n<nav class=\"section-nav\">\n  <div class=\"nav-inner\">\n    <a href=\"#\" class=\"nav-logo\">Higher Ground Melbourne CBD Brunch & Dining</a>\n    <ul class=\"nav-links\">\n      <li><a href=\"#\">About</a></li>\n      <li><a href=\"#\">Services</a></li>\n      <li><a href=\"#\">Contact</a></li>\n    </ul>\n    <button class=\"nav-cta\">Book</button>\n  </div>\n</nav>\n<section class=\"section-hero\">\n  <div class=\"hero-content\">\n    <h1 class=\"hero-title\">Higher Ground Melbourne CBD Brunch & Dining</h1>\n    <p class=\"hero-subtitle\">650 Little Bourke St, Melbourne VIC 3000</p>\n    <div class=\"hero-actions\">\n      <button class=\"hero-cta hero-cta--primary\">Book</button>\n      <button class=\"hero-cta hero-cta--secondary\">Learn More</button>\n    </div>\n  </div>\n</section>\n<section class=\"section-testimonials\">\n  <div class=\"testimonials-inner\">\n    <h2 class=\"testimonials-heading\">What People Say</h2>\n    <div class=\"testimonials-grid\">\n    <div class=\"testimonial-card\">\n      <p class=\"testimonial-text\">\"Absolutely exceptional experience. The team at Higher Ground Melbourne CBD Brunch & Dining went above and beyond.\"</p>\n      <div class=\"testimonial-author\">\n        <strong>Sarah M.</strong>\n        <span>Regular Client</span>\n      </div>\n    </div>\n    <div class=\"testimonial-card\">\n      <p class=\"testimonial-text\">\"I've been coming here for years and it never disappoints. Consistent quality.\"</p>\n      <div class=\"testimonial-author\">\n        <strong>James K.</strong>\n        <span>Customer</span>\n      </div>\n    </div>\n    <div class=\"testimonial-card\">\n      <p class=\"testimonial-text\">\"The attention to detail is remarkable. Highly recommend to everyone.\"</p>\n      <div class=\"testimonial-author\">\n        <strong>Elena R.</strong>\n        <span>First-time Visitor</span>\n      </div>\n    </div>\n    </div>\n  </div>\n</section>\n<section class=\"section-features\">\n  <div class=\"features-inner\">\n    <h2 class=\"features-heading\">What We Offer</h2>\n    <div class=\"features-grid\">\n    <div class=\"feature-card\">\n      <h3 class=\"feature-title\">A place for vibrant mornings, indulgent lunches, and sociabl</h3>\n      <p class=\"feature-desc\">Curated breakfast service, vibrant long lunches and elevated drinks set the tempo for an experience that feels both iconic and intimate.</p>\n    </div>\n    <div class=\"feature-card\">\n      <h3 class=\"feature-title\">An iconic dining room, always in demand</h3>\n      <p class=\"feature-desc\">Sunlight floods through towering arched windows as the room hums with energy. Conversations rise beneath six-storey ceilings. Coffee pours fast. Plate</p>\n    </div>\n    <div class=\"feature-card\">\n      <h3 class=\"feature-title\">For private events that demand scale, atmosphere and impact</h3>\n      <p class=\"feature-desc\">Higher Ground captures the pulse of Melbourne dining \u2013 bold flavours, refined Australian influence, an award-winning coffee program, and a dining room</p>\n    </div>\n    </div>\n  </div>\n</section>\n<section class=\"section-cta\">\n  <div class=\"cta-inner\">\n    <h2 class=\"cta-heading\">Ready to Experience the Difference?</h2>\n    <p class=\"cta-subtitle\">Join hundreds of satisfied customers. Let's build something great together.</p>\n    <button class=\"cta-button\">Book</button>\n  </div>\n</section>\n<footer class=\"section-footer\">\n  <div class=\"footer-inner\">\n    <div class=\"footer-brand\">\n      <div class=\"footer-logo\">Higher Ground Melbourne CBD Brunch & Dining</div>\n      <p class=\"footer-tagline\">Creating exceptional experiences.</p>\n    </div>\n    <div class=\"footer-links\">\n      <div class=\"footer-col\">\n        <h4>Navigate</h4>\n        <a href=\"#\">About</a><a href=\"#\">Services</a><a href=\"#\">Contact</a>\n      </div>\n      <div class=\"footer-col\">\n        <h4>Connect</h4>\n        <a href=\"#\">Instagram</a><a href=\"#\">Facebook</a><a href=\"#\">LinkedIn</a>\n      </div>\n    </div>\n  </div>\n  <div class=\"footer-bottom\">\n    <p>&copy; 2026 Higher Ground Melbourne CBD Brunch & Dining. All rights reserved.</p>\n  </div>\n</footer>\n\n</body>\n</html>",
+"cool": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n<title>Higher Ground Melbourne CBD Brunch & Dining \u2014 Cool</title>\n<style>\n@import url(\"https://fonts.googleapis.com/css2?family=Inter:wght@600&family=Inter:wght@400;700&display=swap\");\n:root{\n    --font-heading: 'Inter', sans-serif;\n    --font-body: 'Inter', sans-serif;\n    --font-heading-weight: 600;\n    --font-body-weight: 400;\n    --color-background: #ffffff;\n    --color-surface: #ffffff;\n    --color-surface-alt: #fcfcfc;\n    --color-text: #212224;\n    --color-text-secondary: #83868d;\n    --color-primary: #471b26;\n    --color-primary-hover: #290f16;\n    --color-accent: #2599ff;\n    --color-border: #eaeaea;\n    --spacing-section: 6rem;\n    --spacing-component: 2.5rem;\n    --spacing-element: 1rem;\n    --spacing-tight: 0.5rem;\n    --border-radius: 3px;\n}\n*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}\nbody{\n  font-family:var(--font-body);\n  font-weight:var(--font-body-weight);\n  font-size:1rem;\n  background:var(--color-background);\n  color:var(--color-text);\n  -webkit-font-smoothing:antialiased;\n  line-height:1.6;\n}\nimg{max-width:100%;height:auto}\n.section-nav{background:var(--color-background);border-bottom:1px solid var(--color-border);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100}.nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:1rem var(--spacing-component);gap:var(--spacing-component)}.nav-logo{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:1.25rem;color:var(--color-text);text-decoration:none}.nav-links{display:flex;gap:var(--spacing-element);list-style:none;margin:0;padding:0}.nav-links a{font-family:var(--font-body);font-size:0.9rem;color:var(--color-text-secondary);text-decoration:none;transition:color 0.2s}.nav-links a:hover{color:var(--color-text)}.nav-cta{font-family:var(--font-body);font-weight:600;font-size:0.875rem;padding:.6em 1.4em;background:var(--color-primary);color:#fff;border:none;border-radius:var(--border-radius);cursor:pointer;transition:background 0.2s}.nav-cta:hover{background:var(--color-primary-hover)}@media(max-width:768px){.nav-links{display:none}}\n.section-hero{padding:var(--spacing-section) var(--spacing-component);display:flex;align-items:center;min-height:70vh;background:var(--color-background)}.hero-content{max-width:720px}.hero-title{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(2rem,5vw,3.5rem);color:var(--color-text);line-height:1.1;margin:0 0 1rem}.hero-subtitle{font-family:var(--font-body);font-size:1.125rem;color:var(--color-text-secondary);line-height:1.6;margin:0 0 2rem}.hero-actions{display:flex;gap:var(--spacing-element);flex-wrap:wrap}.hero-cta{font-family:var(--font-body);font-weight:600;font-size:1rem;padding:.75em 2em;border-radius:var(--border-radius);cursor:pointer;transition:all 0.2s;border:none}.hero-cta--primary{background:var(--color-primary);color:#fff}.hero-cta--primary:hover{background:var(--color-primary-hover);transform:translateY(-1px)}.hero-cta--secondary{background:transparent;color:var(--color-text);border:2px solid var(--color-border)}@media(max-width:768px){.section-hero{min-height:60vh;padding:3rem 1.5rem}}\n.section-features{padding:var(--spacing-section) var(--spacing-component);background:var(--color-surface)}.features-inner{max-width:1200px;margin:0 auto}.features-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.25rem);color:var(--color-text);text-align:center;margin:0 0 3rem}.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--spacing-component)}.feature-card{background:var(--color-background);padding:2rem;border-radius:var(--border-radius);border:1px solid var(--color-border)}.feature-title{font-family:var(--font-heading);font-weight:600;font-size:1.25rem;color:var(--color-text);margin:0 0 0.75rem}.feature-desc{font-family:var(--font-body);font-size:1rem;color:var(--color-text-secondary);line-height:1.6;margin:0}@media(max-width:768px){.features-grid{grid-template-columns:1fr}}\n.section-cta{padding:var(--spacing-section) var(--spacing-component);background:var(--color-primary);text-align:center}.cta-inner{max-width:700px;margin:0 auto}.cta-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.5rem);color:#fff;margin:0 0 1rem}.cta-subtitle{font-family:var(--font-body);font-size:1.125rem;color:rgba(255,255,255,0.85);line-height:1.6;margin:0 0 2rem}.cta-button{font-family:var(--font-body);font-weight:700;font-size:1.125rem;padding:.85em 2.5em;background:#fff;color:var(--color-primary);border:none;border-radius:var(--border-radius);cursor:pointer;transition:all 0.2s}.cta-button:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,0,0,0.15)}\n.section-testimonials{padding:var(--spacing-section) var(--spacing-component);background:var(--color-background)}.testimonials-inner{max-width:1200px;margin:0 auto}.testimonials-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.25rem);color:var(--color-text);text-align:center;margin:0 0 3rem}.testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--spacing-component)}.testimonial-card{background:var(--color-surface);padding:2rem;border-radius:var(--border-radius);border:1px solid var(--color-border)}.testimonial-text{font-family:var(--font-body);font-size:1rem;color:var(--color-text);line-height:1.7;margin:0 0 1.5rem;font-style:italic}.testimonial-author{display:flex;flex-direction:column;gap:.25rem;font-family:var(--font-body)}.testimonial-author strong{color:var(--color-text);font-size:.9rem}.testimonial-author span{color:var(--color-text-secondary);font-size:.8rem}@media(max-width:768px){.testimonials-grid{grid-template-columns:1fr}}\n.section-footer{padding:var(--spacing-section) var(--spacing-component) 2rem;background:var(--color-surface);border-top:1px solid var(--color-border)}.footer-inner{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;gap:3rem;flex-wrap:wrap}.footer-logo{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:1.25rem;color:var(--color-text)}.footer-tagline{font-family:var(--font-body);font-size:.9rem;color:var(--color-text-secondary);margin:.5rem 0 0}.footer-links{display:flex;gap:4rem}.footer-col{display:flex;flex-direction:column;gap:.5rem}.footer-col h4{font-family:var(--font-body);font-weight:600;font-size:.85rem;color:var(--color-text);margin:0 0 .25rem;text-transform:uppercase;letter-spacing:.05em}.footer-col a{font-family:var(--font-body);font-size:.9rem;color:var(--color-text-secondary);text-decoration:none}.footer-col a:hover{color:var(--color-primary)}.footer-bottom{max-width:1200px;margin:3rem auto 0;padding-top:1.5rem;border-top:1px solid var(--color-border);text-align:center}.footer-bottom p{font-family:var(--font-body);font-size:.8rem;color:var(--color-text-secondary);margin:0}@media(max-width:768px){.footer-inner{flex-direction:column;gap:2rem}.footer-links{gap:2rem}}\n\n</style>\n</head>\n<body>\n<nav class=\"section-nav\">\n  <div class=\"nav-inner\">\n    <a href=\"#\" class=\"nav-logo\">Higher Ground Melbourne CBD Brunch & Dining</a>\n    <ul class=\"nav-links\">\n      <li><a href=\"#\">About</a></li>\n      <li><a href=\"#\">Services</a></li>\n      <li><a href=\"#\">Contact</a></li>\n    </ul>\n    <button class=\"nav-cta\">Book</button>\n  </div>\n</nav>\n<section class=\"section-hero\">\n  <div class=\"hero-content\">\n    <h1 class=\"hero-title\">Higher Ground Melbourne CBD Brunch & Dining</h1>\n    <p class=\"hero-subtitle\">650 Little Bourke St, Melbourne VIC 3000</p>\n    <div class=\"hero-actions\">\n      <button class=\"hero-cta hero-cta--primary\">Book</button>\n      <button class=\"hero-cta hero-cta--secondary\">Learn More</button>\n    </div>\n  </div>\n</section>\n<section class=\"section-features\">\n  <div class=\"features-inner\">\n    <h2 class=\"features-heading\">What We Offer</h2>\n    <div class=\"features-grid\">\n    <div class=\"feature-card\">\n      <h3 class=\"feature-title\">A place for vibrant mornings, indulgent lunches, and sociabl</h3>\n      <p class=\"feature-desc\">Curated breakfast service, vibrant long lunches and elevated drinks set the tempo for an experience that feels both iconic and intimate.</p>\n    </div>\n    <div class=\"feature-card\">\n      <h3 class=\"feature-title\">An iconic dining room, always in demand</h3>\n      <p class=\"feature-desc\">Sunlight floods through towering arched windows as the room hums with energy. Conversations rise beneath six-storey ceilings. Coffee pours fast. Plate</p>\n    </div>\n    <div class=\"feature-card\">\n      <h3 class=\"feature-title\">For private events that demand scale, atmosphere and impact</h3>\n      <p class=\"feature-desc\">Higher Ground captures the pulse of Melbourne dining \u2013 bold flavours, refined Australian influence, an award-winning coffee program, and a dining room</p>\n    </div>\n    </div>\n  </div>\n</section>\n<section class=\"section-cta\">\n  <div class=\"cta-inner\">\n    <h2 class=\"cta-heading\">Ready to Experience the Difference?</h2>\n    <p class=\"cta-subtitle\">Join hundreds of satisfied customers. Let's build something great together.</p>\n    <button class=\"cta-button\">Book</button>\n  </div>\n</section>\n<section class=\"section-testimonials\">\n  <div class=\"testimonials-inner\">\n    <h2 class=\"testimonials-heading\">What People Say</h2>\n    <div class=\"testimonials-grid\">\n    <div class=\"testimonial-card\">\n      <p class=\"testimonial-text\">\"Absolutely exceptional experience. The team at Higher Ground Melbourne CBD Brunch & Dining went above and beyond.\"</p>\n      <div class=\"testimonial-author\">\n        <strong>Sarah M.</strong>\n        <span>Regular Client</span>\n      </div>\n    </div>\n    <div class=\"testimonial-card\">\n      <p class=\"testimonial-text\">\"I've been coming here for years and it never disappoints. Consistent quality.\"</p>\n      <div class=\"testimonial-author\">\n        <strong>James K.</strong>\n        <span>Customer</span>\n      </div>\n    </div>\n    <div class=\"testimonial-card\">\n      <p class=\"testimonial-text\">\"The attention to detail is remarkable. Highly recommend to everyone.\"</p>\n      <div class=\"testimonial-author\">\n        <strong>Elena R.</strong>\n        <span>First-time Visitor</span>\n      </div>\n    </div>\n    </div>\n  </div>\n</section>\n<footer class=\"section-footer\">\n  <div class=\"footer-inner\">\n    <div class=\"footer-brand\">\n      <div class=\"footer-logo\">Higher Ground Melbourne CBD Brunch & Dining</div>\n      <p class=\"footer-tagline\">Creating exceptional experiences.</p>\n    </div>\n    <div class=\"footer-links\">\n      <div class=\"footer-col\">\n        <h4>Navigate</h4>\n        <a href=\"#\">About</a><a href=\"#\">Services</a><a href=\"#\">Contact</a>\n      </div>\n      <div class=\"footer-col\">\n        <h4>Connect</h4>\n        <a href=\"#\">Instagram</a><a href=\"#\">Facebook</a><a href=\"#\">LinkedIn</a>\n      </div>\n    </div>\n  </div>\n  <div class=\"footer-bottom\">\n    <p>&copy; 2026 Higher Ground Melbourne CBD Brunch & Dining. All rights reserved.</p>\n  </div>\n</footer>\n\n</body>\n</html>",
+"bold": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n<title>Higher Ground Melbourne CBD Brunch & Dining \u2014 Bold</title>\n<style>\n@import url(\"https://fonts.googleapis.com/css2?family=Archivo+Black:wght@900&family=Archivo:wght@400;700&display=swap\");\n:root{\n    --font-heading: 'Archivo Black', sans-serif;\n    --font-body: 'Archivo', sans-serif;\n    --font-heading-weight: 900;\n    --font-body-weight: 400;\n    --color-background: #f2f2f2;\n    --color-surface: #f7f7f7;\n    --color-surface-alt: #eaeaea;\n    --color-text: #ffffff;\n    --color-text-secondary: #b2b2b2;\n    --color-primary: #115031;\n    --color-primary-hover: #061d12;\n    --color-accent: #ff5425;\n    --color-border: #d8d8d8;\n    --spacing-section: 4rem;\n    --spacing-component: 1.5rem;\n    --spacing-element: 0.75rem;\n    --spacing-tight: 0.5rem;\n    --border-radius: 3px;\n}\n*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}\nbody{\n  font-family:var(--font-body);\n  font-weight:var(--font-body-weight);\n  font-size:1rem;\n  background:var(--color-background);\n  color:var(--color-text);\n  -webkit-font-smoothing:antialiased;\n  line-height:1.6;\n}\nimg{max-width:100%;height:auto}\n.section-nav{background:var(--color-background);border-bottom:1px solid var(--color-border);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100}.nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:1rem var(--spacing-component);gap:var(--spacing-component)}.nav-logo{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:1.25rem;color:var(--color-text);text-decoration:none}.nav-links{display:flex;gap:var(--spacing-element);list-style:none;margin:0;padding:0}.nav-links a{font-family:var(--font-body);font-size:0.9rem;color:var(--color-text-secondary);text-decoration:none;transition:color 0.2s}.nav-links a:hover{color:var(--color-text)}.nav-cta{font-family:var(--font-body);font-weight:600;font-size:0.875rem;padding:.6em 1.4em;background:var(--color-primary);color:#fff;border:none;border-radius:var(--border-radius);cursor:pointer;transition:background 0.2s}.nav-cta:hover{background:var(--color-primary-hover)}@media(max-width:768px){.nav-links{display:none}}\n.section-hero{padding:var(--spacing-section) var(--spacing-component);display:flex;align-items:center;min-height:70vh;background:var(--color-background)}.hero-content{max-width:720px}.hero-title{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(2rem,5vw,3.5rem);color:var(--color-text);line-height:1.1;margin:0 0 1rem}.hero-subtitle{font-family:var(--font-body);font-size:1.125rem;color:var(--color-text-secondary);line-height:1.6;margin:0 0 2rem}.hero-actions{display:flex;gap:var(--spacing-element);flex-wrap:wrap}.hero-cta{font-family:var(--font-body);font-weight:600;font-size:1rem;padding:.75em 2em;border-radius:var(--border-radius);cursor:pointer;transition:all 0.2s;border:none}.hero-cta--primary{background:var(--color-primary);color:#fff}.hero-cta--primary:hover{background:var(--color-primary-hover);transform:translateY(-1px)}.hero-cta--secondary{background:transparent;color:var(--color-text);border:2px solid var(--color-border)}@media(max-width:768px){.section-hero{min-height:60vh;padding:3rem 1.5rem}}\n.section-cta{padding:var(--spacing-section) var(--spacing-component);background:var(--color-primary);text-align:center}.cta-inner{max-width:700px;margin:0 auto}.cta-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.5rem);color:#fff;margin:0 0 1rem}.cta-subtitle{font-family:var(--font-body);font-size:1.125rem;color:rgba(255,255,255,0.85);line-height:1.6;margin:0 0 2rem}.cta-button{font-family:var(--font-body);font-weight:700;font-size:1.125rem;padding:.85em 2.5em;background:#fff;color:var(--color-primary);border:none;border-radius:var(--border-radius);cursor:pointer;transition:all 0.2s}.cta-button:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,0,0,0.15)}\n.section-features{padding:var(--spacing-section) var(--spacing-component);background:var(--color-surface)}.features-inner{max-width:1200px;margin:0 auto}.features-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.25rem);color:var(--color-text);text-align:center;margin:0 0 3rem}.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--spacing-component)}.feature-card{background:var(--color-background);padding:2rem;border-radius:var(--border-radius);border:1px solid var(--color-border)}.feature-title{font-family:var(--font-heading);font-weight:600;font-size:1.25rem;color:var(--color-text);margin:0 0 0.75rem}.feature-desc{font-family:var(--font-body);font-size:1rem;color:var(--color-text-secondary);line-height:1.6;margin:0}@media(max-width:768px){.features-grid{grid-template-columns:1fr}}\n.section-testimonials{padding:var(--spacing-section) var(--spacing-component);background:var(--color-background)}.testimonials-inner{max-width:1200px;margin:0 auto}.testimonials-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.25rem);color:var(--color-text);text-align:center;margin:0 0 3rem}.testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--spacing-component)}.testimonial-card{background:var(--color-surface);padding:2rem;border-radius:var(--border-radius);border:1px solid var(--color-border)}.testimonial-text{font-family:var(--font-body);font-size:1rem;color:var(--color-text);line-height:1.7;margin:0 0 1.5rem;font-style:italic}.testimonial-author{display:flex;flex-direction:column;gap:.25rem;font-family:var(--font-body)}.testimonial-author strong{color:var(--color-text);font-size:.9rem}.testimonial-author span{color:var(--color-text-secondary);font-size:.8rem}@media(max-width:768px){.testimonials-grid{grid-template-columns:1fr}}\n.section-footer{padding:var(--spacing-section) var(--spacing-component) 2rem;background:var(--color-surface);border-top:1px solid var(--color-border)}.footer-inner{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;gap:3rem;flex-wrap:wrap}.footer-logo{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:1.25rem;color:var(--color-text)}.footer-tagline{font-family:var(--font-body);font-size:.9rem;color:var(--color-text-secondary);margin:.5rem 0 0}.footer-links{display:flex;gap:4rem}.footer-col{display:flex;flex-direction:column;gap:.5rem}.footer-col h4{font-family:var(--font-body);font-weight:600;font-size:.85rem;color:var(--color-text);margin:0 0 .25rem;text-transform:uppercase;letter-spacing:.05em}.footer-col a{font-family:var(--font-body);font-size:.9rem;color:var(--color-text-secondary);text-decoration:none}.footer-col a:hover{color:var(--color-primary)}.footer-bottom{max-width:1200px;margin:3rem auto 0;padding-top:1.5rem;border-top:1px solid var(--color-border);text-align:center}.footer-bottom p{font-family:var(--font-body);font-size:.8rem;color:var(--color-text-secondary);margin:0}@media(max-width:768px){.footer-inner{flex-direction:column;gap:2rem}.footer-links{gap:2rem}}\n\n</style>\n</head>\n<body>\n<nav class=\"section-nav\">\n  <div class=\"nav-inner\">\n    <a href=\"#\" class=\"nav-logo\">Higher Ground Melbourne CBD Brunch & Dining</a>\n    <ul class=\"nav-links\">\n      <li><a href=\"#\">About</a></li>\n      <li><a href=\"#\">Services</a></li>\n      <li><a href=\"#\">Contact</a></li>\n    </ul>\n    <button class=\"nav-cta\">Book</button>\n  </div>\n</nav>\n<section class=\"section-hero\">\n  <div class=\"hero-content\">\n    <h1 class=\"hero-title\">Higher Ground Melbourne CBD Brunch & Dining</h1>\n    <p class=\"hero-subtitle\">650 Little Bourke St, Melbourne VIC 3000</p>\n    <div class=\"hero-actions\">\n      <button class=\"hero-cta hero-cta--primary\">Book</button>\n      <button class=\"hero-cta hero-cta--secondary\">Learn More</button>\n    </div>\n  </div>\n</section>\n<section class=\"section-cta\">\n  <div class=\"cta-inner\">\n    <h2 class=\"cta-heading\">Ready to Experience the Difference?</h2>\n    <p class=\"cta-subtitle\">Join hundreds of satisfied customers. Let's build something great together.</p>\n    <button class=\"cta-button\">Book</button>\n  </div>\n</section>\n<section class=\"section-features\">\n  <div class=\"features-inner\">\n    <h2 class=\"features-heading\">What We Offer</h2>\n    <div class=\"features-grid\">\n    <div class=\"feature-card\">\n      <h3 class=\"feature-title\">A place for vibrant mornings, indulgent lunches, and sociabl</h3>\n      <p class=\"feature-desc\">Curated breakfast service, vibrant long lunches and elevated drinks set the tempo for an experience that feels both iconic and intimate.</p>\n    </div>\n    <div class=\"feature-card\">\n      <h3 class=\"feature-title\">An iconic dining room, always in demand</h3>\n      <p class=\"feature-desc\">Sunlight floods through towering arched windows as the room hums with energy. Conversations rise beneath six-storey ceilings. Coffee pours fast. Plate</p>\n    </div>\n    <div class=\"feature-card\">\n      <h3 class=\"feature-title\">For private events that demand scale, atmosphere and impact</h3>\n      <p class=\"feature-desc\">Higher Ground captures the pulse of Melbourne dining \u2013 bold flavours, refined Australian influence, an award-winning coffee program, and a dining room</p>\n    </div>\n    </div>\n  </div>\n</section>\n<section class=\"section-testimonials\">\n  <div class=\"testimonials-inner\">\n    <h2 class=\"testimonials-heading\">What People Say</h2>\n    <div class=\"testimonials-grid\">\n    <div class=\"testimonial-card\">\n      <p class=\"testimonial-text\">\"Absolutely exceptional experience. The team at Higher Ground Melbourne CBD Brunch & Dining went above and beyond.\"</p>\n      <div class=\"testimonial-author\">\n        <strong>Sarah M.</strong>\n        <span>Regular Client</span>\n      </div>\n    </div>\n    <div class=\"testimonial-card\">\n      <p class=\"testimonial-text\">\"I've been coming here for years and it never disappoints. Consistent quality.\"</p>\n      <div class=\"testimonial-author\">\n        <strong>James K.</strong>\n        <span>Customer</span>\n      </div>\n    </div>\n    <div class=\"testimonial-card\">\n      <p class=\"testimonial-text\">\"The attention to detail is remarkable. Highly recommend to everyone.\"</p>\n      <div class=\"testimonial-author\">\n        <strong>Elena R.</strong>\n        <span>First-time Visitor</span>\n      </div>\n    </div>\n    </div>\n  </div>\n</section>\n<footer class=\"section-footer\">\n  <div class=\"footer-inner\">\n    <div class=\"footer-brand\">\n      <div class=\"footer-logo\">Higher Ground Melbourne CBD Brunch & Dining</div>\n      <p class=\"footer-tagline\">Creating exceptional experiences.</p>\n    </div>\n    <div class=\"footer-links\">\n      <div class=\"footer-col\">\n        <h4>Navigate</h4>\n        <a href=\"#\">About</a><a href=\"#\">Services</a><a href=\"#\">Contact</a>\n      </div>\n      <div class=\"footer-col\">\n        <h4>Connect</h4>\n        <a href=\"#\">Instagram</a><a href=\"#\">Facebook</a><a href=\"#\">LinkedIn</a>\n      </div>\n    </div>\n  </div>\n  <div class=\"footer-bottom\">\n    <p>&copy; 2026 Higher Ground Melbourne CBD Brunch & Dining. All rights reserved.</p>\n  </div>\n</footer>\n\n</body>\n</html>",
+"minimal": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n<title>Higher Ground Melbourne CBD Brunch & Dining \u2014 Minimal</title>\n<style>\n@import url(\"https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600&family=Plus+Jakarta+Sans:wght@400;700&display=swap\");\n:root{\n    --font-heading: 'Plus Jakarta Sans', sans-serif;\n    --font-body: 'Plus Jakarta Sans', sans-serif;\n    --font-heading-weight: 600;\n    --font-body-weight: 400;\n    --color-background: #ffffff;\n    --color-surface: #ffffff;\n    --color-surface-alt: #f9f9f9;\n    --color-text: #080809;\n    --color-text-secondary: #-58-5b-61;\n    --color-primary: #27533d;\n    --color-primary-hover: #1e4130;\n    --color-accent: #ef6944;\n    --color-border: #ffffff;\n    --spacing-section: 7rem;\n    --spacing-component: 3rem;\n    --spacing-element: 1.25rem;\n    --spacing-tight: 0.75rem;\n    --border-radius: 4px;\n}\n*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}\nbody{\n  font-family:var(--font-body);\n  font-weight:var(--font-body-weight);\n  font-size:1rem;\n  background:var(--color-background);\n  color:var(--color-text);\n  -webkit-font-smoothing:antialiased;\n  line-height:1.6;\n}\nimg{max-width:100%;height:auto}\n.section-nav{background:var(--color-background);border-bottom:1px solid var(--color-border);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100}.nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:1rem var(--spacing-component);gap:var(--spacing-component)}.nav-logo{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:1.25rem;color:var(--color-text);text-decoration:none}.nav-links{display:flex;gap:var(--spacing-element);list-style:none;margin:0;padding:0}.nav-links a{font-family:var(--font-body);font-size:0.9rem;color:var(--color-text-secondary);text-decoration:none;transition:color 0.2s}.nav-links a:hover{color:var(--color-text)}.nav-cta{font-family:var(--font-body);font-weight:600;font-size:0.875rem;padding:.6em 1.4em;background:var(--color-primary);color:#fff;border:none;border-radius:var(--border-radius);cursor:pointer;transition:background 0.2s}.nav-cta:hover{background:var(--color-primary-hover)}@media(max-width:768px){.nav-links{display:none}}\n.section-hero{padding:var(--spacing-section) var(--spacing-component);display:flex;align-items:center;min-height:70vh;background:var(--color-background)}.hero-content{max-width:720px}.hero-title{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(2rem,5vw,3.5rem);color:var(--color-text);line-height:1.1;margin:0 0 1rem}.hero-subtitle{font-family:var(--font-body);font-size:1.125rem;color:var(--color-text-secondary);line-height:1.6;margin:0 0 2rem}.hero-actions{display:flex;gap:var(--spacing-element);flex-wrap:wrap}.hero-cta{font-family:var(--font-body);font-weight:600;font-size:1rem;padding:.75em 2em;border-radius:var(--border-radius);cursor:pointer;transition:all 0.2s;border:none}.hero-cta--primary{background:var(--color-primary);color:#fff}.hero-cta--primary:hover{background:var(--color-primary-hover);transform:translateY(-1px)}.hero-cta--secondary{background:transparent;color:var(--color-text);border:2px solid var(--color-border)}@media(max-width:768px){.section-hero{min-height:60vh;padding:3rem 1.5rem}}\n.section-testimonials{padding:var(--spacing-section) var(--spacing-component);background:var(--color-background)}.testimonials-inner{max-width:1200px;margin:0 auto}.testimonials-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.25rem);color:var(--color-text);text-align:center;margin:0 0 3rem}.testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--spacing-component)}.testimonial-card{background:var(--color-surface);padding:2rem;border-radius:var(--border-radius);border:1px solid var(--color-border)}.testimonial-text{font-family:var(--font-body);font-size:1rem;color:var(--color-text);line-height:1.7;margin:0 0 1.5rem;font-style:italic}.testimonial-author{display:flex;flex-direction:column;gap:.25rem;font-family:var(--font-body)}.testimonial-author strong{color:var(--color-text);font-size:.9rem}.testimonial-author span{color:var(--color-text-secondary);font-size:.8rem}@media(max-width:768px){.testimonials-grid{grid-template-columns:1fr}}\n.section-cta{padding:var(--spacing-section) var(--spacing-component);background:var(--color-primary);text-align:center}.cta-inner{max-width:700px;margin:0 auto}.cta-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.5rem);color:#fff;margin:0 0 1rem}.cta-subtitle{font-family:var(--font-body);font-size:1.125rem;color:rgba(255,255,255,0.85);line-height:1.6;margin:0 0 2rem}.cta-button{font-family:var(--font-body);font-weight:700;font-size:1.125rem;padding:.85em 2.5em;background:#fff;color:var(--color-primary);border:none;border-radius:var(--border-radius);cursor:pointer;transition:all 0.2s}.cta-button:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,0,0,0.15)}\n.section-features{padding:var(--spacing-section) var(--spacing-component);background:var(--color-surface)}.features-inner{max-width:1200px;margin:0 auto}.features-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.25rem);color:var(--color-text);text-align:center;margin:0 0 3rem}.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--spacing-component)}.feature-card{background:var(--color-background);padding:2rem;border-radius:var(--border-radius);border:1px solid var(--color-border)}.feature-title{font-family:var(--font-heading);font-weight:600;font-size:1.25rem;color:var(--color-text);margin:0 0 0.75rem}.feature-desc{font-family:var(--font-body);font-size:1rem;color:var(--color-text-secondary);line-height:1.6;margin:0}@media(max-width:768px){.features-grid{grid-template-columns:1fr}}\n.section-footer{padding:var(--spacing-section) var(--spacing-component) 2rem;background:var(--color-surface);border-top:1px solid var(--color-border)}.footer-inner{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;gap:3rem;flex-wrap:wrap}.footer-logo{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:1.25rem;color:var(--color-text)}.footer-tagline{font-family:var(--font-body);font-size:.9rem;color:var(--color-text-secondary);margin:.5rem 0 0}.footer-links{display:flex;gap:4rem}.footer-col{display:flex;flex-direction:column;gap:.5rem}.footer-col h4{font-family:var(--font-body);font-weight:600;font-size:.85rem;color:var(--color-text);margin:0 0 .25rem;text-transform:uppercase;letter-spacing:.05em}.footer-col a{font-family:var(--font-body);font-size:.9rem;color:var(--color-text-secondary);text-decoration:none}.footer-col a:hover{color:var(--color-primary)}.footer-bottom{max-width:1200px;margin:3rem auto 0;padding-top:1.5rem;border-top:1px solid var(--color-border);text-align:center}.footer-bottom p{font-family:var(--font-body);font-size:.8rem;color:var(--color-text-secondary);margin:0}@media(max-width:768px){.footer-inner{flex-direction:column;gap:2rem}.footer-links{gap:2rem}}\n\n</style>\n</head>\n<body>\n<nav class=\"section-nav\">\n  <div class=\"nav-inner\">\n    <a href=\"#\" class=\"nav-logo\">Higher Ground Melbourne CBD Brunch & Dining</a>\n    <ul class=\"nav-links\">\n      <li><a href=\"#\">About</a></li>\n      <li><a href=\"#\">Services</a></li>\n      <li><a href=\"#\">Contact</a></li>\n    </ul>\n    <button class=\"nav-cta\">Book</button>\n  </div>\n</nav>\n<section class=\"section-hero\">\n  <div class=\"hero-content\">\n    <h1 class=\"hero-title\">Higher Ground Melbourne CBD Brunch & Dining</h1>\n    <p class=\"hero-subtitle\">650 Little Bourke St, Melbourne VIC 3000</p>\n    <div class=\"hero-actions\">\n      <button class=\"hero-cta hero-cta--primary\">Book</button>\n      <button class=\"hero-cta hero-cta--secondary\">Learn More</button>\n    </div>\n  </div>\n</section>\n<section class=\"section-testimonials\">\n  <div class=\"testimonials-inner\">\n    <h2 class=\"testimonials-heading\">What People Say</h2>\n    <div class=\"testimonials-grid\">\n    <div class=\"testimonial-card\">\n      <p class=\"testimonial-text\">\"Absolutely exceptional experience. The team at Higher Ground Melbourne CBD Brunch & Dining went above and beyond.\"</p>\n      <div class=\"testimonial-author\">\n        <strong>Sarah M.</strong>\n        <span>Regular Client</span>\n      </div>\n    </div>\n    <div class=\"testimonial-card\">\n      <p class=\"testimonial-text\">\"I've been coming here for years and it never disappoints. Consistent quality.\"</p>\n      <div class=\"testimonial-author\">\n        <strong>James K.</strong>\n        <span>Customer</span>\n      </div>\n    </div>\n    <div class=\"testimonial-card\">\n      <p class=\"testimonial-text\">\"The attention to detail is remarkable. Highly recommend to everyone.\"</p>\n      <div class=\"testimonial-author\">\n        <strong>Elena R.</strong>\n        <span>First-time Visitor</span>\n      </div>\n    </div>\n    </div>\n  </div>\n</section>\n<section class=\"section-cta\">\n  <div class=\"cta-inner\">\n    <h2 class=\"cta-heading\">Ready to Experience the Difference?</h2>\n    <p class=\"cta-subtitle\">Join hundreds of satisfied customers. Let's build something great together.</p>\n    <button class=\"cta-button\">Book</button>\n  </div>\n</section>\n<section class=\"section-features\">\n  <div class=\"features-inner\">\n    <h2 class=\"features-heading\">What We Offer</h2>\n    <div class=\"features-grid\">\n    <div class=\"feature-card\">\n      <h3 class=\"feature-title\">A place for vibrant mornings, indulgent lunches, and sociabl</h3>\n      <p class=\"feature-desc\">Curated breakfast service, vibrant long lunches and elevated drinks set the tempo for an experience that feels both iconic and intimate.</p>\n    </div>\n    <div class=\"feature-card\">\n      <h3 class=\"feature-title\">An iconic dining room, always in demand</h3>\n      <p class=\"feature-desc\">Sunlight floods through towering arched windows as the room hums with energy. Conversations rise beneath six-storey ceilings. Coffee pours fast. Plate</p>\n    </div>\n    <div class=\"feature-card\">\n      <h3 class=\"feature-title\">For private events that demand scale, atmosphere and impact</h3>\n      <p class=\"feature-desc\">Higher Ground captures the pulse of Melbourne dining \u2013 bold flavours, refined Australian influence, an award-winning coffee program, and a dining room</p>\n    </div>\n    </div>\n  </div>\n</section>\n<footer class=\"section-footer\">\n  <div class=\"footer-inner\">\n    <div class=\"footer-brand\">\n      <div class=\"footer-logo\">Higher Ground Melbourne CBD Brunch & Dining</div>\n      <p class=\"footer-tagline\">Creating exceptional experiences.</p>\n    </div>\n    <div class=\"footer-links\">\n      <div class=\"footer-col\">\n        <h4>Navigate</h4>\n        <a href=\"#\">About</a><a href=\"#\">Services</a><a href=\"#\">Contact</a>\n      </div>\n      <div class=\"footer-col\">\n        <h4>Connect</h4>\n        <a href=\"#\">Instagram</a><a href=\"#\">Facebook</a><a href=\"#\">LinkedIn</a>\n      </div>\n    </div>\n  </div>\n  <div class=\"footer-bottom\">\n    <p>&copy; 2026 Higher Ground Melbourne CBD Brunch & Dining. All rights reserved.</p>\n  </div>\n</footer>\n\n</body>\n</html>"
+};
+let currentConcept = "original";
+let splitMode = false;
+
+// Load initial concept
+document.addEventListener('DOMContentLoaded', () => {
+  loadConcept(currentConcept);
+});
+
+function loadConcept(id) {
+  const iframe = document.getElementById('iframe-' + id);
+  if (iframe && CONCEPT_PAGES[id]) {
+    iframe.srcdoc = CONCEPT_PAGES[id];
+  }
+  currentConcept = id;
+  updateToolbar(id);
+}
+
+function updateToolbar(id) {
+  const c = CONCEPTS.find(c => c.id === id);
+  if (!c) return;
+  document.querySelector('.concept-name').textContent = c.name;
+  document.querySelector('.font-info').textContent = c.font_pairing;
+  document.querySelector('.layout-list').innerHTML = 'Sections: ' + c.layout.map(s => '<span>' + s + '</span>').join('');
+}
+
+// Tab switching
+document.getElementById('tabs').addEventListener('click', (e) => {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  const conceptId = tab.dataset.concept;
+  
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  
+  if (splitMode) {
+    // In split mode, show this concept alongside current
+    const views = document.getElementById('views');
+    views.querySelectorAll('.cf-view').forEach(v => v.classList.add('hidden'));
+    views.querySelectorAll('.cf-view').forEach(v => v.classList.remove('split-visible'));
+    const primary = document.getElementById('view-' + conceptId);
+    primary.classList.remove('hidden');
+    primary.classList.add('split-visible');
+    if (conceptId !== currentConcept) {
+      const secondary = document.getElementById('view-' + currentConcept);
+      secondary.classList.remove('hidden');
+      secondary.classList.add('split-visible');
+      loadConcept(currentConcept);
+    }
+    loadConcept(conceptId);
+  } else {
+    document.querySelectorAll('.cf-view').forEach(v => v.classList.add('hidden'));
+    const view = document.getElementById('view-' + conceptId);
+    view.classList.remove('hidden');
+    loadConcept(conceptId);
+  }
+});
+
+// View mode buttons
+document.getElementById('btn-single').addEventListener('click', () => {
+  splitMode = false;
+  document.getElementById('views').classList.remove('split');
+  document.getElementById('btn-single').classList.add('active');
+  document.getElementById('btn-split').classList.remove('active');
+  document.querySelectorAll('.cf-view').forEach(v => {
+    v.classList.remove('split-visible');
+    v.classList.add('hidden');
+  });
+  const view = document.getElementById('view-' + currentConcept);
+  view.classList.remove('hidden');
+  document.getElementById('btn-single').classList.add('active');
+});
+
+document.getElementById('btn-split').addEventListener('click', () => {
+  splitMode = true;
+  document.getElementById('views').classList.add('split');
+  document.getElementById('btn-split').classList.add('active');
+  document.getElementById('btn-single').classList.remove('active');
+  // Show current + first other
+  const otherConcept = CONCEPTS.find(c => c.id !== currentConcept);
+  if (otherConcept) {
+    document.querySelectorAll('.cf-view').forEach(v => v.classList.add('hidden'));
+    document.querySelectorAll('.cf-view').forEach(v => v.classList.remove('split-visible'));
+    const primary = document.getElementById('view-' + currentConcept);
+    const secondary = document.getElementById('view-' + otherConcept.id);
+    primary.classList.remove('hidden');
+    primary.classList.add('split-visible');
+    secondary.classList.remove('hidden');
+    secondary.classList.add('split-visible');
+    loadConcept(currentConcept);
+    loadConcept(otherConcept.id);
+  }
+});
+
+// Export CSS
+document.getElementById('btn-export').addEventListener('click', () => {
+  const c = CONCEPTS.find(c => c.id === currentConcept);
+  if (!c) return;
+  const tokens = c.tokens;
+  const css = `:root {
+  --font-heading: '${tokens.typography.heading_font}', sans-serif;
+  --font-body: '${tokens.typography.body_font}', sans-serif;
+  --font-heading-weight: ${tokens.typography.heading_weight};
+  --font-body-weight: ${tokens.typography.body_weight};
+  --color-background: ${tokens.colors.background};
+  --color-surface: ${tokens.colors.surface};
+  --color-text: ${tokens.colors.text};
+  --color-text-secondary: ${tokens.colors.text_secondary};
+  --color-primary: ${tokens.colors.primary};
+  --color-accent: ${tokens.colors.accent};
+  --color-border: ${tokens.colors.border};
+  --spacing-section: ${tokens.spacing.section};
+  --spacing-component: ${tokens.spacing.component};
+  --spacing-element: ${tokens.spacing.element};
+  --border-radius: ${tokens.spacing.border_radius};
+}`;
+  navigator.clipboard.writeText(css).then(() => {
+    alert('CSS tokens copied to clipboard!');
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = css;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('CSS tokens copied!');
+  });
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.key === 's' && !e.metaKey && !e.ctrlKey && !e.target.closest('input,textarea')) {
+    document.getElementById('btn-export').click();
+  }
+  // 1-5 keys to switch concepts
+  const num = parseInt(e.key);
+  if (num >= 1 && num <= CONCEPTS.length) {
+    const conceptId = CONCEPTS[num - 1].id;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('[data-concept="' + conceptId + '"]').classList.add('active');
+    document.querySelectorAll('.cf-view').forEach(v => v.classList.add('hidden'));
+    document.getElementById('view-' + conceptId).classList.remove('hidden');
+    loadConcept(conceptId);
+  }
+});
+
+// Responsive font loading
+document.querySelectorAll('iframe').forEach(iframe => {
+  iframe.addEventListener('load', () => {
+    try {
+      const doc = iframe.contentDocument;
+      if (doc) {
+        const links = doc.querySelectorAll('link[rel="stylesheet"]');
+        links.forEach(l => {
+          const clone = document.createElement('link');
+          clone.rel = 'stylesheet';
+          clone.href = l.href;
+          doc.head.appendChild(clone);
+        });
+      }
+    } catch(e) {}
+  });
+});
+</script>
+</body>
+</html>
