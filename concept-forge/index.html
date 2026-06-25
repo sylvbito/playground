@@ -171,7 +171,7 @@ body{
 
 <script>
 // Concept data
-const CONCEPTS = [{"id": "original", "name": "Original", "description": "As extracted from Higher Ground Melbourne CBD Brunch & Dining", "tokens": {"colors": {"background": "#fff", "surface": "#fff", "surface_alt": "#f7f7f7", "text": "#212224", "text_secondary": "#-40-42-46", "primary": "#1b4731", "primary_hover": "#0f291c", "accent": "#ff5526", "border": "#e5e5e5"}, "typography": {"heading_font": "Droid Sans", "body_font": "Oxygen", "heading_weight": "700", "body_weight": "400", "scale_ratio": "1.25", "body_size": "1rem"}, "spacing": {"section": "5rem", "component": "2rem", "element": "1rem", "tight": "0.5rem", "border_radius": "3px"}}, "font_pairing": "Original", "layout": ["nav", "hero", "features", "testimonials", "cta", "footer"]}, {"id": "warm", "name": "Warm", "description": "Rotated toward reds and oranges — evokes warmth, hospitality, and energy", "tokens": {"colors": {"background": "#fff", "surface": "#ffffff", "surface_alt": "#f9f9f9", "text": "#212224", "text_secondary": "#83868d", "primary": "#1b4743", "primary_hover": "#0f2927", "accent": "#ffaf25", "border": "#eaeaea"}, "typography": {"heading_font": "DM Serif Display", "body_font": "DM Sans", "heading_weight": "400", "body_weight": "400", "scale_ratio": "1.25", "body_size": "1rem"}, "spacing": {"section": "5rem", "component": "2rem", "element": "1rem", "tight": "0.5rem", "border_radius": "4px"}}, "font_pairing": "Warm Editorial", "layout": ["nav", "hero", "testimonials", "features", "cta", "footer"]}, {"id": "cool", "name": "Cool", "description": "Shifted toward blues and teals — calm, professional, and trustworthy", "tokens": {"colors": {"background": "#ffffff", "surface": "#ffffff", "surface_alt": "#fcfcfc", "text": "#212224", "text_secondary": "#83868d", "primary": "#471b26", "primary_hover": "#290f16", "accent": "#2599ff", "border": "#eaeaea"}, "typography": {"heading_font": "Inter", "body_font": "Inter", "heading_weight": "600", "body_weight": "400", "scale_ratio": "1.2", "body_size": "1rem"}, "spacing": {"section": "6rem", "component": "2.5rem", "element": "1rem", "tight": "0.5rem", "border_radius": "3px"}}, "font_pairing": "Swiss Modern", "layout": ["nav", "hero", "features", "cta", "testimonials", "footer"]}, {"id": "bold", "name": "Bold", "description": "High contrast, saturated colours, and strong typography — makes a statement", "tokens": {"colors": {"background": "#f2f2f2", "surface": "#f7f7f7", "surface_alt": "#eaeaea", "text": "#000000", "text_secondary": "#b2b2b2", "primary": "#115031", "primary_hover": "#061d12", "accent": "#ff5425", "border": "#d8d8d8"}, "typography": {"heading_font": "Archivo Black", "body_font": "Archivo", "heading_weight": "900", "body_weight": "400", "scale_ratio": "1.333", "body_size": "1rem"}, "spacing": {"section": "4rem", "component": "1.5rem", "element": "0.75rem", "tight": "0.5rem", "border_radius": "3px"}}, "font_pairing": "Brutalist Grotesk", "layout": ["nav", "hero", "cta", "features", "testimonials", "footer"]}, {"id": "minimal", "name": "Minimal", "description": "Soft palette, generous whitespace, and refined typography — quiet confidence", "tokens": {"colors": {"background": "#ffffff", "surface": "#ffffff", "surface_alt": "#f9f9f9", "text": "#080809", "text_secondary": "#-58-5b-61", "primary": "#27533d", "primary_hover": "#1e4130", "accent": "#ef6944", "border": "#ffffff"}, "typography": {"heading_font": "Plus Jakarta Sans", "body_font": "Plus Jakarta Sans", "heading_weight": "600", "body_weight": "400", "scale_ratio": "1.15", "body_size": "1rem"}, "spacing": {"section": "7rem", "component": "3rem", "element": "1.25rem", "tight": "0.75rem", "border_radius": "4px"}}, "font_pairing": "Soft Humanist", "layout": ["nav", "hero", "testimonials", "cta", "features", "footer"]}];
+const CONCEPTS = [{"id": "original", "name": "Original", "description": "As extracted from the source", "tokens": {"colors": {"background": "#fff", "surface": "#f9f9f9", "surface_alt": "#c4c4be", "text": "#000", "text_secondary": "#c4c4be", "primary": "#ff5526", "primary_hover": "#fc3600", "accent": "#ffe4e0", "border": "#e0e0e0", "hero_bg": "var(--color-background)", "features_bg": "var(--color-surface)", "testimonials_bg": "var(--color-background)", "cta_bg": "var(--color-primary)"}, "typography": {"heading_font": "Sailec", "body_font": "Droid Sans", "heading_weight": "700", "body_weight": "400", "scale_ratio": "1.25", "body_size": "1rem"}, "spacing": {"section": "5rem", "component": "2rem", "element": "1rem", "tight": "0.5rem", "border_radius": "3px"}}, "font_pairing": "Original", "layout": ["nav", "hero", "features", "testimonials", "cta", "footer"]}, {"id": "warm", "name": "Warm", "description": "Warmer typography, softer spacing, rounded corners", "tokens": {"colors": {"background": "#f9f9f9", "surface": "#fff", "surface_alt": "#c4c4be", "text": "#000", "text_secondary": "#c4c4be", "primary": "#ff5526", "primary_hover": "#fc3600", "accent": "#ffe4e0", "border": "#dfdfdf", "hero_bg": "var(--color-background)", "features_bg": "var(--color-surface)", "testimonials_bg": "var(--color-surface-alt)", "cta_bg": "var(--color-primary)"}, "typography": {"heading_font": "DM Serif Display", "body_font": "DM Sans", "heading_weight": "400", "body_weight": "400", "scale_ratio": "1.25", "body_size": "1rem"}, "spacing": {"section": "5.5rem", "component": "2.25rem", "element": "1.1rem", "tight": "0.6rem", "border_radius": "4px"}}, "font_pairing": "Warm Editorial", "layout": ["nav", "hero", "testimonials", "features", "cta", "footer"]}, {"id": "cool", "name": "Cool", "description": "Tighter, structured, sharper", "tokens": {"colors": {"background": "#fff", "surface": "#f9f9f9", "surface_alt": "#f1f1f1", "text": "#000", "text_secondary": "#c4c4be", "primary": "#ff5526", "primary_hover": "#fc3600", "accent": "#ffe4e0", "border": "#eaeaea", "hero_bg": "var(--color-background)", "features_bg": "var(--color-surface)", "testimonials_bg": "var(--color-background)", "cta_bg": "var(--color-primary)"}, "typography": {"heading_font": "Inter", "body_font": "Inter", "heading_weight": "600", "body_weight": "400", "scale_ratio": "1.2", "body_size": "0.95rem"}, "spacing": {"section": "6rem", "component": "2.5rem", "element": "1rem", "tight": "0.5rem", "border_radius": "3px"}}, "font_pairing": "Swiss Modern", "layout": ["nav", "hero", "features", "cta", "testimonials", "footer"]}, {"id": "bold", "name": "Bold", "description": "Full-colour sections, aggressive type scale, bold presence", "tokens": {"colors": {"background": "#fff", "surface": "#f7f7f7", "surface_alt": "#f9f9f9", "text": "#000", "text_secondary": "#8c8c8c", "primary": "#ff5526", "primary_hover": "#fc3600", "accent": "#ffe4e0", "border": "#000", "hero_bg": "var(--color-primary)", "features_bg": "var(--color-primary)", "testimonials_bg": "var(--color-primary)", "cta_bg": "var(--color-darkest)"}, "typography": {"heading_font": "Archivo Black", "body_font": "Archivo", "heading_weight": "900", "body_weight": "400", "scale_ratio": "1.333", "body_size": "1.05rem"}, "spacing": {"section": "4rem", "component": "1.5rem", "element": "0.75rem", "tight": "0.4rem", "border_radius": "0px"}}, "font_pairing": "Brutalist Grotesk", "layout": ["nav", "hero", "cta", "features", "testimonials", "footer"]}, {"id": "minimal", "name": "Minimal", "description": "Generous whitespace, restrained colour, refined", "tokens": {"colors": {"background": "#fff", "surface": "#f9f9f9", "surface_alt": "#f9f9f9", "text": "#141414", "text_secondary": "#c4c4be", "primary": "#ff5526", "primary_hover": "#fc3600", "accent": "#ffe4e0", "border": "#ffffff", "hero_bg": "var(--color-background)", "features_bg": "var(--color-background)", "testimonials_bg": "var(--color-background)", "cta_bg": "var(--color-surface)"}, "typography": {"heading_font": "Plus Jakarta Sans", "body_font": "Plus Jakarta Sans", "heading_weight": "600", "body_weight": "400", "scale_ratio": "1.15", "body_size": "0.9rem"}, "spacing": {"section": "7rem", "component": "3rem", "element": "1.25rem", "tight": "0.75rem", "border_radius": "4px"}}, "font_pairing": "Soft Humanist", "layout": ["nav", "hero", "testimonials", "cta", "features", "footer"]}];
 const CONTENT_DATA = {"title": "Higher Ground Melbourne CBD Brunch & Dining", "site_name": "Higher Ground Melbourne CBD Brunch & Dining", "meta_description": "Iconic all day dining in a heritage power station. Discover Melbourne CBD brunch, specialty coffee and unique event spaces across five levels.", "headings": [{"level": "h2", "text": "A place for vibrant mornings, indulgent lunches, and sociable dining from day to dusk"}, {"level": "h2", "text": "An iconic dining room, always in demand"}, {"level": "h2", "text": "For private events that demand scale, atmosphere and impact"}, {"level": "h2", "text": "Mailing List."}, {"level": "h3", "text": "Welcome"}, {"level": "h3", "text": "Reservations"}, {"level": "h3", "text": "Events & Celebrations"}, {"level": "h3", "text": "Socials"}], "paragraphs": ["650 Little Bourke St, Melbourne VIC 3000", "Where industrial grandeur meets modern indulgence. Higher Ground transforms a historic power station into a soaring, high-energy dining destination, alive from first coffee to final cocktail.", "Curated breakfast service, vibrant long lunches and elevated drinks set the tempo for an experience that feels both iconic and intimate.", "Sunlight floods through towering arched windows as the room hums with energy. Conversations rise beneath six-storey ceilings. Coffee pours fast. Plates land with theatre. Every moment is charged.", "Higher Ground captures the pulse of Melbourne dining – bold flavours, refined Australian influence, an award-winning coffee program, and a dining room that never stands still. Whether it’s a power breakfast, a long lunch, or an impromptu celebration, this is where the city gathers.", "From weekday breakfasts to weekend-long lunches that roll deep into the afternoon, Higher Ground is in constant motion.", "Secure a table beneath the vaulted 15-metre ceiling, along the mezzanine, or in the heart of the dining room where the energy is palpable. With seasonal menus and a room that never rests, reservations are strongly recommended.", "Higher Ground offers one of Melbourne’s most commanding event spaces – dramatic, bustling, and immediately unforgettable. From corporate dining to milestone celebrations and brand launches to weddings and everything in between, the venue delivers scale without sacrificing intimacy.", "Expect elevated menus, seamless hospitality, and a room that brings instant grandeur to any gathering.", "Receive priority access to new menus, special events and exclusive dining moments. This is where first invitations land."], "ctas": ["Book", "Menu", "RESERVATIONS", "ALL DAY DINING"], "paragraph_count": 11, "images": [{"url": "https://highergroundmelbourne.com.au/static/aa37e307b2b003c19450fb4ee9228d6f/1df2c/ec7bc62dd55381ce573f3aaa338335ff3c9cc24d.jpg", "alt": "Higher Ground", "likely_logo": false, "likely_hero": false}, {"url": "https://highergroundmelbourne.com.au/static/e13f0ad1ab2c4bd0b736d58c2c428d4d/2145a/insignia.png", "alt": "Higher Ground", "likely_logo": false, "likely_hero": false}, {"url": "https://highergroundmelbourne.com.au/static/59da1c33415d2bff7d2311ca0eb96c61/1df2c/cf90bb977528fcee29016c0084b0ee21cd7ccb4f.jpg", "alt": "Higher Ground", "likely_logo": false, "likely_hero": false}, {"url": "https://highergroundmelbourne.com.au/static/86145ea26403ab475260c8e824d864a6/f827b/hg1.jpg", "alt": "Slide 1", "likely_logo": false, "likely_hero": false}, {"url": "https://highergroundmelbourne.com.au/static/261801305eb03512a1edcabf26cdb15c/f827b/hg2.jpg", "alt": "Slide 2", "likely_logo": false, "likely_hero": false}, {"url": "https://highergroundmelbourne.com.au/static/49c894dfd37941099441aa45723bc11c/f827b/hg3.jpg", "alt": "Slide 3", "likely_logo": false, "likely_hero": false}, {"url": "https://highergroundmelbourne.com.au/static/130b21cef0c727b68b3f7bdb8964bdde/f827b/hg4.jpg", "alt": "Slide 4", "likely_logo": false, "likely_hero": false}, {"url": "https://highergroundmelbourne.com.au/static/e46b85274649962e84a6253b5252d31d/f827b/hg5.jpg", "alt": "Slide 5", "likely_logo": false, "likely_hero": false}, {"url": "https://highergroundmelbourne.com.au/static/00316b93014de3fa2a94595b5afd51c4/f827b/hg6.jpg", "alt": "Slide 6", "likely_logo": false, "likely_hero": false}, {"url": "https://highergroundmelbourne.com.au/static/31cf5b542309849e922280f3693c356e/f827b/hg7.jpg", "alt": "Slide 7", "likely_logo": false, "likely_hero": false}]};
 let currentConcept = "original";
 let splitMode = false;
@@ -457,77 +457,164 @@ function isDark(hex) { const [r, g, b] = hexToRgb(hex); return (0.299 * r + 0.58
 
 function identifyKeyColours(colours) {
   const top = colours.map(c => c.value);
-  let primary = null, accent = null, background = null, text = null, darkest = null, lightest = null;
+  let primary = null, accent = null, darkest = null, lightest = null, secondLight = null, midGray = null;
+  const neutrals = [];
+  const saturated = [];
+  
   top.forEach(c => {
     const [r, g, b] = hexToRgb(c);
     const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    const [h, s, l] = rgbToHsl(r, g, b);
+    
     if (!darkest || lum < darkest[1]) darkest = [c, lum];
     if (!lightest || lum > lightest[1]) lightest = [c, lum];
-    if (lum < 40 && !text) text = c;
-    if (lum > 240 && !background) background = c;
-    const [h, s, l] = rgbToHsl(r, g, b);
-    if (s > 20 && !isNeutral(c)) { if (!primary) primary = c; else if (s > 30 && !accent && c !== primary) accent = c; }
+    
+    if (isNeutral(c)) {
+      neutrals.push({hex: c, lum});
+    } else if (s > 15) {
+      saturated.push({hex: c, lum, sat: s});
+    }
   });
-  return { primary: primary || '#0066cc', accent: accent || primary || '#0066cc', background: background || '#ffffff', text: text || '#111111', surface: lightest ? lightest[0] : '#f5f5f5', darkest: darkest ? darkest[0] : '#111111' };
+  
+  // Second lightest neutral
+  neutrals.sort((a, b) => b.lum - a.lum);
+  if (neutrals.length > 1) secondLight = neutrals[1].hex;
+  // Mid-gray
+  const midNeutral = neutrals.find(n => n.lum > 60 && n.lum < 200);
+  if (midNeutral) midGray = midNeutral.hex;
+  else if (neutrals.length > 2) midGray = neutrals[Math.floor(neutrals.length/2)].hex;
+  
+  // Most saturated = primary, second most = accent
+  saturated.sort((a, b) => b.sat - a.sat);
+  if (saturated.length > 0) primary = saturated[0].hex;
+  if (saturated.length > 1) accent = saturated[1].hex;
+  
+  return {
+    primary: primary || '#0066cc',
+    accent: accent || primary || '#ff6b35',
+    darkest: darkest ? darkest[0] : '#111111',
+    lightest: lightest ? lightest[0] : '#ffffff',
+    surface: secondLight || '#f5f5f5',
+    surface_alt: midGray || '#e8e8e8',
+    mid_gray: midGray || '#999999'
+  };
 }
+
+// ═══ Per-concept design rules ═══
+// Same base palette for all — only USAGE changes
+const CONCEPT_RULES = {
+  original: {
+    color_map: (p) => ({
+      background: p.lightest, surface: p.surface, surface_alt: p.surface_alt,
+      text: p.darkest, text_secondary: p.mid_gray,
+      primary: p.primary, accent: p.accent,
+      border: darken(p.lightest, 12),
+      hero_bg: 'var(--color-background)', features_bg: 'var(--color-surface)',
+      testimonials_bg: 'var(--color-background)', cta_bg: 'var(--color-primary)'
+    }),
+    typography: (t) => ({ heading_font: t.fonts?.[0]||'Inter', body_font: t.fonts?.[t.fonts?.length-1]||'Inter', heading_weight: '700', body_weight: '400' }),
+    type_scale: '1.25', base_size: '1rem',
+    spacing: { section:'5rem', component:'2rem', element:'1rem', tight:'0.5rem' },
+    border_radius: (s) => (s.border_radius?.[0]||8)+'px'
+  },
+  warm: {
+    color_map: (p) => ({
+      background: p.surface, surface: p.lightest, surface_alt: p.surface_alt,
+      text: p.darkest, text_secondary: p.mid_gray,
+      primary: p.primary, accent: p.accent,
+      border: darken(p.surface, 10),
+      hero_bg: 'var(--color-background)', features_bg: 'var(--color-surface)',
+      testimonials_bg: 'var(--color-surface-alt)', cta_bg: 'var(--color-primary)'
+    }),
+    typography: () => ({ heading_font:'DM Serif Display', body_font:'DM Sans', heading_weight:'400', body_weight:'400' }),
+    type_scale: '1.25', base_size: '1rem',
+    spacing: { section:'5.5rem', component:'2.25rem', element:'1.1rem', tight:'0.6rem' },
+    border_radius: (s) => Math.max(...(s.border_radius||[8]))+'px'
+  },
+  cool: {
+    color_map: (p) => ({
+      background: p.lightest, surface: p.surface, surface_alt: darken(p.surface, 3),
+      text: p.darkest, text_secondary: p.mid_gray,
+      primary: p.primary, accent: p.accent,
+      border: darken(p.lightest, 8),
+      hero_bg: 'var(--color-background)', features_bg: 'var(--color-surface)',
+      testimonials_bg: 'var(--color-background)', cta_bg: 'var(--color-primary)'
+    }),
+    typography: () => ({ heading_font:'Inter', body_font:'Inter', heading_weight:'600', body_weight:'400' }),
+    type_scale: '1.2', base_size: '0.95rem',
+    spacing: { section:'6rem', component:'2.5rem', element:'1rem', tight:'0.5rem' },
+    border_radius: (s) => Math.min(...(s.border_radius||[4]))+'px'
+  },
+  bold: {
+    color_map: (p) => ({
+      background: p.lightest, surface: darken(p.lightest, 3), surface_alt: p.surface,
+      text: p.darkest, text_secondary: darken(p.lightest, 45),
+      primary: p.primary, accent: p.accent,
+      border: p.darkest,
+      hero_bg: 'var(--color-primary)', features_bg: 'var(--color-primary)',
+      testimonials_bg: 'var(--color-primary)', cta_bg: 'var(--color-darkest)'
+    }),
+    typography: () => ({ heading_font:'Archivo Black', body_font:'Archivo', heading_weight:'900', body_weight:'400' }),
+    type_scale: '1.333', base_size: '1.05rem',
+    spacing: { section:'4rem', component:'1.5rem', element:'0.75rem', tight:'0.4rem' },
+    border_radius: () => '0px'
+  },
+  minimal: {
+    color_map: (p) => ({
+      background: p.lightest, surface: p.surface, surface_alt: p.surface,
+      text: lighten(p.darkest, 8), text_secondary: p.mid_gray,
+      primary: p.primary, accent: p.accent,
+      border: lighten(p.surface, 3),
+      hero_bg: 'var(--color-background)', features_bg: 'var(--color-background)',
+      testimonials_bg: 'var(--color-background)', cta_bg: 'var(--color-surface)'
+    }),
+    typography: () => ({ heading_font:'Plus Jakarta Sans', body_font:'Plus Jakarta Sans', heading_weight:'600', body_weight:'400' }),
+    type_scale: '1.15', base_size: '0.9rem',
+    spacing: { section:'7rem', component:'3rem', element:'1.25rem', tight:'0.75rem' },
+    border_radius: (s) => Math.max(...(s.border_radius||[8]))+'px'
+  }
+};
 
 function generateTokensJS(brand, style) {
   const colours = brand.colours?.top_colours || [];
   const typography = brand.typography || {};
   const spacing = brand.spacing || {};
-  const key = identifyKeyColours(colours);
-  const bodySize = typography.body_size || '1rem';
-  const radius = spacing.border_radius || [8];
+  const content = brand.content || {};
   
-  const styles = {
-    original: {
-      bg: key.background, surface: key.surface, text: key.text,
-      primary: key.primary, accent: key.accent,
-      headingFont: typography.fonts?.[0] || 'Inter', bodyFont: typography.fonts?.[typography.fonts?.length - 1] || 'Inter',
-      headingWeight: '700', bodyWeight: '400', scaleRatio: '1.25', radius: radius[0] + 'px'
-    },
-    warm: {
-      bg: key.background, surface: lighten(key.surface, 2), text: key.text,
-      primary: shiftHue(key.primary, 25), accent: shiftHue(key.accent, 25),
-      headingFont: 'DM Serif Display', bodyFont: 'DM Sans', headingWeight: '400', bodyWeight: '400',
-      scaleRatio: '1.25', radius: Math.max(...radius) + 'px'
-    },
-    cool: {
-      bg: lighten(key.background, 1), surface: lighten(key.surface, 1), text: key.text,
-      primary: shiftHue(key.primary, 195), accent: shiftHue(key.accent, 195),
-      headingFont: 'Inter', bodyFont: 'Inter', headingWeight: '600', bodyWeight: '400',
-      scaleRatio: '1.2', radius: Math.min(...radius) + 'px'
-    },
-    bold: {
-      bg: isDark(key.background) ? key.background : darken(key.background, 5), surface: darken(key.surface, 3), text: isDark(key.background) ? '#fff' : '#000',
-      primary: saturate(key.primary, 20), accent: saturate(key.accent, 25),
-      headingFont: 'Archivo Black', bodyFont: 'Archivo', headingWeight: '900', bodyWeight: '400',
-      scaleRatio: '1.333', radius: '0px'
-    },
-    minimal: {
-      bg: lighten(key.background, 2), surface: lighten(key.surface, 3), text: lighten(key.text, 10),
-      primary: lighten(saturate(key.primary, -10), 5), accent: lighten(saturate(key.accent, -15), 3),
-      headingFont: 'Plus Jakarta Sans', bodyFont: 'Plus Jakarta Sans', headingWeight: '600', bodyWeight: '400',
-      scaleRatio: '1.15', radius: Math.max(...radius) + 'px'
-    }
-  };
+  // 1. Extract shared base palette (same for all concepts)
+  const palette = identifyKeyColours(colours);
   
-  const s = styles[style] || styles.original;
+  // 2. Get concept rules
+  const rules = CONCEPT_RULES[style] || CONCEPT_RULES.original;
+  
+  // 3. Apply colour mapping
+  const mapped = rules.color_map(palette);
+  
+  // 4. Build tokens
   return {
     colors: {
-      background: s.bg, surface: s.surface, surface_alt: lighten(s.surface, -2),
-      text: s.text, text_secondary: lighten(s.text, 40),
-      primary: s.primary, primary_hover: darken(s.primary, 8),
-      accent: s.accent, border: darken(s.bg, 10)
+      background: mapped.background,
+      surface: mapped.surface,
+      surface_alt: mapped.surface_alt,
+      text: mapped.text,
+      text_secondary: mapped.text_secondary,
+      primary: mapped.primary,
+      primary_hover: darken(mapped.primary, 8),
+      accent: mapped.accent,
+      border: mapped.border,
+      hero_bg: mapped.hero_bg,
+      features_bg: mapped.features_bg,
+      testimonials_bg: mapped.testimonials_bg,
+      cta_bg: mapped.cta_bg
     },
     typography: {
-      heading_font: s.headingFont, body_font: s.bodyFont,
-      heading_weight: s.headingWeight, body_weight: s.bodyWeight,
-      scale_ratio: s.scaleRatio, body_size: bodySize
+      ...rules.typography(typography),
+      scale_ratio: rules.type_scale,
+      body_size: rules.base_size
     },
     spacing: {
-      section: '5rem', component: '2rem', element: '1rem', tight: '0.5rem',
-      border_radius: s.radius
+      ...rules.spacing,
+      border_radius: rules.border_radius(spacing)
     }
   };
 }
@@ -535,7 +622,7 @@ function generateTokensJS(brand, style) {
 // ═══ Client-Side Section Renderer ═══
 function cssTokens(tokens) {
   const c = tokens.colors, t = tokens.typography, s = tokens.spacing;
-  return `--font-heading:'${t.heading_font}',sans-serif;--font-body:'${t.body_font}',sans-serif;--font-heading-weight:${t.heading_weight};--font-body-weight:${t.body_weight};--color-background:${c.background};--color-surface:${c.surface};--color-surface-alt:${c.surface_alt};--color-text:${c.text};--color-text-secondary:${c.text_secondary};--color-primary:${c.primary};--color-primary-hover:${c.primary_hover};--color-accent:${c.accent};--color-border:${c.border};--spacing-section:${s.section};--spacing-component:${s.component};--spacing-element:${s.element};--spacing-tight:${s.tight};--border-radius:${s.border_radius}`;
+  return `--font-heading:'${t.heading_font}',sans-serif;--font-body:'${t.body_font}',sans-serif;--font-heading-weight:${t.heading_weight};--font-body-weight:${t.body_weight};--color-background:${c.background};--color-surface:${c.surface};--color-surface-alt:${c.surface_alt};--color-text:${c.text};--color-text-secondary:${c.text_secondary};--color-primary:${c.primary};--color-primary-hover:${c.primary_hover};--color-accent:${c.accent};--color-border:${c.border};--color-hero-bg:${c.hero_bg||'var(--color-background)'};--color-features-bg:${c.features_bg||'var(--color-surface)'};--color-testimonials-bg:${c.testimonials_bg||'var(--color-background)'};--color-cta-bg:${c.cta_bg||'var(--color-primary)'};--color-darkest:${c.text};--spacing-section:${s.section};--spacing-component:${s.component};--spacing-element:${s.element};--spacing-tight:${s.tight};--border-radius:${s.border_radius}`;
 }
 
 const SECTION_HTML = {
@@ -547,7 +634,7 @@ const SECTION_HTML = {
     const cta = c.ctas?.[0] || 'Learn More';
     const heroImg = c.images?.[0]?.url || '';
     const imgStyle = heroImg ? `background:linear-gradient(135deg,var(--color-primary)08,var(--color-background)e6),url(${heroImg}) center/cover` : `background:linear-gradient(160deg,var(--color-background) 60%,var(--color-surface) 100%)`;
-    return [`<section class="section-hero"><div class="hero-content"><h1 class="hero-title">${h1}</h1><p class="hero-subtitle">${sub.substring(0,200)}</p><div class="hero-actions"><button class="hero-cta hero-cta--primary">${cta}</button><button class="hero-cta hero-cta--secondary">Learn More</button></div></div>${heroImg?`<div class="hero-visual"><img src="${heroImg}" alt="" loading="lazy"></div>`:'<div class="hero-visual hero-visual--pattern"></div>'}</section>`, `.section-hero{padding:var(--spacing-section) var(--spacing-component);display:flex;align-items:center;min-height:75vh;position:relative;overflow:hidden;${imgStyle}}.hero-content{max-width:600px;position:relative;z-index:2}.hero-title{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(2.25rem,5.5vw,4rem);color:var(--color-text);line-height:1.08;margin:0 0 1.25rem;letter-spacing:-.02em}.hero-subtitle{font-family:var(--font-body);font-size:clamp(1rem,1.5vw,1.2rem);color:var(--color-text-secondary);line-height:1.65;margin:0 0 2rem;max-width:520px}.hero-actions{display:flex;gap:var(--spacing-element);flex-wrap:wrap}.hero-cta{font-family:var(--font-body);font-weight:600;font-size:1rem;padding:.8em 2.2em;border-radius:var(--border-radius);cursor:pointer;transition:all .2s;border:none}.hero-cta--primary{background:var(--color-primary);color:#fff;box-shadow:0 4px 14px color-mix(in srgb,var(--color-primary) 40%,transparent)}.hero-cta--primary:hover{background:var(--color-primary-hover);transform:translateY(-2px);box-shadow:0 8px 25px color-mix(in srgb,var(--color-primary) 50%,transparent)}.hero-cta--secondary{background:transparent;color:var(--color-text);border:2px solid var(--color-border)}.hero-cta--secondary:hover{border-color:var(--color-text)}.hero-visual{position:absolute;right:0;top:0;width:48%;height:100%;overflow:hidden}.hero-visual img{width:100%;height:100%;object-fit:cover}.hero-visual--pattern{background:linear-gradient(135deg,var(--color-primary)18,var(--color-accent)18);opacity:.06;border-radius:50% 0 0 50%;transform:scale(1.4)}@media(max-width:768px){.section-hero{min-height:60vh;padding:3rem 1.5rem}.hero-visual{display:none}.hero-content{max-width:100%}}`];
+    return [`<section class="section-hero" style="background:var(--color-hero-bg)"><div class="hero-content"><h1 class="hero-title">${h1}</h1><p class="hero-subtitle">${sub.substring(0,200)}</p><div class="hero-actions"><button class="hero-cta hero-cta--primary">${cta}</button><button class="hero-cta hero-cta--secondary">Learn More</button></div></div>${heroImg?`<div class="hero-visual"><img src="${heroImg}" alt="" loading="lazy"></div>`:'<div class="hero-visual hero-visual--pattern"></div>'}</section>`, `.section-hero{padding:var(--spacing-section) var(--spacing-component);display:flex;align-items:center;min-height:75vh;position:relative;overflow:hidden}.hero-content{max-width:600px;position:relative;z-index:2}.hero-title{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(2.25rem,5.5vw,4rem);color:var(--color-text);line-height:1.08;margin:0 0 1.25rem;letter-spacing:-.02em}.hero-subtitle{font-family:var(--font-body);font-size:clamp(1rem,1.5vw,1.2rem);color:var(--color-text-secondary);line-height:1.65;margin:0 0 2rem;max-width:520px}.hero-actions{display:flex;gap:var(--spacing-element);flex-wrap:wrap}.hero-cta{font-family:var(--font-body);font-weight:600;font-size:1rem;padding:.8em 2.2em;border-radius:var(--border-radius);cursor:pointer;transition:all .2s;border:none}.hero-cta--primary{background:var(--color-primary);color:#fff;box-shadow:0 4px 14px color-mix(in srgb,var(--color-primary) 40%,transparent)}.hero-cta--primary:hover{background:var(--color-primary-hover);transform:translateY(-2px);box-shadow:0 8px 25px color-mix(in srgb,var(--color-primary) 50%,transparent)}.hero-cta--secondary{background:transparent;color:var(--color-text);border:2px solid var(--color-border)}.hero-cta--secondary:hover{border-color:var(--color-text)}.hero-visual{position:absolute;right:0;top:0;width:48%;height:100%;overflow:hidden}.hero-visual img{width:100%;height:100%;object-fit:cover}.hero-visual--pattern{background:linear-gradient(135deg,var(--color-primary)18,var(--color-accent)18);opacity:.06;border-radius:50% 0 0 50%;transform:scale(1.4)}@media(max-width:768px){.section-hero{min-height:60vh;padding:3rem 1.5rem}.hero-visual{display:none}.hero-content{max-width:100%}}`];
   },
   
   features: (t, c) => {
@@ -560,7 +647,7 @@ const SECTION_HTML = {
     }
     if (!items.length) items.push({title:'Quality',desc:'Exceptional quality.'},{title:'Service',desc:'Dedicated to you.'},{title:'Innovation',desc:'Always forward.'});
     const cards = items.map(i => `<div class="feature-card">${i.img?`<div class="feature-image"><img src="${i.img}" alt="" loading="lazy"></div>`:'<div class="feature-icon">✦</div>'}<div class="feature-text"><h3 class="feature-title">${i.title}</h3><p class="feature-desc">${i.desc}</p></div></div>`).join('');
-    return [`<section class="section-features"><div class="features-inner"><h2 class="features-heading">What We Offer</h2><div class="features-grid">${cards}</div></div></section>`, `.section-features{padding:var(--spacing-section) var(--spacing-component);background:var(--color-surface)}.features-inner{max-width:1200px;margin:0 auto}.features-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.25rem);color:var(--color-text);text-align:center;margin:0 0 3.5rem;letter-spacing:-.01em}.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--spacing-component)}.feature-card{background:var(--color-background);border-radius:var(--border-radius);border:1px solid var(--color-border);overflow:hidden;transition:transform .2s,box-shadow .2s}.feature-card:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,.06)}.feature-image{width:100%;height:200px;overflow:hidden}.feature-image img{width:100%;height:100%;object-fit:cover}.feature-icon{font-size:2.5rem;padding:1.5rem 1.5rem 0;color:var(--color-primary);opacity:.7}.feature-text{padding:1.5rem}.feature-title{font-family:var(--font-heading);font-weight:600;font-size:1.2rem;color:var(--color-text);margin:0 0 .5rem}.feature-desc{font-family:var(--font-body);font-size:.95rem;color:var(--color-text-secondary);line-height:1.6;margin:0}@media(max-width:768px){.features-grid{grid-template-columns:1fr}}`];
+    return [`<section class="section-features" style="background:var(--color-features-bg)"><div class="features-inner"><h2 class="features-heading">What We Offer</h2><div class="features-grid">${cards}</div></div></section>`, `.section-features{padding:var(--spacing-section) var(--spacing-component)}.features-inner{max-width:1200px;margin:0 auto}.features-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.25rem);color:var(--color-text);text-align:center;margin:0 0 3.5rem;letter-spacing:-.01em}.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--spacing-component)}.feature-card{background:var(--color-background);border-radius:var(--border-radius);border:1px solid var(--color-border);overflow:hidden;transition:transform .2s,box-shadow .2s}.feature-card:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,.06)}.feature-image{width:100%;height:200px;overflow:hidden}.feature-image img{width:100%;height:100%;object-fit:cover}.feature-icon{font-size:2.5rem;padding:1.5rem 1.5rem 0;color:var(--color-primary);opacity:.7}.feature-text{padding:1.5rem}.feature-title{font-family:var(--font-heading);font-weight:600;font-size:1.2rem;color:var(--color-text);margin:0 0 .5rem}.feature-desc{font-family:var(--font-body);font-size:.95rem;color:var(--color-text-secondary);line-height:1.6;margin:0}@media(max-width:768px){.features-grid{grid-template-columns:1fr}}`];
   },
   
   testimonials: (t, c) => {
@@ -568,12 +655,12 @@ const SECTION_HTML = {
     const initials = ['SM','JK','ER'];
     const ts = [{text:`Exceptional experience with ${name}.`,author:'Sarah M.',role:'Client'},{text:'Consistent quality, every time.',author:'James K.',role:'Customer'},{text:'Remarkable attention to detail.',author:'Elena R.',role:'Visitor'}];
     const cards = ts.map((t,i) => `<div class="testimonial-card"><div class="testimonial-stars">★★★★★</div><p class="testimonial-text">"${t.text}"</p><div class="testimonial-author"><div class="testimonial-avatar">${initials[i]}</div><div><strong>${t.author}</strong><span>${t.role}</span></div></div></div>`).join('');
-    return [`<section class="section-testimonials"><div class="testimonials-inner"><h2 class="testimonials-heading">What People Say</h2><div class="testimonials-grid">${cards}</div></div></section>`, `.section-testimonials{padding:var(--spacing-section) var(--spacing-component);background:var(--color-background)}.testimonials-inner{max-width:1200px;margin:0 auto}.testimonials-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.25rem);color:var(--color-text);text-align:center;margin:0 0 3.5rem;letter-spacing:-.01em}.testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--spacing-component)}.testimonial-card{background:var(--color-surface);padding:2rem;border-radius:var(--border-radius);border:1px solid var(--color-border);display:flex;flex-direction:column;gap:1rem}.testimonial-stars{color:var(--color-primary);font-size:1rem;letter-spacing:2px}.testimonial-text{font-family:var(--font-body);font-size:1rem;color:var(--color-text);line-height:1.7;margin:0;font-style:italic}.testimonial-author{display:flex;align-items:center;gap:.75rem;font-family:var(--font-body);margin-top:auto}.testimonial-avatar{width:44px;height:44px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;flex-shrink:0}.testimonial-author strong{color:var(--color-text);font-size:.9rem;display:block}.testimonial-author span{color:var(--color-text-secondary);font-size:.8rem}@media(max-width:768px){.testimonials-grid{grid-template-columns:1fr}}`];
+    return [`<section class="section-testimonials" style="background:var(--color-testimonials-bg)"><div class="testimonials-inner"><h2 class="testimonials-heading">What People Say</h2><div class="testimonials-grid">${cards}</div></div></section>`, `.section-testimonials{padding:var(--spacing-section) var(--spacing-component)}.testimonials-inner{max-width:1200px;margin:0 auto}.testimonials-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.5rem,3vw,2.25rem);color:var(--color-text);text-align:center;margin:0 0 3.5rem;letter-spacing:-.01em}.testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--spacing-component)}.testimonial-card{background:var(--color-surface);padding:2rem;border-radius:var(--border-radius);border:1px solid var(--color-border);display:flex;flex-direction:column;gap:1rem}.testimonial-stars{color:var(--color-primary);font-size:1rem;letter-spacing:2px}.testimonial-text{font-family:var(--font-body);font-size:1rem;color:var(--color-text);line-height:1.7;margin:0;font-style:italic}.testimonial-author{display:flex;align-items:center;gap:.75rem;font-family:var(--font-body);margin-top:auto}.testimonial-avatar{width:44px;height:44px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;flex-shrink:0}.testimonial-author strong{color:var(--color-text);font-size:.9rem;display:block}.testimonial-author span{color:var(--color-text-secondary);font-size:.8rem}@media(max-width:768px){.testimonials-grid{grid-template-columns:1fr}}`];
   },
   
   cta: (t, c) => {
     const cta = c.ctas?.[0] || 'Get Started';
-    return [`<section class="section-cta"><div class="cta-inner"><h2 class="cta-heading">Ready to Experience the Difference?</h2><p class="cta-subtitle">Join hundreds of satisfied customers. Let's build something great together.</p><div class="cta-actions"><button class="cta-button">${cta}</button><button class="cta-button cta-button--outline">Learn More</button></div></div></section>`, `.section-cta{padding:var(--spacing-section) var(--spacing-component);background:linear-gradient(135deg,var(--color-primary),var(--color-primary-hover));text-align:center;position:relative;overflow:hidden}.section-cta::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 20% 50%,rgba(255,255,255,.08) 0%,transparent 50%);pointer-events:none}.cta-inner{max-width:650px;margin:0 auto;position:relative;z-index:1}.cta-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.75rem,3.5vw,2.75rem);color:#fff;margin:0 0 1rem;letter-spacing:-.01em}.cta-subtitle{font-family:var(--font-body);font-size:1.125rem;color:rgba(255,255,255,.85);line-height:1.6;margin:0 0 2.5rem}.cta-actions{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}.cta-button{font-family:var(--font-body);font-weight:700;font-size:1.05rem;padding:.85em 2.5em;background:#fff;color:var(--color-primary);border:none;border-radius:var(--border-radius);cursor:pointer;transition:all .2s}.cta-button:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,.2)}.cta-button--outline{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.5)}.cta-button--outline:hover{background:rgba(255,255,255,.1);border-color:#fff}@media(max-width:768px){.cta-actions{flex-direction:column;align-items:center}}`];
+    return [`<section class="section-cta" style="background:var(--color-cta-bg)"><div class="cta-inner"><h2 class="cta-heading">Ready to Experience the Difference?</h2><p class="cta-subtitle">Join hundreds of satisfied customers. Let's build something great together.</p><div class="cta-actions"><button class="cta-button">${cta}</button><button class="cta-button cta-button--outline">Learn More</button></div></div></section>`, `.section-cta{padding:var(--spacing-section) var(--spacing-component);text-align:center;position:relative;overflow:hidden}.section-cta::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 20% 50%,rgba(255,255,255,.08) 0%,transparent 50%);pointer-events:none}.cta-inner{max-width:650px;margin:0 auto;position:relative;z-index:1}.cta-heading{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(1.75rem,3.5vw,2.75rem);color:#fff;margin:0 0 1rem;letter-spacing:-.01em}.cta-subtitle{font-family:var(--font-body);font-size:1.125rem;color:rgba(255,255,255,.85);line-height:1.6;margin:0 0 2.5rem}.cta-actions{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}.cta-button{font-family:var(--font-body);font-weight:700;font-size:1.05rem;padding:.85em 2.5em;background:#fff;color:var(--color-primary);border:none;border-radius:var(--border-radius);cursor:pointer;transition:all .2s}.cta-button:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,.2)}.cta-button--outline{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.5)}.cta-button--outline:hover{background:rgba(255,255,255,.1);border-color:#fff}@media(max-width:768px){.cta-actions{flex-direction:column;align-items:center}}`];
   },
   
   footer: (t, c) => {
