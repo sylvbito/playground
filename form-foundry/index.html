@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Form Foundry — Modern CSS Form Components</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* ============================================
+   TOKENS
+   ============================================ */
+:root {
+  --bg: oklch(0.145 0.01 260);
+  --surface: oklch(0.18 0.012 260);
+  --surface2: oklch(0.22 0.012 260);
+  --surface3: oklch(0.26 0.012 260);
+  --border: oklch(0.30 0.012 260);
+  --text: oklch(0.93 0.004 260);
+  --text2: oklch(0.68 0.008 260);
+  --text3: oklch(0.48 0.008 260);
+  --accent: oklch(0.65 0.20 260);
+  --accent-hover: oklch(0.58 0.20 260);
+  --accent-muted: oklch(0.65 0.20 260 / 0.12);
+  --accent-text: oklch(0.97 0 0);
+  --success: oklch(0.65 0.18 150);
+  --success-muted: oklch(0.65 0.18 150 / 0.10);
+  --danger: oklch(0.58 0.22 20);
+  --danger-muted: oklch(0.58 0.22 20 / 0.10);
+  --warning: oklch(0.72 0.15 85);
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --font: system-ui, -apple-system, sans-serif;
+  --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  color-scheme: dark;
+  interpolate-size: allow-keywords;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+img, svg { display: block; max-width: 100%; }
+
+/* ============================================
+   LAYOUT
+   ============================================ */
+.container {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 6rem;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+.header h1 {
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, var(--accent), oklch(0.72 0.15 160));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+.header p {
+  color: var(--text2);
+  font-size: 1.05rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.header .badge-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 20px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+}
+.badge.shipped { color: var(--success); border-color: var(--success); background: var(--success-muted); }
+.badge.new { color: var(--accent); border-color: var(--accent); background: var(--accent-muted); }
+
+/* ============================================
+   COMPONENT CARDS
+   ============================================ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.card-header h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.card-header .support-badges {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+.card-demo {
+  padding: 2rem 1.5rem;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Code panel */
+.code-toggle {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid var(--border);
+}
+.code-tab {
+  flex: 1;
+  padding: 0.6rem 1rem;
+  background: var(--surface);
+  border: none;
+  color: var(--text3);
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  border-bottom: 2px solid transparent;
+}
+.code-tab:hover { color: var(--text2); }
+.code-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: var(--surface2);
+}
+.code-panel {
+  display: none;
+  padding: 1.25rem 1.5rem;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+.code-panel.visible { display: block; }
+.code-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  white-space: pre;
+  color: var(--text);
+  position: relative;
+}
+.code-block .copy-mini {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.7rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  cursor: pointer;
+  font-family: var(--font);
+  transition: background 0.15s;
+}
+.code-block .copy-mini:hover { background: var(--surface3); }
+
+/* ============================================
+   FORM COMPONENT STYLES
+   ============================================ */
+
+/* --- 1. SELECT (appearance: base-select) --- */
+.select-base {
+  appearance: base-select;
+  padding: 0.6rem 2.25rem 0.6rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  cursor: pointer;
+  min-width: 200px;
+  transition: border-color 0.2s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+}
+@supports (appearance: base-select) {
+  .select-base-modern {
+    appearance: base-select;
+    padding: 0.6rem 0.85rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 0.9rem;
+    cursor: pointer;
+    min-width: 200px;
+  }
+  .select-base-modern::picker(select) {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 12px 32px oklch(0 0 0 / 0.4);
+    padding: 0.25rem;
+    min-width: 200px;
+  }
+  .select-base-modern option {
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    margin: 0.15rem;
+  }
+  .select-base-modern option:hover {
+    background: var(--accent-muted);
+    color: var(--accent);
+  }
+  .select-base-modern option:checked {
+    background: var(--accent);
+    color: var(--accent-text);
+    font-weight: 500;
+  }
+  /* Open animation */
+  .select-base-modern::picker(select) {
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .select-base-modern:open::picker(select) {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fallback styling for non-supporting browsers */
+@supports not (appearance: base-select) {
+  .select-base-modern {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 0.6rem 2.25rem 0.6rem 0.85rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 0.9rem;
+    cursor: pointer;
+    min-width: 200px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+  }
+}
+
+/* --- 2. TEXT INPUT --- */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  max-width: 360px;
+}
+.input-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text2);
+}
+.input-label .required { color: var(--danger); }
+.text-input {
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  caret-color: var(--accent);
+}
+.text-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+.text-input.error {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-muted);
+}
+.text-input.success {
+  border-color: var(--success);
+  box-shadow: 0 0 0 3px var(--success-muted);
+}
+.input-hint { font-size: 0.78rem; color: var(--text3); }
+.input-error { font-size: 0.78rem; color: var(--danger); display: flex; align-items: center; gap: 0.3rem; }
+.input-success { font-size: 0.78rem; color: var(--success); display: flex; align-items: center; gap: 0.3rem; }
+
+/* --- 3. CHECKBOX / RADIO --- */
+.check-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.35rem 0;
+}
+.check-item input[type="checkbox"],
+.check-item input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  border: 1.5px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  accent-color: var(--accent);
+}
+.check-item input[type="radio"] { border-radius: 50%; }
+.check-item input[type="checkbox"]:checked,
+.check-item input[type="radio"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.check-item input[type="checkbox"]:checked::after {
+  content: '';
+  width: 0.45rem;
+  height: 0.7rem;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+.check-item input[type="radio"]:checked::after {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: white;
+}
+.check-item input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.check-item:hover input:not(:checked) {
+  border-color: var(--accent);
+}
+
+/* --- 4. SWITCH/TOGGLE --- */
+.switch-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 26px;
+  flex-shrink: 0;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch .slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 26px;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+.switch .slider::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.switch input:checked + .slider { background: var(--accent); }
+.switch input:checked + .slider::before { transform: translateX(18px); }
+.switch input:focus-visible + .slider {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- 5. RANGE SLIDER --- */
+.range-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 300px;
+}
+.range-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--text3);
+}
+.range-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  outline: none;
+  accent-color: var(--accent);
+}
+.range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--surface2);
+  box-shadow: 0 0 6px var(--accent-muted);
+  transition: transform 0.15s;
+}
+.range-input::-webkit-slider-thumb:hover { transform: scale(1.15); }
+.range-input::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--surface2);
+}
+.range-value { font-size: 0.85rem; font-weight: 600; color: var(--accent); text-align: center; }
+
+/* --- 6. FILE UPLOAD --- */
+.file-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 360px;
+}
+.file-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 2px dashed var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.file-label:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-muted); }
+.file-input { display: none; }
+.file-name { font-size: 0.78rem; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* --- 7. TEXTAREA --- */
+.textarea-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  max-width: 360px;
+}
+.textarea {
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  caret-color: var(--accent);
+  field-sizing: content;
+}
+.textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+.char-count {
+  font-size: 0.78rem;
+  color: var(--text3);
+  text-align: right;
+}
+.char-count.warn { color: var(--warning); }
+.char-count.over { color: var(--danger); }
+
+/* --- 8. BUTTONS --- */
+.btn-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.25rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.4;
+}
+.btn:hover { background: var(--surface2); }
+.btn:active { transform: scale(0.97); }
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+}
+.btn-danger:hover { background: oklch(0.52 0.22 20); }
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text2);
+}
+.btn-ghost:hover { background: var(--accent-muted); color: var(--accent); }
+.btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+.btn-lg { padding: 0.8rem 1.75rem; font-size: 1rem; }
+
+/* ============================================
+   CODE PANEL
+   ============================================ */
+.code-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  gap: 0.5rem;
+}
+.code-title {
+  font-size: 0.82rem;
+  color: var(--text3);
+  font-weight: 500;
+}
+.code-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+.code-btn {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  cursor: pointer;
+  font-family: var(--font);
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.code-btn:hover { background: var(--surface3); color: var(--text); }
+
+/* ============================================
+   TOAST
+   ============================================ */
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: var(--accent-text);
+  padding: 0.6rem 1.25rem;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  font-weight: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+  z-index: 999;
+}
+.toast.show { opacity: 1; }
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 600px) {
+  .container { padding: 1.5rem 1rem 4rem; }
+  .card-header { padding: 1rem; }
+  .card-demo { padding: 1.5rem 1rem; }
+  .code-panel { padding: 1rem; }
+  .code-block { padding: 0.75rem 1rem; font-size: 0.72rem; }
+  .btn-row { flex-direction: column; width: 100%; }
+  .btn-row .btn { width: 100%; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <h1>Form Foundry</h1>
+  <p>Modern CSS form components — accessible, copy-paste ready, zero-dependency. Built with appearance: base-select, accent-color, light-dark(), and the Popover API.</p>
+  <div class="badge-row">
+    <span class="badge new">appearance: base-select</span>
+    <span class="badge shipped">Baseline 2025</span>
+    <span class="badge">OKLCH dark theme</span>
+    <span class="badge">mobile-first</span>
+  </div>
+</div>
+
+<!-- 1. SELECT (base-select) -->
+<div class="card" id="select">
+  <div class="card-header">
+    <h2>01 · Select (base-select)</h2>
+    <div class="support-badges">
+      <span class="badge new">Chrome 135+</span>
+      <span class="badge">Edge 135+</span>
+      <span class="badge">soon: Safari/FF</span>
+    </div>
+  </div>
+  <div class="card-demo">
+    <select class="select-base-modern" id="selectDemo">
+      <option>Choose a plan…</option>
+      <option>Starter — $9/mo</option>
+      <option>Pro — $29/mo</option>
+      <option>Enterprise — $99/mo</option>
+    </select>
+  </div>
+  <div class="code-toggle">
+    <button class="code-tab active" data-panel="select-html">HTML</button>
+    <button class="code-tab" data-panel="select-css">CSS</button>
+    <button class="code-tab" data-panel="select-notes">Notes</button>
+  </div>
+  <div class="code-panel visible" id="select-html">
+    <div class="code-header-row">
+      <span class="code-title">HTML</span>
+      <div class="code-actions">
+        <button class="code-btn" onclick="copyCode(this, 'select-html-code')">📋 Copy</button>
+      </div>
+    </div>
+    <div class="code-block" id="select-html-code"><select class="form-select" appearance="base-select">
+  <option>Choose a plan…</option>
+  <option>Starter — $9/mo</option>
+  <option>Pro — $29/mo</option>
+  <option>Enterprise — $99/mo</option>
+</select></div>
+  </div>
+  <div class="code-panel" id="select-css">
+    <div class="code-header-row">
+      <span class="code-title">CSS</span>
+      <div class="code-actions">
+        <button class="code-btn" onclick="copyCode(this, 'select-css-code')">📋 Copy</button>
+      </div>
+    </div>
+    <div class="code-block" id="select-css-code">.form-select {
+  appearance: base-select;
+
+  &::picker(select) {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    padding: 0.25rem;
+  }
+
+  option {
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    margin: 0.15rem;
+  }
+  option:hover { background: var(--accent-muted); }
+  option:checked {
+    background: var(--accent);
+    color: white;
+    font-weight: 500;
+  }
+}</div>
+  </div>
+  <div class="code-panel" id="select-notes">
+    <div class="code-header-row">
+      <span class="code-title">Usage Notes</span>
+    </div>
+    <div class="code-block"><strong>appearance: base-select</strong> unlocks full CSS styling of &lt;select&gt; — the picker, options, and open/close state. No more div-wrapping hacks. Chrome 135+ and Edge 135+. Safari and Firefox are actively implementing.
+
+<b>::picker(select)</b> targets the dropdown popup itself.
+<b>:open</b> pseudo-class fires when the picker is visible.
+<b>option:checked</b> styles the currently selected option.
+<b>@starting-style</b> enables open/close animations.
+
+Fallback: use @supports not (appearance: base-select) to provide the standard native select styling.</div>
+  </div>
+</div>
+
+<!-- 2. TEXT INPUT -->
+<div class="card" id="text-input">
+  <div class="card-header">
+    <h2>02 · Text Input</h2>
+    <div class="support-badges">
+      <span class="badge shipped">All browsers</span>
+    </div>
+  </div>
+  <div class="card-demo" style="flex-direction: column; gap: 1.5rem;">
+    <div class="input-group">
+      <label class="input-label">Email <span class="required">*</span></label>
+      <input type="email" class="text-input success" value="user@example.com" placeholder="you@company.com">
+      <span class="input-success">✓ Valid email format</span>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Password</label>
+      <input type="text" class="text-input error" value="123" placeholder="Min 8 characters">
+      <span class="input-error">⚠ Password must be at least 8 characters</span>
+    </div>
+  </div>
+  <div class="code-toggle">
+    <button class="code-tab active" data-panel="input-html">HTML</button>
+    <button class="code-tab" data-panel="input-css">CSS</button>
+  </div>
+  <div class="code-panel visible" id="input-html">
+    <div class="code-header-row"><span class="code-title">HTML</span><button class="code-btn" onclick="copyCode(this,'input-html-code')">📋 Copy</button></div>
+    <div class="code-block" id="input-html-code"><div class="input-group">
+  <label class="input-label">Email <span class="required">*</span></label>
+  <input type="email" class="text-input success"
+    value="user@example.com">
+  <span class="input-success">✓ Valid email</span>
+</div>
+
+<div class="input-group">
+  <label class="input-label">Password</label>
+  <input type="password" class="text-input error">
+  <span class="input-error">⚠ Minimum 8 characters</span>
+</div></div>
+  </div>
+  <div class="code-panel" id="input-css">
+    <div class="code-header-row"><span class="code-title">CSS</span><button class="code-btn" onclick="copyCode(this,'input-css-code')">📋 Copy</button></div>
+    <div class="code-block" id="input-css-code">.text-input {
+  padding: 0.6rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  caret-color: var(--accent);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.text-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+.text-input.error {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-muted);
+}
+.text-input.success {
+  border-color: var(--success);
+  box-shadow: 0 0 0 3px var(--success-muted);
+}</div>
+  </div>
+</div>
+
+<!-- 3. CHECKBOX + RADIO -->
+<div class="card" id="check-radio">
+  <div class="card-header">
+    <h2>03 · Checkbox &amp; Radio</h2>
+    <div class="support-badges">
+      <span class="badge shipped">All browsers</span>
+    </div>
+  </div>
+  <div class="card-demo" style="gap: 2.5rem; flex-wrap: wrap;">
+    <div class="check-group">
+      <label class="check-item">
+        <input type="checkbox" checked>
+        <span>Notifications</span>
+      </label>
+      <label class="check-item">
+        <input type="checkbox" checked>
+        <span>Weekly digest</span>
+      </label>
+      <label class="check-item">
+        <input type="checkbox">
+        <span>Marketing emails</span>
+      </label>
+    </div>
+    <div class="check-group">
+      <label class="check-item">
+        <input type="radio" name="plan-demo" checked>
+        <span>Monthly billing</span>
+      </label>
+      <label class="check-item">
+        <input type="radio" name="plan-demo">
+        <span>Annual billing (save 20%)</span>
+      </label>
+    </div>
+  </div>
+  <div class="code-toggle">
+    <button class="code-tab active" data-panel="check-html">HTML</button>
+    <button class="code-tab" data-panel="check-css">CSS</button>
+  </div>
+  <div class="code-panel visible" id="check-html">
+    <div class="code-header-row"><span class="code-title">HTML</span><button class="code-btn" onclick="copyCode(this,'check-html-code')">📋 Copy</button></div>
+    <div class="code-block" id="check-html-code"><label class="check-item">
+  <input type="checkbox" checked>
+  <span>Notifications</span>
+</label>
+
+<label class="check-item">
+  <input type="radio" name="plan" checked>
+  <span>Monthly billing</span>
+</label></div>
+  </div>
+  <div class="code-panel" id="check-css">
+    <div class="code-header-row"><span class="code-title">CSS</span><button class="code-btn" onclick="copyCode(this,'check-css-code')">📋 Copy</button></div>
+    <div class="code-block" id="check-css-code">.check-item input[type="checkbox"],
+.check-item input[type="radio"] {
+  appearance: none;
+  width: 1.15rem; height: 1.15rem;
+  border: 1.5px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  accent-color: var(--accent);
+}
+.check-item input[type="radio"] { border-radius: 50%; }
+
+.check-item input:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.check-item input[type="checkbox"]:checked::after {
+  content: '';
+  width: 0.45rem; height: 0.7rem;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.check-item input[type="radio"]:checked::after {
+  content: '';
+  width: 0.5rem; height: 0.5rem;
+  border-radius: 50%;
+  background: white;
+}</div>
+  </div>
+</div>
+
+<!-- 4. SWITCH TOGGLE -->
+<div class="card" id="switch">
+  <div class="card-header">
+    <h2>04 · Switch Toggle</h2>
+    <div class="support-badges">
+      <span class="badge shipped">All browsers</span>
+    </div>
+  </div>
+  <div class="card-demo" style="flex-direction: column; gap: 1rem;">
+    <div class="switch-wrap">
+      <label class="switch">
+        <input type="checkbox" checked id="switchDemo1">
+        <span class="slider"></span>
+      </label>
+      <span>Dark mode</span>
+    </div>
+    <div class="switch-wrap">
+      <label class="switch">
+        <input type="checkbox" id="switchDemo2">
+        <span class="slider"></span>
+      </label>
+      <span>Email notifications</span>
+    </div>
+  </div>
+  <div class="code-toggle">
+    <button class="code-tab active" data-panel="switch-html">HTML</button>
+    <button class="code-tab" data-panel="switch-css">CSS</button>
+  </div>
+  <div class="code-panel visible" id="switch-html">
+    <div class="code-header-row"><span class="code-title">HTML</span><button class="code-btn" onclick="copyCode(this,'switch-html-code')">📋 Copy</button></div>
+    <div class="code-block" id="switch-html-code"><label class="switch">
+  <input type="checkbox">
+  <span class="slider"></span>
+</label></div>
+  </div>
+  <div class="code-panel" id="switch-css">
+    <div class="code-header-row"><span class="code-title">CSS</span><button class="code-btn" onclick="copyCode(this,'switch-css-code')">📋 Copy</button></div>
+    <div class="code-block" id="switch-css-code">.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px; height: 26px;
+}
+.switch input {
+  opacity: 0;
+  width: 0; height: 0;
+}
+.switch .slider {
+  position: absolute; inset: 0;
+  background: var(--border);
+  border-radius: 26px;
+  transition: background 0.2s;
+}
+.switch .slider::before {
+  content: '';
+  position: absolute;
+  width: 20px; height: 20px;
+  left: 3px; bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.switch input:checked + .slider {
+  background: var(--accent);
+}
+.switch input:checked + .slider::before {
+  transform: translateX(18px);
+}
+.switch input:focus-visible + .slider {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}</div>
+  </div>
+</div>
+
+<!-- 5. RANGE SLIDER -->
+<div class="card" id="range">
+  <div class="card-header">
+    <h2>05 · Range Slider</h2>
+    <div class="support-badges">
+      <span class="badge shipped">All browsers</span>
+    </div>
+  </div>
+  <div class="card-demo">
+    <div class="range-wrap">
+      <div class="range-labels">
+        <span>0%</span>
+        <span id="rangeVal" class="range-value">50%</span>
+        <span>100%</span>
+      </div>
+      <input type="range" class="range-input" min="0" max="100" value="50" id="rangeDemo">
+    </div>
+  </div>
+  <div class="code-toggle">
+    <button class="code-tab active" data-panel="range-html">HTML</button>
+    <button class="code-tab" data-panel="range-css">CSS</button>
+  </div>
+  <div class="code-panel visible" id="range-html">
+    <div class="code-header-row"><span class="code-title">HTML</span><button class="code-btn" onclick="copyCode(this,'range-html-code')">📋 Copy</button></div>
+    <div class="code-block" id="range-html-code"><input type="range" min="0" max="100" value="50"
+  class="range-input"></div>
+  </div>
+  <div class="code-panel" id="range-css">
+    <div class="code-header-row"><span class="code-title">CSS</span><button class="code-btn" onclick="copyCode(this,'range-css-code')">📋 Copy</button></div>
+    <div class="code-block" id="range-css-code">.range-input {
+  accent-color: var(--accent);
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+}
+.range-input::-webkit-slider-thumb {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--surface2);
+  box-shadow: 0 0 6px var(--accent-muted);
+}</div>
+  </div>
+</div>
+
+<!-- 6. FILE UPLOAD -->
+<div class="card" id="file">
+  <div class="card-header">
+    <h2>06 · File Upload</h2>
+    <div class="support-badges">
+      <span class="badge shipped">All browsers</span>
+    </div>
+  </div>
+  <div class="card-demo">
+    <div class="file-wrap">
+      <label class="file-label" for="fileDemo">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 5l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Choose a file or drag it here
+      </label>
+      <input type="file" class="file-input" id="fileDemo">
+      <span class="file-name" id="fileName">No file chosen</span>
+    </div>
+  </div>
+  <div class="code-toggle">
+    <button class="code-tab active" data-panel="file-html">HTML</button>
+    <button class="code-tab" data-panel="file-css">CSS</button>
+  </div>
+  <div class="code-panel visible" id="file-html">
+    <div class="code-header-row"><span class="code-title">HTML</span><button class="code-btn" onclick="copyCode(this,'file-html-code')">📋 Copy</button></div>
+    <div class="code-block" id="file-html-code"><label class="file-label" for="upload">
+  📎 Choose a file or drag it here
+</label>
+<input type="file" class="file-input" id="upload">
+<span class="file-name">No file chosen</span></div>
+  </div>
+  <div class="code-panel" id="file-css">
+    <div class="code-header-row"><span class="code-title">CSS</span><button class="code-btn" onclick="copyCode(this,'file-css-code')">📋 Copy</button></div>
+    <div class="code-block" id="file-css-code">.file-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border: 2px dashed var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.file-label:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-muted);
+}
+.file-input { display: none; }</div>
+  </div>
+</div>
+
+<!-- 7. TEXTAREA -->
+<div class="card" id="textarea">
+  <div class="card-header">
+    <h2>07 · Textarea + field-sizing</h2>
+    <div class="support-badges">
+      <span class="badge shipped">Chrome 123+</span>
+    </div>
+  </div>
+  <div class="card-demo">
+    <div class="textarea-wrap">
+      <label class="input-label">Message</label>
+      <textarea class="textarea" id="textareaDemo" placeholder="Write your message…" maxlength="500">Hello! I'd like to inquire about your services.</textarea>
+      <span class="char-count" id="charCount">47 / 500</span>
+    </div>
+  </div>
+  <div class="code-toggle">
+    <button class="code-tab active" data-panel="textarea-html">HTML</button>
+    <button class="code-tab" data-panel="textarea-css">CSS</button>
+  </div>
+  <div class="code-panel visible" id="textarea-html">
+    <div class="code-header-row"><span class="code-title">HTML</span><button class="code-btn" onclick="copyCode(this,'textarea-html-code')">📋 Copy</button></div>
+    <div class="code-block" id="textarea-html-code"><textarea class="textarea"
+  placeholder="Write your message…"
+  maxlength="500"
+  field-sizing="content"></textarea>
+<span class="char-count">0 / 500</span></div>
+  </div>
+  <div class="code-panel" id="textarea-css">
+    <div class="code-header-row"><span class="code-title">CSS</span><button class="code-btn" onclick="copyCode(this,'textarea-css-code')">📋 Copy</button></div>
+    <div class="code-block" id="textarea-css-code">.textarea {
+  padding: 0.6rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  caret-color: var(--accent);
+  field-sizing: content; /* auto-grows! */
+  min-height: 80px;
+  resize: vertical;
+}
+.textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}</div>
+  </div>
+</div>
+
+<!-- 8. BUTTONS -->
+<div class="card" id="buttons">
+  <div class="card-header">
+    <h2>08 · Button Variants</h2>
+    <div class="support-badges">
+      <span class="badge shipped">All browsers</span>
+    </div>
+  </div>
+  <div class="card-demo">
+    <div class="btn-row">
+      <button class="btn btn-primary">Primary</button>
+      <button class="btn">Default</button>
+      <button class="btn btn-danger">Delete</button>
+      <button class="btn btn-ghost">Ghost</button>
+      <button class="btn btn-primary btn-lg">Large CTA</button>
+      <button class="btn btn-sm">Small</button>
+    </div>
+  </div>
+  <div class="code-toggle">
+    <button class="code-tab active" data-panel="btn-html">HTML</button>
+    <button class="code-tab" data-panel="btn-css">CSS</button>
+  </div>
+  <div class="code-panel visible" id="btn-html">
+    <div class="code-header-row"><span class="code-title">HTML</span><button class="code-btn" onclick="copyCode(this,'btn-html-code')">📋 Copy</button></div>
+    <div class="code-block" id="btn-html-code"><button class="btn btn-primary">Primary</button>
+<button class="btn">Default</button>
+<button class="btn btn-danger">Delete</button>
+<button class="btn btn-ghost">Ghost</button>
+<button class="btn btn-primary btn-lg">Large CTA</button>
+<button class="btn btn-sm">Small</button></div>
+  </div>
+  <div class="code-panel" id="btn-css">
+    <div class="code-header-row"><span class="code-title">CSS</span><button class="code-btn" onclick="copyCode(this,'btn-css-code')">📋 Copy</button></div>
+    <div class="code-block" id="btn-css-code">.btn {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.6rem 1.25rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem; font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn:hover { background: var(--surface2); }
+.btn:active { transform: scale(0.97); }
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.btn-primary { background: var(--accent); border-color: var(--accent); color: white; }
+.btn-danger { background: var(--danger); border-color: var(--danger); color: white; }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-lg { padding: 0.8rem 1.75rem; font-size: 1rem; }
+.btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; }</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">Copied!</div>
+
+</div>
+
+<script>
+// Code panel tabs
+document.querySelectorAll('.code-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const card = tab.closest('.card');
+    card.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    card.querySelectorAll('.code-panel').forEach(p => p.classList.remove('visible'));
+    const panelId = tab.dataset.panel;
+    const panel = card.querySelector('#' + panelId);
+    if (panel) panel.classList.add('visible');
+  });
+});
+
+// Copy code
+function copyCode(btn, codeId) {
+  const code = document.getElementById(codeId).textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1800);
+  });
+}
+
+// Range slider live value
+const rangeDemo = document.getElementById('rangeDemo');
+const rangeVal = document.getElementById('rangeVal');
+if (rangeDemo && rangeVal) {
+  rangeDemo.addEventListener('input', () => {
+    rangeVal.textContent = rangeDemo.value + '%';
+  });
+}
+
+// File upload name display
+const fileDemo = document.getElementById('fileDemo');
+const fileName = document.getElementById('fileName');
+if (fileDemo && fileName) {
+  fileDemo.addEventListener('change', () => {
+    fileName.textContent = fileDemo.files[0]?.name || 'No file chosen';
+  });
+}
+
+// Textarea character count
+const textareaDemo = document.getElementById('textareaDemo');
+const charCount = document.getElementById('charCount');
+if (textareaDemo && charCount) {
+  function updateCount() {
+    const len = textareaDemo.value.length;
+    const max = textareaDemo.maxLength || 500;
+    charCount.textContent = len + ' / ' + max;
+    charCount.className = 'char-count';
+    if (len > max * 0.9) charCount.classList.add('warn');
+    if (len >= max) charCount.classList.add('over');
+  }
+  textareaDemo.addEventListener('input', updateCount);
+  updateCount();
+}
+
+// Convert code block HTML examples to text to prevent live elements
+document.querySelectorAll('.code-block[id$="-code"]').forEach(block => {
+  block.textContent = block.innerHTML.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+});
+
+// S-key copies the last viewed code block
+document.addEventListener('keydown', e => {
+  if (e.key === 's' && !e.metaKey && !e.ctrlKey && !e.altKey && document.activeElement === document.body) {
+    e.preventDefault();
+    const visiblePanel = document.querySelector('.code-panel.visible');
+    if (visiblePanel) {
+      const copyBtn = visiblePanel.querySelector('.code-btn');
+      if (copyBtn) copyBtn.click();
+    }
+  }
+});
+</script>
+</body>
+</html>
