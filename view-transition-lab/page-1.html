@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pattern 1: Default Cross-Fade — View Transition Lab</title>
+  <link rel="stylesheet" href="styles.css">
+  <meta name="description" content="Default cross-fade page transition with @view-transition { navigation: auto }">
+</head>
+<body>
+  <nav class="nav-bar">
+    <a href="index.html" class="logo"><span>⟐</span> View Transition Lab</a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="page-1.html" class="active">Fade</a>
+      <a href="page-2.html">Hero</a>
+      <a href="page-3.html">Slide</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="detail-hero">
+      <h1>Pattern 1: Default Cross-Fade</h1>
+      <p class="subtitle">The simplest possible setup: one line of CSS. Old page fades out, new page fades in.</p>
+    </div>
+
+    <div class="demo-stage">
+      <span class="stage-label">← Page 1 of the Lab →</span>
+      <div class="hero-element" style="background: linear-gradient(135deg, oklch(0.70 0.18 180), oklch(0.68 0.18 10));">📄</div>
+      <p style="font-size:0.9rem;color:var(--text-dim);">This hero block is named <code>hero-image</code>. Click below to morph it into the next page.</p>
+      <div class="nav-actions">
+        <a href="page-2.html" class="btn btn-primary">Next: Hero Morph →</a>
+        <a href="index.html" class="btn btn-secondary">← Back to Hub</a>
+      </div>
+    </div>
+
+    <div class="page-indicator">
+      <a href="index.html" class="dot" title="Hub"></a>
+      <span>→</span>
+      <span class="dot active" title="Page 1: Fade"></span>
+      <span>→</span>
+      <a href="page-2.html" class="dot" title="Page 2: Hero Morph"></a>
+      <span>→</span>
+      <a href="page-3.html" class="dot" title="Page 3: Slide"></a>
+      <span>→</span>
+      <a href="index.html" class="dot" title="Back to Hub"></a>
+    </div>
+
+    <div class="feature-grid" style="margin-top:1rem;">
+      <div class="feature-card"><div class="icon">⚡</div><h4>One Line</h4><p>Just <code>@view-transition</code></p></div>
+      <div class="feature-card"><div class="icon">🔄</div><h4>Auto Cross-Fade</h4><p>Browser handles timing</p></div>
+      <div class="feature-card"><div class="icon">📱</div><h4>Progressive</h4><p>Falls back to instant nav</p></div>
+      <div class="feature-card"><div class="icon">🎨</div><h4>Customizable</h4><p>Override old/new animations</p></div>
+    </div>
+
+    <div class="code-section">
+      <h3>📋 CSS for This Page</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this,'code1')">Copy</button>
+        <pre><code id="code1">/* === Pattern 1: Default Cross-Fade === */
+/* Add to both source and destination pages */
+
+@view-transition {
+  navigation: auto;
+}
+
+/* Optional: adjust duration */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.4s;
+}
+
+/* That's it. The browser cross-fades between
+   snapshots of the old and new pages. No JS. */</code></pre>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast">Copied!</div>
+
+  <script>
+    function copyCode(btn, id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      navigator.clipboard.writeText(el.textContent.trim()).then(() => {
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        const t = document.getElementById('toast');
+        t.classList.add('show');
+        clearTimeout(t._tid);
+        t._tid = setTimeout(() => t.classList.remove('show'), 1800);
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+      });
+    }
+  </script>
+</body>
+</html>

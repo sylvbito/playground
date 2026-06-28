@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pattern 3: Slide Navigation — View Transition Lab</title>
+  <link rel="stylesheet" href="styles.css">
+  <meta name="description" content="Custom slide navigation using ::view-transition-old and ::view-transition-new pseudo-elements.">
+  <style>
+    /* === Pattern 3: Slide Navigation === */
+    /* Override default cross-fade with slide animations */
+
+    ::view-transition-old(root) {
+      animation: 0.35s cubic-bezier(0.4, 0, 0.2, 1) both slide-out-left;
+    }
+
+    ::view-transition-new(root) {
+      animation: 0.35s cubic-bezier(0.4, 0, 0.2, 1) both slide-in-right;
+    }
+
+    @keyframes slide-out-left {
+      from { opacity: 1; transform: translateX(0); }
+      to { opacity: 0; transform: translateX(-30px); }
+    }
+
+    @keyframes slide-in-right {
+      from { opacity: 0; transform: translateX(30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Reverse direction for back-navigation via view-transition-class */
+    html:active-view-transition-type(back) {
+      &::view-transition-old(root) {
+        animation-name: slide-out-right;
+      }
+      &::view-transition-new(root) {
+        animation-name: slide-in-left;
+      }
+    }
+
+    @keyframes slide-out-right {
+      from { opacity: 1; transform: translateX(0); }
+      to { opacity: 0; transform: translateX(30px); }
+    }
+
+    @keyframes slide-in-left {
+      from { opacity: 0; transform: translateX(-30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav-bar">
+    <a href="index.html" class="logo"><span>⟐</span> View Transition Lab</a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="page-1.html">Fade</a>
+      <a href="page-2.html">Hero</a>
+      <a href="page-3.html" class="active">Slide</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="detail-hero">
+      <h1>Pattern 3: Slide Navigation</h1>
+      <p class="subtitle">Custom <code>::view-transition-old/new</code> animations. Old page slides out left, new slides in from right. iOS nav-stack feel.</p>
+    </div>
+
+    <div class="demo-stage">
+      <span class="stage-label">← Page 3 of the Lab →</span>
+      <div style="display:flex;align-items:center;gap:2rem;margin:1rem 0;">
+        <div style="width:100px;height:120px;background:oklch(0.65 0.16 145/0.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:2rem;">👈</div>
+        <div style="font-size:0.85rem;color:var(--text-dim);text-align:left;line-height:1.5;">
+          <strong>Slide Out →</strong><br>Old page moves left,<br>fades slightly.
+        </div>
+        <div style="font-size:1.5rem;">➡️</div>
+        <div style="font-size:0.85rem;color:var(--text-dim);text-align:left;line-height:1.5;">
+          <strong>← Slide In</strong><br>New page enters from right,<br>fades in.
+        </div>
+        <div style="width:100px;height:120px;background:oklch(0.65 0.16 145/0.4);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:2rem;">👉</div>
+      </div>
+      <p style="font-size:0.85rem;color:var(--text-dim);margin-top:0.5rem;">Navigate to the Hub — the slide direction reverses for back-navigation.</p>
+      <div class="nav-actions">
+        <a href="index.html" class="btn btn-primary">→ Back to Hub</a>
+        <a href="page-2.html" class="btn btn-secondary">← Back to Hero</a>
+      </div>
+    </div>
+
+    <div class="page-indicator">
+      <a href="index.html" class="dot" title="Hub"></a>
+      <span>→</span>
+      <a href="page-1.html" class="dot" title="Page 1: Fade"></a>
+      <span>→</span>
+      <a href="page-2.html" class="dot" title="Page 2: Hero Morph"></a>
+      <span>→</span>
+      <span class="dot active" title="Page 3: Slide"></span>
+      <span>→</span>
+      <a href="index.html" class="dot" title="Back to Hub"></a>
+    </div>
+
+    <div class="feature-grid" style="margin-top:1rem;">
+      <div class="feature-card"><div class="icon">🎬</div><h4>Custom Keyframes</h4><p>Full control over <code>@keyframes</code></p></div>
+      <div class="feature-card"><div class="icon">↔️</div><h4>Direction Aware</h4><p>Reverse animation on back-nav</p></div>
+      <div class="feature-card"><div class="icon">⏱️</div><h4>Easing Control</h4><p>Custom cubic-bezier curves</p></div>
+      <div class="feature-card"><div class="icon">🧩</div><h4>Composable</h4><p>Works with named elements too</p></div>
+    </div>
+
+    <div class="code-section">
+      <h3>📋 CSS for Slide Navigation</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this,'code3')">Copy</button>
+        <pre><code id="code3">/* === Pattern 3: Slide Navigation === */
+/* Both pages need this setup */
+
+@view-transition { navigation: auto; }
+
+/* Forward navigation: slide left */
+::view-transition-old(root) {
+  animation: 0.35s cubic-bezier(0.4, 0, 0.2, 1) both slide-out-left;
+}
+::view-transition-new(root) {
+  animation: 0.35s cubic-bezier(0.4, 0, 0.2, 1) both slide-in-right;
+}
+
+@keyframes slide-out-left {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-30px); }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Reverse for back-navigation */
+html:active-view-transition-type(back) {
+  &::view-transition-old(root) { animation-name: slide-out-right; }
+  &::view-transition-new(root) { animation-name: slide-in-left; }
+}</code></pre>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast">Copied!</div>
+
+  <script>
+    function copyCode(btn, id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      navigator.clipboard.writeText(el.textContent.trim()).then(() => {
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        const t = document.getElementById('toast');
+        t.classList.add('show');
+        clearTimeout(t._tid);
+        t._tid = setTimeout(() => t.classList.remove('show'), 1800);
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+      });
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 's' || e.key === 'S') {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        e.preventDefault();
+        const codeBlock = document.querySelector('.code-block code');
+        if (codeBlock) {
+          navigator.clipboard.writeText(codeBlock.textContent.trim()).then(() => {
+            const btn = document.querySelector('.copy-btn');
+            if (btn) { btn.textContent = 'Copied!'; btn.classList.add('copied'); }
+            const t = document.getElementById('toast');
+            t.classList.add('show');
+            clearTimeout(t._tid);
+            t._tid = setTimeout(() => t.classList.remove('show'), 1800);
+            setTimeout(() => { if (btn) { btn.textContent = 'Copy'; btn.classList.remove('copied'); } }, 1800);
+          });
+        }
+      }
+    });
+  </script>
+</body>
+</html>

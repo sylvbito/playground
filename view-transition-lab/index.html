@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>View Transition Lab — Cross-Document MPA Transitions</title>
+  <link rel="stylesheet" href="styles.css">
+  <meta name="description" content="Interactive reference for CSS Cross-Document View Transitions. 3 real MPA patterns with copyable CSS. Chrome 126+, Safari 18+, Edge 126+.">
+</head>
+<body>
+  <nav class="nav-bar">
+    <a href="index.html" class="logo"><span>⟐</span> View Transition Lab</a>
+    <div class="nav-links">
+      <a href="index.html" class="active">Home</a>
+      <a href="page-1.html">Fade</a>
+      <a href="page-2.html">Hero</a>
+      <a href="page-3.html">Slide</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="detail-hero">
+      <h1>Cross-Document View Transitions</h1>
+      <p class="subtitle">Real MPA page transitions — zero JavaScript. Navigate through 3 patterns and copy the CSS.</p>
+      <div class="nav-actions">
+        <a href="page-1.html" class="btn btn-primary">Start Lab →</a>
+      </div>
+    </div>
+
+    <section>
+      <h2 style="font-size:1.15rem;font-weight:600;margin-bottom:0.5rem;">What This Is</h2>
+      <p style="color:var(--text-dim);font-size:0.9rem;margin-bottom:2rem;">
+        Cross-document view transitions animate navigation between <em>different HTML pages</em> — no SPA, no JS router, no framework.
+        Add one line of CSS (<code>@view-transition { navigation: auto }</code>) and the browser handles the rest.
+        Customize with <code>view-transition-name</code> for shared-element morphing and <code>::view-transition-old/new</code> for custom animations.
+        <strong>Shipped in Chrome 126+, Safari 18+, Edge 126+.</strong>
+      </p>
+    </section>
+
+    <h2 style="font-size:1.15rem;font-weight:600;margin-bottom:1rem;">3 Transition Patterns</h2>
+
+    <div class="pattern-grid">
+      <!-- Pattern 1: Default Cross-Fade -->
+      <div class="pattern-card">
+        <div class="preview-area">
+          <svg width="120" height="80" viewBox="0 0 120 80">
+            <rect x="10" y="10" width="45" height="60" rx="6" fill="oklch(0.70 0.18 180 / 0.3)"/>
+            <rect x="65" y="10" width="45" height="60" rx="6" fill="oklch(0.68 0.18 10 / 0.3)"/>
+            <text x="60" y="48" text-anchor="middle" fill="oklch(0.92 0.01 260)" font-size="10">→</text>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Default Cross-Fade</h3>
+          <p>One line of CSS. Old page fades out, new page fades in. No customization needed.</p>
+          <a href="page-1.html" class="try-btn">Try It →</a>
+        </div>
+      </div>
+
+      <!-- Pattern 2: Hero Morph -->
+      <div class="pattern-card">
+        <div class="preview-area">
+          <svg width="120" height="80" viewBox="0 0 120 80">
+            <rect x="15" y="15" width="40" height="50" rx="6" fill="oklch(0.70 0.18 180 / 0.5)"/>
+            <rect x="65" y="25" width="30" height="30" rx="15" fill="oklch(0.70 0.18 180 / 0.5)"/>
+            <text x="60" y="48" text-anchor="middle" fill="oklch(0.92 0.01 260)" font-size="10">→</text>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Hero Morph</h3>
+          <p>Shared-element transition. A hero image morphs size and shape between pages using <code>view-transition-name</code>.</p>
+          <a href="page-1.html" class="try-btn">Start → Page 1</a>
+        </div>
+      </div>
+
+      <!-- Pattern 3: Slide Navigation -->
+      <div class="pattern-card">
+        <div class="preview-area">
+          <svg width="120" height="80" viewBox="0 0 120 80">
+            <rect x="5" y="10" width="50" height="60" rx="6" fill="oklch(0.65 0.16 145 / 0.25)" opacity="0.4"/>
+            <rect x="65" y="10" width="50" height="60" rx="6" fill="oklch(0.65 0.16 145 / 0.5)"/>
+            <text x="60" y="48" text-anchor="middle" fill="oklch(0.92 0.01 260)" font-size="10">→</text>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Slide Navigation</h3>
+          <p>Custom old/new animations. Old page slides out left, new page slides in from right. iOS nav-stack style.</p>
+          <a href="page-2.html" class="try-btn">Start → Page 2</a>
+        </div>
+      </div>
+    </div>
+
+    <section style="margin-top:3rem;">
+      <h2 style="font-size:1.15rem;font-weight:600;margin-bottom:0.75rem;">How the Lab Works</h2>
+      <p style="color:var(--text-dim);font-size:0.9rem;margin-bottom:1rem;">
+        Navigate through 4 real pages in a loop. Each page-to-page transition demonstrates a different pattern. The CSS for each transition is shown on the detail pages — inspect, copy, use in your own projects.
+      </p>
+      <div class="page-indicator">
+        <span class="dot active" title="You are here: Hub"></span>
+        <span>→</span>
+        <span class="dot" title="Pattern 1: Fade"></span>
+        <span>→</span>
+        <span class="dot" title="Pattern 2: Hero Morph"></span>
+        <span>→</span>
+        <span class="dot" title="Pattern 3: Slide"></span>
+        <span>→</span>
+        <span class="dot active" title="Back to Hub"></span>
+      </div>
+    </section>
+
+    <section style="margin-top:2rem;">
+      <h2 style="font-size:1.15rem;font-weight:600;margin-bottom:0.75rem;">Browser Support</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="icon">🟢</div>
+          <h4>Chrome 126+</h4>
+          <p>Shipped May 2024. Full cross-document + same-document support.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🟢</div>
+          <h4>Safari 18+</h4>
+          <p>Shipped Sep 2024. Full support for cross-document transitions.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🟢</div>
+          <h4>Edge 126+</h4>
+          <p>Shipped with Chromium 126. Same as Chrome.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon">🟡</div>
+          <h4>Firefox</h4>
+          <p>In development. Falls back to instant navigation — no breakage.</p>
+        </div>
+      </div>
+      <p style="color:var(--text-dim);font-size:0.78rem;margin-top:1rem;text-align:center;">
+        ⚡ <strong>Progressive enhancement by default.</strong> Browsers without view transition support navigate normally. Zero breakage.
+      </p>
+    </section>
+
+    <section style="margin-top:3rem;">
+      <h2 style="font-size:1.15rem;font-weight:600;margin-bottom:0.75rem;">Quick Start</h2>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this, 'quickstart')">Copy</button>
+        <pre><code id="quickstart">/* Add to both pages — that's it */
+@view-transition {
+  navigation: auto;
+}
+
+/* Optional: name a shared element */
+.hero-image {
+  view-transition-name: hero;
+}
+
+/* Optional: customize the animation */
+::view-transition-old(root) {
+  animation: 0.3s ease both fade-out;
+}
+::view-transition-new(root) {
+  animation: 0.3s ease both fade-in;
+}</code></pre>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast">Copied!</div>
+
+  <script>
+    function copyCode(btn, id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      navigator.clipboard.writeText(el.textContent.trim()).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        showToast();
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 1800);
+      });
+    }
+
+    function showToast() {
+      const t = document.getElementById('toast');
+      t.classList.add('show');
+      clearTimeout(t._tid);
+      t._tid = setTimeout(() => t.classList.remove('show'), 1800);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 's' || e.key === 'S') {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        e.preventDefault();
+        const codeBlock = document.querySelector('.code-block code');
+        if (codeBlock) {
+          navigator.clipboard.writeText(codeBlock.textContent.trim()).then(() => {
+            const btn = document.querySelector('.copy-btn');
+            if (btn) { btn.textContent = 'Copied!'; btn.classList.add('copied'); }
+            showToast();
+            setTimeout(() => {
+              if (btn) { btn.textContent = 'Copy'; btn.classList.remove('copied'); }
+            }, 1800);
+          });
+        }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pattern 2: Hero Morph — View Transition Lab</title>
+  <link rel="stylesheet" href="styles.css">
+  <meta name="description" content="Shared-element hero morph transition using view-transition-name across pages.">
+</head>
+<body class="page-2">
+  <nav class="nav-bar">
+    <a href="index.html" class="logo"><span>⟐</span> View Transition Lab</a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="page-1.html">Fade</a>
+      <a href="page-2.html" class="active">Hero</a>
+      <a href="page-3.html">Slide</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="detail-hero">
+      <h1>Pattern 2: Hero Morph</h1>
+      <p class="subtitle">A shared element transitions between pages — morph size, shape, and position. Name an element on both pages with the same <code>view-transition-name</code>.</p>
+    </div>
+
+    <div class="demo-stage">
+      <span class="stage-label">← Page 2 of the Lab →</span>
+      <div class="hero-element" style="background: linear-gradient(135deg, oklch(0.68 0.18 10), oklch(0.75 0.14 85));">🖼️</div>
+      <p style="font-size:0.9rem;color:var(--text-dim);">The hero just morphed from a square to a circle across pages — watch it animate back when you go to Page 3.</p>
+      <div class="nav-actions">
+        <a href="page-3.html" class="btn btn-primary">Next: Slide Nav →</a>
+        <a href="page-1.html" class="btn btn-secondary">← Back to Fade</a>
+      </div>
+    </div>
+
+    <div class="page-indicator">
+      <a href="index.html" class="dot" title="Hub"></a>
+      <span>→</span>
+      <a href="page-1.html" class="dot" title="Page 1: Fade"></a>
+      <span>→</span>
+      <span class="dot active" title="Page 2: Hero Morph"></span>
+      <span>→</span>
+      <a href="page-3.html" class="dot" title="Page 3: Slide"></a>
+      <span>→</span>
+      <a href="index.html" class="dot" title="Back to Hub"></a>
+    </div>
+
+    <div class="feature-grid" style="margin-top:1rem;">
+      <div class="feature-card"><div class="icon">🎯</div><h4>Name It</h4><p><code>view-transition-name</code> links elements</p></div>
+      <div class="feature-card"><div class="icon">✨</div><h4>Auto Morph</h4><p>Browser tweens size, shape, position</p></div>
+      <div class="feature-card"><div class="icon">🔗</div><h4>Multi-Element</h4><p>Name multiple elements per page</p></div>
+      <div class="feature-card"><div class="icon">🎛️</div><h4>Fine Control</h4><p>Customize with <code>::view-transition-group</code></p></div>
+    </div>
+
+    <div class="code-section">
+      <h3>📋 CSS for Hero Morph (both pages)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this,'code2')">Copy</button>
+        <pre><code id="code2">/* === Pattern 2: Hero Morph === */
+/* Page 1 (source) */
+
+@view-transition {
+  navigation: auto;
+}
+
+.hero { view-transition-name: hero-image; }
+/* Element: 200×200px square, border-radius 12px */
+
+/* --- */
+
+/* Page 2 (destination) */
+
+@view-transition {
+  navigation: auto;
+}
+
+.hero { view-transition-name: hero-image; }
+/* Element: 120×120px circle, border-radius 50% */
+
+/* Browser automatically animates the size,
+   shape, and position difference between
+   the two named elements. No keyframes needed. */</code></pre>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast">Copied!</div>
+
+  <script>
+    function copyCode(btn, id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      navigator.clipboard.writeText(el.textContent.trim()).then(() => {
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        const t = document.getElementById('toast');
+        t.classList.add('show');
+        clearTimeout(t._tid);
+        t._tid = setTimeout(() => t.classList.remove('show'), 1800);
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+      });
+    }
+  </script>
+</body>
+</html>
