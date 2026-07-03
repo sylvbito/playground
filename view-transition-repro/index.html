@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>View Transition Repro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="./styles.css">
+    <script type="module" src="./script.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <div class="stack">
+        <div class="message-box">
+          <div class="chat">
+            <div class="message-wrapper">
+              <div class="message">
+                <p class="message-bito">Hi Bito, can you create a comparison between Thailand and Bali?</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="placeholder">
+            <p class="message-bito">Message Bito...</p>
+            <div class="icons">
+              <div class="frame-style" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </div>
+              <a class="frame-style" data-variant-link href="./home-copy.html" aria-label="Open message state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <section class="controls">
+          <div><strong>Variant:</strong> <code data-current-variant>nested</code></div>
+          <div data-variant-description>Faithful repro</div>
+          <ul data-variant-picker>
+            <li><a data-variant="nested" href="./index.html?variant=nested">nested</a></li>
+            <li><a data-variant="parent-only" href="./index.html?variant=parent-only">parent-only</a></li>
+            <li><a data-variant="child-only" href="./index.html?variant=child-only">child-only</a></li>
+            <li><a data-variant="nested-groups" href="./index.html?variant=nested-groups">nested-groups</a></li>
+            <li><a data-variant="parent-only-fix" href="./index.html?variant=parent-only-fix">parent-only-fix</a></li>
+          </ul>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
