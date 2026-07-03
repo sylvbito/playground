@@ -7,6 +7,10 @@
   color-scheme: light;
 }
 
+html {
+  view-transition-name: none;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -160,14 +164,12 @@ body {
   margin-top: 4px;
 }
 
-::view-transition-group(root) {
-  animation: none;
-}
-
+::view-transition-group(root),
+::view-transition-image-pair(root),
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
-  mix-blend-mode: normal;
+  display: none;
 }
 
 ::view-transition-group(chat),
