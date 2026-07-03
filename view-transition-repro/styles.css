@@ -160,8 +160,14 @@ body {
   margin-top: 4px;
 }
 
+::view-transition-group(root) {
+  animation: none;
+}
+
+::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-delay: 0.15s;
+  animation: none;
+  mix-blend-mode: normal;
 }
 
 ::view-transition-group(chat),
