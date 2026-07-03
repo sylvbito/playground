@@ -178,6 +178,23 @@ body {
   animation-timing-function: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
+::view-transition-image-pair(chat),
+::view-transition-image-pair(chat-container) {
+  isolation: auto;
+}
+
+::view-transition-old(chat),
+::view-transition-old(chat-container) {
+  animation: none;
+  opacity: 0;
+}
+
+::view-transition-new(chat),
+::view-transition-new(chat-container) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
 html[data-variant="parent-only"] .message-box {
   view-transition-name: chat-container;
 }
