@@ -502,6 +502,117 @@
     </div>
   </section>
 
+  <hr class="divider">
+
+  <!-- ══════════ USE CASE 6 ══════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">★ Use case 6</span>
+      <h2 class="section-title">Truly combined — brand mixed with its own contrast color</h2>
+    </div>
+    <p class="section-desc">
+      Here the two functions are <strong>composed in one declaration</strong>: <code>color-mix()</code> blends <code>var(--brand)</code> with <code>contrast-color(var(--brand))</code>. The result is a surface that retains brand character while being guaranteed readable — because the contrast color (white or black) pulls it toward a safe zone.
+    </p>
+
+    <style>
+      .mix-cards {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+      @media (max-width: 700px) { .mix-cards { grid-template-columns: repeat(2, 1fr); } }
+      .mix-card {
+        border-radius: var(--radius);
+        padding: 1.25rem 1rem;
+        text-align: center;
+        transition: background 0.3s, color 0.3s;
+      }
+      .mix-card .mix-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        opacity: 0.7;
+        margin-bottom: 0.5rem;
+      }
+      .mix-card .mix-ratio {
+        font-family: 'SF Mono', Menlo, monospace;
+        font-size: 0.72rem;
+        opacity: 0.8;
+        margin-top: 0.4rem;
+      }
+
+      .mix-btn-demo {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin: 0.75rem 0;
+      }
+      .mix-btn {
+        padding: 0.6rem 1.4rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.85rem;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: background 0.25s, color 0.25s, transform 0.15s;
+      }
+      .mix-btn:hover { transform: scale(1.03); }
+      .mix-btn:active { transform: scale(0.97); }
+
+      .mix-divider-demo {
+        height: 3px;
+        border-radius: 2px;
+        margin: 1rem 0;
+        transition: background 0.3s;
+      }
+    </style>
+
+    <div class="mix-cards" id="mixCards"></div>
+
+    <p class="section-desc" style="margin-top:0.5rem">
+      <strong>Button</strong> — base and hover both use <code>color-mix()</code> with different brand ratios. Text always runs <code>contrast-color()</code> on the result:
+    </p>
+    <div class="mix-btn-demo">
+      <button class="mix-btn" id="mixBtn">Mixed CTA</button>
+      <span style="font-size:0.78rem;color:var(--text3)">hover to shift ratio →</span>
+    </div>
+
+    <p class="section-desc">
+      <strong>Divider</strong> — a rule that's brand-tinted but never invisible:
+    </p>
+    <div class="mix-divider-demo" id="mixDivider"></div>
+
+    <button class="code-toggle" onclick="this.classList.toggle('open'); this.nextElementSibling.classList.toggle('open')">
+      <span class="arrow">▶</span> View CSS
+    </button>
+    <div class="code-container">
+      <div class="code-block"><span class="co">/* Surfaces: brand character + guaranteed readable */</span>
+<span class="kw">.surface--hint</span>  { <span class="prop">background</span>: <span class="fn">color-mix</span>(<span class="kw">in oklch</span>, <span class="var">var(--brand)</span> 5%,  <span class="fn">contrast-color</span>(<span class="var">var(--brand)</span>) 95%); }
+<span class="kw">.surface--wash</span>  { <span class="prop">background</span>: <span class="fn">color-mix</span>(<span class="kw">in oklch</span>, <span class="var">var(--brand)</span> 12%, <span class="fn">contrast-color</span>(<span class="var">var(--brand)</span>) 88%); }
+<span class="kw">.surface--tint</span>  { <span class="prop">background</span>: <span class="fn">color-mix</span>(<span class="kw">in oklch</span>, <span class="var">var(--brand)</span> 22%, <span class="fn">contrast-color</span>(<span class="var">var(--brand)</span>) 78%); }
+<span class="kw">.surface--strong</span>{ <span class="prop">background</span>: <span class="fn">color-mix</span>(<span class="kw">in oklch</span>, <span class="var">var(--brand)</span> 38%, <span class="fn">contrast-color</span>(<span class="var">var(--brand)</span>) 62%); }
+
+<span class="co">/* All use contrast-color() on the result for auto-text */</span>
+<span class="kw">.mix-card</span> { <span class="prop">color</span>: <span class="fn">contrast-color</span>(<span class="var">background-color</span>); }
+
+<span class="co">/* Button: base vs hover shift the mix ratio */</span>
+<span class="kw">.mix-btn</span> {
+  <span class="prop">background</span>: <span class="fn">color-mix</span>(<span class="kw">in oklch</span>, <span class="var">var(--brand)</span> 25%, <span class="fn">contrast-color</span>(<span class="var">var(--brand)</span>) 75%);
+  <span class="prop">color</span>:      <span class="fn">contrast-color</span>(<span class="var">background-color</span>);
+}
+<span class="kw">.mix-btn:hover</span> {
+  <span class="prop">background</span>: <span class="fn">color-mix</span>(<span class="kw">in oklch</span>, <span class="var">var(--brand)</span> 50%, <span class="fn">contrast-color</span>(<span class="var">var(--brand)</span>) 50%);
+}
+
+<span class="co">/* Divider: always visible, brand-tinted */</span>
+<span class="kw">.mix-divider</span> {
+  <span class="prop">background</span>: <span class="fn">color-mix</span>(<span class="kw">in oklch</span>, <span class="var">var(--brand)</span> 35%, <span class="fn">contrast-color</span>(<span class="var">var(--brand)</span>) 65%);
+}</div>
+    </div>
+  </section>
+
   <!-- ══════════ SUPPORT ─═════════ -->
   <div class="support-note">
     <span class="support-badge ok">Baseline 2026</span>
@@ -580,6 +691,7 @@ function updateBrand(hex) {
   renderBadges();
   renderPalette();
   renderCards();
+  renderMixSection();
 }
 
 // ── Badges ──
@@ -665,6 +777,60 @@ function renderCards() {
       }
     });
   });
+}
+
+// ── Mix section: color-mix(brand, contrast-color(brand)) ──
+function mixOklch(l, c, h, brandPct) {
+  // contrast-color returns white or black — we determine which
+  // by checking the color that has better contrast with the brand
+  const brandRgb = hexToRgb(oklchToHex(l, c, h));
+  const contrastIsWhite = bestContrastText(brandRgb) === 'white';
+  const cl = contrastIsWhite ? 1 : 0;
+  const mixL = l * brandPct + cl * (1 - brandPct);
+  const mixC = c * brandPct; // white/black have 0 chroma
+  return { l: mixL, c: mixC, h };
+}
+
+function renderMixSection() {
+  const {l, c, h} = currentOklch;
+  const ratios = [
+    { label: 'Hint',   pct: 0.05,  desc: '5% brand' },
+    { label: 'Wash',   pct: 0.12,  desc: '12% brand' },
+    { label: 'Tint',   pct: 0.22,  desc: '22% brand' },
+    { label: 'Strong', pct: 0.38,  desc: '38% brand' },
+  ];
+
+  // Cards
+  const container = document.getElementById('mixCards');
+  container.innerHTML = ratios.map(r => {
+    const mix = mixOklch(l, c, h, r.pct);
+    const bgHex = oklchToHex(mix.l, mix.c, mix.h);
+    const bgRgb = hexToRgb(bgHex);
+    const textColor = bestContrastText(bgRgb);
+    return `<div class="mix-card" style="background:${bgHex};color:${textColor}">
+      <div class="mix-label">${r.label}</div>
+      <div class="mix-ratio">${r.desc}</div>
+    </div>`;
+  }).join('');
+
+  // Button (base state)
+  const btnBase = mixOklch(l, c, h, 0.25);
+  const btnBaseHex = oklchToHex(btnBase.l, btnBase.c, btnBase.h);
+  const btnBaseText = bestContrastText(hexToRgb(btnBaseHex));
+  const btnHover = mixOklch(l, c, h, 0.50);
+  const btnHoverHex = oklchToHex(btnHover.l, btnHover.c, btnHover.h);
+  const btnHoverText = bestContrastText(hexToRgb(btnHoverHex));
+
+  const btn = document.getElementById('mixBtn');
+  btn.style.background = btnBaseHex;
+  btn.style.color = btnBaseText;
+  btn.onmouseenter = () => { btn.style.background = btnHoverHex; btn.style.color = btnHoverText; };
+  btn.onmouseleave = () => { btn.style.background = btnBaseHex; btn.style.color = btnBaseText; };
+
+  // Divider
+  const divMix = mixOklch(l, c, h, 0.35);
+  const divHex = oklchToHex(divMix.l, divMix.c, divMix.h);
+  document.getElementById('mixDivider').style.background = divHex;
 }
 
 // ── Init ──
