@@ -447,7 +447,7 @@
 }
 
 <span class="kw">.option-card.selected</span> {
-  <span class="prop">background</span>:   <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--brand)</span> <span class="fn">calc</span>(l + 0.02) <span class="fn">calc</span>(c * 0.7) h);
+  <span class="prop">background</span>:   <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--brand)</span> <span class="fn">calc</span>(l - 0.08) <span class="fn">calc</span>(c * 0.7) h);
   <span class="prop">color</span>:        <span class="fn">contrast-color</span>(<span class="var">background-color</span>);
   <span class="prop">border-color</span>: <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--brand)</span> l <span class="fn">calc</span>(c * 0.85) h);
 }</div>
@@ -655,7 +655,7 @@ function renderCards() {
       grid.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
       if (!wasSelected) {
         el.classList.add('selected');
-        const selL = l + 0.02;
+        const selL = l - 0.08;
         const selBg = oklchToHex(selL, c*0.7, h);
         const selBorder = oklchToHex(selL-0.05, c*0.85, h);
         const selText = bestContrastText(hexToRgb(selBg));
