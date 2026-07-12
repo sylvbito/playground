@@ -613,6 +613,127 @@
     </div>
   </section>
 
+  <hr class="divider">
+
+  <!-- ══════════ USE CASE 7 ══════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">★ Use case 7</span>
+      <h2 class="section-title">Branded text — contrast-color() tinted with the brand</h2>
+    </div>
+    <p class="section-desc">
+      <code>contrast-color()</code> only returns black or white — readable but anonymous. Here text uses <code>color-mix()</code> to blend the contrast color with the brand, producing <strong>readable text that carries brand identity</strong>. The contrast color guarantees legibility; the brand ratio adds character.
+    </p>
+
+    <style>
+      .branded-text-demo {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+      }
+      @media (max-width: 700px) { .branded-text-demo { grid-template-columns: 1fr; } }
+      .bt-card {
+        border-radius: var(--radius);
+        padding: 1.5rem 1.25rem;
+        transition: background 0.3s;
+      }
+      .bt-card .bt-label {
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.6rem;
+        font-weight: 600;
+      }
+      .bt-card .bt-heading {
+        font-size: 1.4rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.4rem;
+        line-height: 1.15;
+      }
+      .bt-card .bt-body {
+        font-size: 0.82rem;
+        line-height: 1.5;
+        opacity: 0.82;
+      }
+      .bt-card .bt-link {
+        font-weight: 500;
+        text-decoration: underline;
+        text-underline-offset: 0.25em;
+      }
+
+      .compare-row {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-end;
+        margin: 0.75rem 0 1rem;
+        flex-wrap: wrap;
+      }
+      .compare-swatch {
+        border-radius: var(--radius);
+        padding: 1.25rem;
+        flex: 1;
+        min-width: 200px;
+        transition: background 0.3s;
+      }
+      .compare-swatch .compare-text {
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        transition: color 0.3s;
+      }
+      .compare-swatch .compare-meta {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 0.5rem;
+        opacity: 0.65;
+      }
+    </style>
+
+    <p class="section-desc" style="margin-bottom:1rem">
+      <strong>Headings</strong> — each card has a different background derived from the brand. The heading text is <code>color-mix(in oklch, contrast-color(bg), brand X%)</code>. Body text uses <code>contrast-color(bg)</code> directly — so the hierarchy is expressed in color intensity too.
+    </p>
+
+    <div class="branded-text-demo" id="brandedTextGrid"></div>
+
+    <p class="section-desc">
+      <strong>Side-by-side</strong> — same background, plain contrast text vs. brand-tinted:
+    </p>
+    <div class="compare-row" id="compareRow"></div>
+
+    <button class="code-toggle" onclick="this.classList.toggle('open'); this.nextElementSibling.classList.toggle('open')">
+      <span class="arrow">▶</span> View CSS
+    </button>
+    <div class="code-container">
+      <div class="code-block"><span class="co">/* Text that's readable AND carries brand identity */</span>
+<span class="co">/* contrast-color(bg) guarantees the base contrast; the brand injects character */</span>
+
+<span class="kw">.branded-heading</span> {
+  <span class="prop">color</span>: <span class="fn">color-mix</span>(<span class="kw">in oklch</span>,
+              <span class="fn">contrast-color</span>(<span class="var">var(--surface-bg)</span>),
+              <span class="var">var(--brand)</span> <span class="val">25%</span>);
+}
+
+<span class="co">/* Body text: pure contrast — anchors the hierarchy */</span>
+<span class="kw">.branded-body</span> {
+  <span class="prop">color</span>: <span class="fn">contrast-color</span>(<span class="var">var(--surface-bg)</span>);
+}
+
+<span class="co">/* Links: stronger brand tint — they're still readable but clearly branded */</span>
+<span class="kw">.branded-link</span> {
+  <span class="prop">color</span>: <span class="fn">color-mix</span>(<span class="kw">in oklch</span>,
+              <span class="fn">contrast-color</span>(<span class="var">var(--surface-bg)</span>),
+              <span class="var">var(--brand)</span> <span class="val">40%</span>);
+}
+
+<span class="co">/* Plain contrast (black/white) vs branded (tinted) */</span>
+<span class="kw">.text--plain</span>   { <span class="prop">color</span>: <span class="fn">contrast-color</span>(<span class="var">var(--surface-bg)</span>); }
+<span class="kw">.text--branded</span> { <span class="prop">color</span>: <span class="fn">color-mix</span>(<span class="kw">in oklch</span>, <span class="fn">contrast-color</span>(<span class="var">var(--surface-bg)</span>), <span class="var">var(--brand)</span> 30%); }</div>
+    </div>
+  </section>
+
   <!-- ══════════ SUPPORT ─═════════ -->
   <div class="support-note">
     <span class="support-badge ok">Baseline 2026</span>
@@ -692,6 +813,7 @@ function updateBrand(hex) {
   renderPalette();
   renderCards();
   renderMixSection();
+  renderBrandedTextSection();
 }
 
 // ── Badges ──
@@ -831,6 +953,66 @@ function renderMixSection() {
   const divMix = mixOklch(l, c, h, 0.35);
   const divHex = oklchToHex(divMix.l, divMix.c, divMix.h);
   document.getElementById('mixDivider').style.background = divHex;
+}
+
+// ── Branded text section: color-mix(contrast-color(bg), brand) ──
+function renderBrandedTextSection() {
+  const {l, c, h} = currentOklch;
+
+  // Three cards with different backgrounds (UC6-style mix surfaces)
+  const cards = [
+    { label: 'Subtle surface', bgPct: 0.12, headingBrandPct: 0.20, linkBrandPct: 0.35 },
+    { label: 'Mid surface',    bgPct: 0.28, headingBrandPct: 0.20, linkBrandPct: 0.35 },
+    { label: 'Strong surface', bgPct: 0.48, headingBrandPct: 0.20, linkBrandPct: 0.35 },
+  ];
+
+  const grid = document.getElementById('brandedTextGrid');
+  grid.innerHTML = cards.map(c => {
+    const bgMix = mixOklch(l, c, h, c.bgPct);
+    const bgHex = oklchToHex(bgMix.l, bgMix.c, bgMix.h);
+    const bgRgb = hexToRgb(bgHex);
+
+    // Body text: pure contrast-color (black or white)
+    const bodyColor = bestContrastText(bgRgb);
+
+    // Heading: color-mix(contrast-color(bg), brand, headingBrandPct)
+    const headingMix = mixOklch(l, c, h, c.headingBrandPct);
+    const headingColor = oklchToHex(headingMix.l, headingMix.c, headingMix.h);
+
+    // Link: color-mix(contrast-color(bg), brand, linkBrandPct) — stronger brand
+    const linkMix = mixOklch(l, c, h, c.linkBrandPct);
+    const linkColor = oklchToHex(linkMix.l, linkMix.c, linkMix.h);
+
+    return `<div class="bt-card" style="background:${bgHex}">
+      <div class="bt-label" style="color:${bodyColor};opacity:0.5">${c.label}</div>
+      <div class="bt-heading" style="color:${headingColor}">Design that scales with intent</div>
+      <div class="bt-body" style="color:${bodyColor}">
+        Type, colour, and rhythm carry meaning when the system is consistent. The heading is brand-tinted — the body uses pure contrast to anchor the hierarchy.
+        <span class="bt-link" style="color:${linkColor}">Read the case study →</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Compare row: one swatch with matching surface
+  const compareBg = mixOklch(l, c, h, 0.22);
+  const compareBgHex = oklchToHex(compareBg.l, compareBg.c, compareBg.h);
+  const compareBgRgb = hexToRgb(compareBgHex);
+  const plainText = bestContrastText(compareBgRgb);
+
+  // Branded 30%: 70% contrast + 30% brand
+  const brandedMix = mixOklch(l, c, h, 0.30);
+  const brandedTextHex = oklchToHex(brandedMix.l, brandedMix.c, brandedMix.h);
+
+  const compareRow = document.getElementById('compareRow');
+  compareRow.innerHTML = `
+    <div class="compare-swatch" style="background:${compareBgHex}">
+      <div class="compare-meta" style="color:${plainText}">contrast-color() only</div>
+      <div class="compare-text" style="color:${plainText}">Anonymous contrast</div>
+    </div>
+    <div class="compare-swatch" style="background:${compareBgHex}">
+      <div class="compare-meta" style="color:${plainText}">contrast-color() + 30% brand</div>
+      <div class="compare-text" style="color:${brandedTextHex}">Branded contrast</div>
+    </div>`;
 }
 
 // ── Init ──
