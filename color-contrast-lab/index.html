@@ -967,8 +967,8 @@ function renderBrandedTextSection() {
   ];
 
   const grid = document.getElementById('brandedTextGrid');
-  grid.innerHTML = cards.map(c => {
-    const bgMix = mixOklch(l, c, h, c.bgPct);
+  grid.innerHTML = cards.map(card => {
+    const bgMix = mixOklch(l, c, h, card.bgPct);
     const bgHex = oklchToHex(bgMix.l, bgMix.c, bgMix.h);
     const bgRgb = hexToRgb(bgHex);
 
@@ -976,15 +976,15 @@ function renderBrandedTextSection() {
     const bodyColor = bestContrastText(bgRgb);
 
     // Heading: color-mix(contrast-color(bg), brand, headingBrandPct)
-    const headingMix = mixOklch(l, c, h, c.headingBrandPct);
+    const headingMix = mixOklch(l, c, h, card.headingBrandPct);
     const headingColor = oklchToHex(headingMix.l, headingMix.c, headingMix.h);
 
     // Link: color-mix(contrast-color(bg), brand, linkBrandPct) — stronger brand
-    const linkMix = mixOklch(l, c, h, c.linkBrandPct);
+    const linkMix = mixOklch(l, c, h, card.linkBrandPct);
     const linkColor = oklchToHex(linkMix.l, linkMix.c, linkMix.h);
 
     return `<div class="bt-card" style="background:${bgHex}">
-      <div class="bt-label" style="color:${bodyColor};opacity:0.5">${c.label}</div>
+      <div class="bt-label" style="color:${bodyColor};opacity:0.5">${card.label}</div>
       <div class="bt-heading" style="color:${headingColor}">Design that scales with intent</div>
       <div class="bt-body" style="color:${bodyColor}">
         Type, colour, and rhythm carry meaning when the system is consistent. The heading is brand-tinted — the body uses pure contrast to anchor the hierarchy.
