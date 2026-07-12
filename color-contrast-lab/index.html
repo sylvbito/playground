@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Color Contrast Lab — CSS relative colors × contrast-color()</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: oklch(0.13 0.02 260);
+    --surface: oklch(0.17 0.02 260);
+    --surface2: oklch(0.22 0.02 260);
+    --border: oklch(0.27 0.02 260);
+    --text: oklch(0.93 0.01 260);
+    --text2: oklch(0.68 0.02 260);
+    --text3: oklch(0.48 0.02 260);
+    --accent: oklch(0.65 0.2 260);
+    --accent-dim: oklch(0.45 0.15 260);
+    --radius: 12px;
+    --radius-sm: 7px;
+
+    /* Demo brand color — overridden by JS picker */
+    --brand: oklch(0.6 0.22 260);
+
+    /* Derived using relative colors */
+    --brand-bg: oklch(from var(--brand) calc(l + 0.32) calc(c * 0.15) h);
+    --brand-border: oklch(from var(--brand) calc(l + 0.18) calc(c * 0.35) h);
+    --brand-hover: oklch(from var(--brand) calc(l - 0.06) calc(c * 1.05) h);
+    --brand-active: oklch(from var(--brand) calc(l - 0.12) calc(c * 0.9) h);
+
+    /* contrast-color() on the derived backgrounds */
+    --brand-text: contrast-color(var(--brand-bg));
+    --brand-btn-text: contrast-color(var(--brand));
+    --brand-hover-text: contrast-color(var(--brand-hover));
+  }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(12px);
+  }
+  .header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  .logo {
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .logo-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--brand); /* uses live brand value */
+    transition: background 0.3s;
+  }
+  .logo span { color: var(--text2); font-weight: 400; font-size: 0.9rem; }
+
+  .input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .color-swatch-btn {
+    width: 2.2rem; height: 2.2rem;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    background: var(--brand);
+    flex-shrink: 0;
+    transition: border-color 0.15s, background 0.3s;
+  }
+  .color-swatch-btn:hover { border-color: var(--accent); }
+  #colorPicker { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+
+  /* ── Main layout ── */
+  .main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.75rem 1.5rem 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+  .section-num {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .section-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .section-desc {
+    font-size: 0.85rem;
+    color: var(--text3);
+    line-height: 1.55;
+    max-width: 56ch;
+    margin-bottom: 1rem;
+  }
+  .section-desc code {
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 0.82rem;
+    background: var(--surface2);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    color: var(--accent);
+  }
+
+  /* ── Use Case 1: Brand-driven UI panel ── */
+  .demo-panel {
+    background: var(--brand-bg);
+    border: 1px solid var(--brand-border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    color: var(--brand-text);
+    transition: background 0.3s, border-color 0.3s, color 0.3s;
+  }
+  .demo-panel h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+  .demo-panel p {
+    font-size: 0.85rem;
+    opacity: 0.82;
+    line-height: 1.55;
+    margin-bottom: 1rem;
+  }
+  .demo-panel .btn-row {
+    display: flex;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+  }
+  .demo-btn {
+    padding: 0.55rem 1.2rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .demo-btn.primary {
+    background: var(--brand);
+    color: var(--brand-btn-text);
+  }
+  .demo-btn.primary:hover { background: var(--brand-hover); color: var(--brand-hover-text); }
+  .demo-btn.ghost {
+    background: transparent;
+    color: var(--brand-text);
+    border: 1px solid var(--brand-border);
+  }
+  .demo-btn.ghost:hover { background: oklch(from var(--brand) calc(l + 0.42) calc(c * 0.08) h); }
+
+  /* ── Use Case 2: Badges ── */
+  .badge-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  /* ── Use Case 3: Generated palette cards ── */
+  .palette-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+  }
+  @media (max-width: 700px) {
+    .palette-strip { grid-template-columns: repeat(2, 1fr); }
+  }
+  .palette-swatch {
+    border-radius: var(--radius-sm);
+    height: 100px;
+    display: flex;
+    align-items: flex-end;
+    padding: 0.6rem;
+    font-size: 0.72rem;
+    font-family: 'SF Mono', Menlo, monospace;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ── Use Case 4: Checkbox cards ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+  }
+  @media (max-width: 700px) {
+    .card-grid { grid-template-columns: 1fr; }
+  }
+  .option-card {
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.25s, border-color 0.25s, color 0.25s;
+  }
+
+  /* ── Code display ── */
+  .code-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.9rem 1rem;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 0.75rem;
+    line-height: 1.7;
+    color: var(--text2);
+    overflow-x: auto;
+    white-space: pre;
+    tab-size: 2;
+    margin-top: 0.75rem;
+  }
+  .code-block .kw { color: oklch(0.65 0.18 300); }
+  .code-block .fn { color: oklch(0.65 0.2 190); }
+  .code-block .var { color: oklch(0.65 0.2 60); }
+  .code-block .prop { color: oklch(0.65 0.18 260); }
+  .code-block .val { color: oklch(0.75 0.1 130); }
+
+  /* ── Code toggle ── */
+  .code-toggle {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0.25rem 0;
+    margin-top: 0.5rem;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .code-toggle:hover { opacity: 0.8; }
+  .code-toggle .arrow { transition: transform 0.2s; display: inline-block; font-size: 0.65rem; }
+  .code-toggle.open .arrow { transform: rotate(90deg); }
+  .code-container { display: none; }
+  .code-container.open { display: block; }
+
+  /* ── Browser support note ── */
+  .support-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.7rem 1rem;
+    font-size: 0.8rem;
+    color: var(--text3);
+    margin-top: 1.5rem;
+  }
+  .support-badge {
+    font-weight: 600;
+    font-size: 0.7rem;
+    padding: 0.2em 0.55em;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+  }
+  .support-badge.ok {
+    background: oklch(0.35 0.1 160);
+    color: oklch(0.85 0.08 160);
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-dot"></div>
+      Color Contrast Lab
+      <span>— relative colors × contrast-color()</span>
+    </div>
+    <div class="input-group">
+      <button class="color-swatch-btn" id="swatchBtn" aria-label="Pick brand color"></button>
+      <input type="color" id="colorPicker" aria-label="Color picker">
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ══════════ USE CASE 1 ══════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">Use case 1</span>
+      <h2 class="section-title">Brand-driven UI panel</h2>
+    </div>
+    <p class="section-desc">
+      One <code>--brand</code> color drives the entire panel. Background, border, and hover states are <strong>derived with relative colors</strong>. Text and buttons use <code>contrast-color()</code> to stay readable automatically — no hand-picked text colors.
+    </p>
+
+    <div class="demo-panel" id="brandPanel">
+      <h3>Welcome back, Sylvain</h3>
+      <p>Your team has shipped 14 builds this week. The design system audit is 92% complete and the new token pipeline is live in staging.</p>
+      <div class="btn-row">
+        <button class="demo-btn primary">View dashboard</button>
+        <button class="demo-btn ghost">Share feedback</button>
+      </div>
+    </div>
+
+    <button class="code-toggle" onclick="this.classList.toggle('open'); this.nextElementSibling.classList.toggle('open')">
+      <span class="arrow">▶</span> View CSS
+    </button>
+    <div class="code-container">
+      <div class="code-block"><span class="kw">:root</span> {
+  <span class="prop">--brand</span>: <span class="val" id="codeBrand">oklch(0.6 0.22 260)</span>;
+
+  <span class="co">/* Derived with relative colors */</span>
+  <span class="prop">--brand-bg</span>:     <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--brand)</span> <span class="fn">calc</span>(l + 0.32) <span class="fn">calc</span>(c * 0.15) h);
+  <span class="prop">--brand-border</span>: <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--brand)</span> <span class="fn">calc</span>(l + 0.18) <span class="fn">calc</span>(c * 0.35) h);
+  <span class="prop">--brand-hover</span>:  <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--brand)</span> <span class="fn">calc</span>(l - 0.06) <span class="fn">calc</span>(c * 1.05) h);
+
+  <span class="co">/* contrast-color() picks readable text automatically */</span>
+  <span class="prop">--brand-text</span>:      <span class="fn">contrast-color</span>(<span class="var">var(--brand-bg)</span>);
+  <span class="prop">--brand-btn-text</span>:  <span class="fn">contrast-color</span>(<span class="var">var(--brand)</span>);
+}</div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ══════════ USE CASE 2 ══════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">Use case 2</span>
+      <h2 class="section-title">Auto-adaptive badge system</h2>
+    </div>
+    <p class="section-desc">
+      Four severity colors. Each badge derives its <strong>background from the severity via relative color</strong> (muted, tinted), and its <strong>text from that background via <code>contrast-color()</code></strong>. Change any severity — everything stays readable.
+    </p>
+
+    <div class="badge-grid" id="badgeGrid"></div>
+
+    <button class="code-toggle" onclick="this.classList.toggle('open'); this.nextElementSibling.classList.toggle('open')">
+      <span class="arrow">▶</span> View CSS
+    </button>
+    <div class="code-container">
+      <div class="code-block"><span class="kw">.badge</span> {
+  <span class="prop">background</span>: <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--severity)</span> <span class="fn">calc</span>(l + 0.35) <span class="fn">calc</span>(c * 0.2) h);
+  <span class="prop">color</span>:      <span class="fn">contrast-color</span>(<span class="var">background-color</span>);
+  <span class="prop">border</span>:    1px solid <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--severity)</span> <span class="fn">calc</span>(l + 0.25) <span class="fn">calc</span>(c * 0.35) h);
+}
+
+<span class="kw">.badge.success</span> { <span class="prop">--severity</span>: <span class="val">oklch(0.62 0.19 160)</span>; }
+<span class="kw">.badge.warning</span> { <span class="prop">--severity</span>: <span class="val">oklch(0.72 0.17 85)</span>;  }
+<span class="kw">.badge.danger</span>  { <span class="prop">--severity</span>: <span class="val">oklch(0.55 0.22 20)</span>;  }
+<span class="kw">.badge.info</span>    { <span class="prop">--severity</span>: <span class="val">oklch(0.6 0.2 260)</span>;   }</div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ══════════ USE CASE 3 ══════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">Use case 3</span>
+      <h2 class="section-title">Generated palette — 5 colors, auto text</h2>
+    </div>
+    <p class="section-desc">
+      From <strong>one base color</strong>, five variants are derived using <code>oklch(from ...)</code>. Each swatch uses <code>contrast-color()</code> on its own background — no manual text color assignment.
+    </p>
+
+    <div class="palette-strip" id="paletteStrip"></div>
+
+    <button class="code-toggle" onclick="this.classList.toggle('open'); this.nextElementSibling.classList.toggle('open')">
+      <span class="arrow">▶</span> View CSS
+    </button>
+    <div class="code-container">
+      <div class="code-block"><span class="co">/* Five variants from one base */</span>
+<span class="kw">.swatch-1</span> { <span class="prop">background</span>: <span class="val">var(--base)</span>;                                              }
+<span class="kw">.swatch-2</span> { <span class="prop">background</span>: <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--base)</span> <span class="fn">calc</span>(l - 0.15) c h);                      }
+<span class="kw">.swatch-3</span> { <span class="prop">background</span>: <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--base)</span> <span class="fn">calc</span>(l + 0.28) <span class="fn">calc</span>(c * 0.25) h);          }
+<span class="kw">.swatch-4</span> { <span class="prop">background</span>: <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--base)</span> <span class="fn">calc</span>(l + 0.38) <span class="fn">calc</span>(c * 0.10) h);          }
+<span class="kw">.swatch-5</span> { <span class="prop">background</span>: <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--base)</span> <span class="fn">calc</span>(l - 0.08) <span class="fn">calc</span>(c * 1.15) <span class="fn">calc</span>(h + 180); }
+
+<span class="co">/* Every swatch auto-contrasts its own text */</span>
+<span class="kw">.palette-swatch</span> { <span class="prop">color</span>: <span class="fn">contrast-color</span>(<span class="var">background-color</span>); }</div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ══════════ USE CASE 4 ══════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">Use case 4</span>
+      <h2 class="section-title">Dynamic selection cards with auto-contrast</h2>
+    </div>
+    <p class="section-desc">
+      Three cards, each tinted from the brand color at different intensities using relative colors. <code>contrast-color()</code> handles the text. <strong>Click a card</strong> — its background deepens and text auto-flips.
+    </p>
+
+    <div class="card-grid" id="cardGrid"></div>
+
+    <button class="code-toggle" onclick="this.classList.toggle('open'); this.nextElementSibling.classList.toggle('open')">
+      <span class="arrow">▶</span> View CSS
+    </button>
+    <div class="code-container">
+      <div class="code-block"><span class="co">/* Selected card uses a darker variant */</span>
+<span class="kw">.option-card</span> {
+  <span class="prop">--card-bg</span>: <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--brand)</span> <span class="fn">calc</span>(l + <span class="var">var(--lift, 0.38)</span>) <span class="fn">calc</span>(c * 0.12) h);
+  <span class="prop">background</span>: <span class="var">var(--card-bg)</span>;
+  <span class="prop">color</span>:      <span class="fn">contrast-color</span>(<span class="var">var(--card-bg)</span>);
+}
+
+<span class="kw">.option-card.selected</span> {
+  <span class="prop">--lift</span>: 0.05;  <span class="co">/* Less lift = darker = contrast-color() may flip */</span>
+  <span class="prop">border-color</span>: <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--brand)</span> <span class="fn">calc</span>(l + 0.08) <span class="fn">calc</span>(c * 0.6) h);
+}</div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ══════════ USE CASE 5 ══════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">Use case 5</span>
+      <h2 class="section-title">Multi-stop gradient card with auto-text</h2>
+    </div>
+    <p class="section-desc">
+      A gradient built from relative color stops. The card uses <code>contrast-color()</code> on a <strong>custom property set to the midpoint</strong> so text stays readable even as the gradient changes.
+    </p>
+
+    <style>
+      .gradient-card-native {
+        --grad-mid: oklch(from var(--brand) calc(l + 0.15) calc(c * 0.5) h);
+        --grad-light: oklch(from var(--brand) calc(l + 0.36) calc(c * 0.15) h);
+        --grad-dark: oklch(from var(--brand) calc(l - 0.04) calc(c * 0.7) h);
+        background: linear-gradient(135deg, var(--grad-light), var(--grad-mid), var(--grad-dark));
+        color: contrast-color(var(--grad-mid));
+        border-radius: var(--radius);
+        padding: 1.75rem 1.5rem;
+        font-size: 1.05rem;
+        font-weight: 600;
+        text-align: center;
+        letter-spacing: -0.01em;
+        transition: background 0.3s, color 0.3s;
+      }
+    </style>
+    <div class="gradient-card-native" id="gradCard">
+      This text stays readable because <code style="font-size:0.9em">contrast-color()</code> checks the midpoint.
+    </div>
+
+    <button class="code-toggle" onclick="this.classList.toggle('open'); this.nextElementSibling.classList.toggle('open')">
+      <span class="arrow">▶</span> View CSS
+    </button>
+    <div class="code-container">
+      <div class="code-block"><span class="kw">.gradient-card</span> {
+  <span class="co">/* Three stops derived from one brand color */</span>
+  <span class="prop">--grad-mid</span>:   <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--brand)</span> <span class="fn">calc</span>(l + 0.15) <span class="fn">calc</span>(c * 0.5) h);
+  <span class="prop">--grad-light</span>: <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--brand)</span> <span class="fn">calc</span>(l + 0.36) <span class="fn">calc</span>(c * 0.15) h);
+  <span class="prop">--grad-dark</span>:  <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--brand)</span> <span class="fn">calc</span>(l - 0.04) <span class="fn">calc</span>(c * 0.7) h);
+
+  <span class="prop">background</span>: <span class="fn">linear-gradient</span>(135deg, <span class="var">var(--grad-light)</span>, <span class="var">var(--grad-mid)</span>, <span class="var">var(--grad-dark)</span>);
+  <span class="prop">color</span>:      <span class="fn">contrast-color</span>(<span class="var">var(--grad-mid)</span>);
+}</div>
+    </div>
+  </section>
+
+  <!-- ══════════ SUPPORT ─═════════ -->
+  <div class="support-note">
+    <span class="support-badge ok">Baseline 2026</span>
+    Both <code>oklch(from ...)</code> relative colors and <code>contrast-color()</code> are now available in Chrome, Edge, Firefox, and Safari.
+  </div>
+
+</div>
+
+<script>
+// ── OKLCH math (verified round-trip) ──
+function srgbToLinear(c) {
+  c /= 255;
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+function rgbToOklch(r, g, b) {
+  const rl = srgbToLinear(r), gl = srgbToLinear(g), bl = srgbToLinear(b);
+  const Lm = 0.4122214708*rl + 0.5363325363*gl + 0.0514459929*bl;
+  const Mm = 0.2119034982*rl + 0.6806995451*gl + 0.1073969566*bl;
+  const Sm = 0.0883024619*rl + 0.2817188376*gl + 0.6299787005*bl;
+  const Lp = Math.cbrt(Lm), Mp = Math.cbrt(Mm), Sp = Math.cbrt(Sm);
+  const okL = 0.2104542553*Lp + 0.7936177850*Mp - 0.0040720468*Sp;
+  const oka = 1.9779984951*Lp - 2.4285922050*Mp + 0.4505937099*Sp;
+  const okb = 0.0259040371*Lp + 0.7827717662*Mp - 0.8086757660*Sp;
+  const C = Math.sqrt(oka*oka + okb*okb);
+  let H = Math.atan2(okb, oka) * 180 / Math.PI;
+  if (H < 0) H += 360;
+  return { l: okL, c: C, h: H };
+}
+function hexToRgb(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return m ? { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) } : null;
+}
+function oklchToHex(l, c, h) {
+  const hRad = (h % 360) * Math.PI / 180;
+  const oka = c * Math.cos(hRad), okb = c * Math.sin(hRad);
+  const Lp = l + 0.3963377774*oka + 0.2158037573*okb;
+  const Mp = l - 0.1055613458*oka - 0.0638541728*okb;
+  const Sp = l - 0.0894841775*oka - 1.2914855480*okb;
+  const Lm = Lp*Lp*Lp, Mm = Mp*Mp*Mp, Sm = Sp*Sp*Sp;
+  const rl = 4.0767416621*Lm - 3.3077115913*Mm + 0.2309699292*Sm;
+  const gl = -1.2684380046*Lm + 2.6097574011*Mm - 0.3413193965*Sm;
+  const bl = -0.0041960863*Lm - 0.7034186147*Mm + 1.7076147010*Sm;
+  const toSrgb = c => { if (c<0) return 0; if (c>1) return 255; return Math.round((c<=0.0031308?c*12.92:1.055*Math.pow(c,1/2.4)-0.055)*255); };
+  return '#' + [toSrgb(rl),toSrgb(gl),toSrgb(bl)].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+function oklchStr(l,c,h){ return `oklch(${l.toFixed(3)} ${c.toFixed(3)} ${h.toFixed(1)})`; }
+
+// ── Compute contrast ratio ──
+function relativeLuminance(c) {
+  const s = v => { v/=255; return v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4); };
+  return 0.2126*s(c.r)+0.7152*s(c.g)+0.0722*s(c.b);
+}
+function contrastRatio(c1,c2){ const l1=relativeLuminance(c1),l2=relativeLuminance(c2); return (Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05); }
+function bestContrastText(bgRgb){
+  const white={r:255,g:255,b:255}, black={r:0,g:0,b:0};
+  const wcr = contrastRatio(bgRgb, white), bcr = contrastRatio(bgRgb, black);
+  return wcr >= bcr ? 'white' : 'black';
+}
+
+// ── State ──
+let currentHex = '#4477e8';
+let currentOklch = null;
+
+function updateBrand(hex) {
+  currentHex = hex;
+  const rgb = hexToRgb(hex);
+  if (!rgb) return;
+  currentOklch = rgbToOklch(rgb.r, rgb.g, rgb.b);
+  const {l, c, h} = currentOklch;
+
+  document.documentElement.style.setProperty('--brand', oklchStr(l, c, h));
+  document.getElementById('swatchBtn').style.background = hex;
+  document.getElementById('colorPicker').value = hex;
+  document.getElementById('codeBrand').textContent = oklchStr(l, c, h);
+
+  renderBadges();
+  renderPalette();
+  renderCards();
+}
+
+// ── Badges ──
+const SEVERITIES = [
+  { id: 'success', name: 'Success', color: [0.62, 0.19, 160] },
+  { id: 'warning', name: 'Warning', color: [0.72, 0.17, 85]  },
+  { id: 'danger',  name: 'Danger',  color: [0.55, 0.22, 20]  },
+  { id: 'info',    name: 'Info',    color: [0.60, 0.20, 260]  },
+];
+
+function renderBadges() {
+  const grid = document.getElementById('badgeGrid');
+  grid.innerHTML = SEVERITIES.map(s => {
+    const [bl, bc, bh] = s.color;
+    const bgHex = oklchToHex(bl+0.35, bc*0.2, bh);
+    const bgRgb = hexToRgb(bgHex);
+    const textColor = bestContrastText(bgRgb);
+    const borderHex = oklchToHex(bl+0.25, bc*0.35, bh);
+    return `<span style="
+      display:inline-block;padding:0.45rem 0.85rem;border-radius:999px;
+      font-size:0.82rem;font-weight:500;
+      background:${bgHex};color:${textColor};
+      border:1px solid ${borderHex};
+      transition:background 0.3s,color 0.3s,border-color 0.3s;
+    ">${s.name}</span>`;
+  }).join('');
+}
+
+// ── Palette strip ──
+function renderPalette() {
+  const {l, c, h} = currentOklch;
+  const variants = [
+    { label: 'Base',      bg: oklchToHex(l, c, h) },
+    { label: 'Darker',    bg: oklchToHex(l-0.15, c, h) },
+    { label: 'Muted',     bg: oklchToHex(l+0.28, c*0.25, h) },
+    { label: 'Subtle BG', bg: oklchToHex(l+0.38, c*0.10, h) },
+    { label: 'Complement',bg: oklchToHex(l-0.08, c*1.15, (h+180)%360) },
+  ];
+  const strip = document.getElementById('paletteStrip');
+  strip.innerHTML = variants.map(v => {
+    const bgRgb = hexToRgb(v.bg);
+    const textColor = bestContrastText(bgRgb);
+    return `<div class="palette-swatch" style="background:${v.bg};color:${textColor}">${v.label}</div>`;
+  }).join('');
+}
+
+// ── Cards ──
+function renderCards() {
+  const {l, c, h} = currentOklch;
+  const cards = [
+    { name: 'Starter',  lift: 0.38, desc: 'Light tint, ideal for secondary surfaces.' },
+    { name: 'Standard', lift: 0.22, desc: 'Balanced surface for most content.' },
+    { name: 'Emphasis', lift: 0.08, desc: 'Deeper tint for highlighted sections.' },
+  ];
+  const grid = document.getElementById('cardGrid');
+  grid.innerHTML = cards.map((card, i) => {
+    const bgHex = oklchToHex(l+card.lift, c*0.12, h);
+    const bgRgb = hexToRgb(bgHex);
+    const textColor = bestContrastText(bgRgb);
+    const borderHex = oklchToHex(l+card.lift-0.08, c*0.25, h);
+    return `<div class="option-card" data-idx="${i}" data-lift="${card.lift}" style="
+      background:${bgHex};color:${textColor};border-color:${borderHex};
+    ">
+      <strong style="display:block;margin-bottom:0.35rem;font-size:0.95rem;">${card.name}</strong>
+      <span style="font-size:0.8rem;opacity:0.78;">${card.desc}</span>
+    </div>`;
+  }).join('');
+
+  // click handler
+  grid.querySelectorAll('.option-card').forEach(el => {
+    el.addEventListener('click', () => {
+      const wasSelected = el.classList.contains('selected');
+      grid.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+      if (!wasSelected) {
+        el.classList.add('selected');
+        const lift = parseFloat(el.dataset.lift);
+        const selL = l + lift - 0.15;
+        const selBg = oklchToHex(selL, c*0.25, h);
+        const selBorder = oklchToHex(selL-0.05, c*0.55, h);
+        const selText = bestContrastText(hexToRgb(selBg));
+        el.style.background = selBg;
+        el.style.color = selText;
+        el.style.borderColor = selBorder;
+      }
+    });
+  });
+}
+
+// ── Init ──
+document.getElementById('swatchBtn').addEventListener('click', () => {
+  document.getElementById('colorPicker').click();
+});
+document.getElementById('colorPicker').addEventListener('input', (e) => {
+  updateBrand(e.target.value);
+});
+updateBrand(currentHex);
+</script>
+
+</body>
+</html>
