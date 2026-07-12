@@ -948,7 +948,7 @@ function renderBrandedTextSection() {
   container.innerHTML = samples.map(s => {
     let textHex;
     if (s.pct === 0) {
-      textHex = bestContrastText(bgRgb);
+      textHex = bestContrastText(bgRgb) === 'white' ? '#ffffff' : '#000000';
     } else {
       const mix = mixOklch(l, c, h, s.pct);
       textHex = oklchToHex(mix.l, mix.c, mix.h);
