@@ -959,17 +959,20 @@ function renderMixSection() {
 function renderBrandedTextSection() {
   const {l, c, h} = currentOklch;
 
-  // Three cards with different backgrounds (UC6-style mix surfaces)
+  // Three cards with backgrounds derived via relative colors (oklch from brand),
+  // so they're visibly distinct surfaces. Text then uses color-mix(contrast-color(bg), brand, X%).
   const cards = [
-    { label: 'Subtle surface', bgPct: 0.12, headingBrandPct: 0.20, linkBrandPct: 0.35 },
-    { label: 'Mid surface',    bgPct: 0.28, headingBrandPct: 0.20, linkBrandPct: 0.35 },
-    { label: 'Strong surface', bgPct: 0.48, headingBrandPct: 0.20, linkBrandPct: 0.35 },
+    { label: 'Subtle surface', bgLift: 0.38, bgChromaMul: 0.12, headingBrandPct: 0.22, linkBrandPct: 0.38 },
+    { label: 'Mid surface',    bgLift: 0.22, bgChromaMul: 0.18, headingBrandPct: 0.22, linkBrandPct: 0.38 },
+    { label: 'Strong surface', bgLift: 0.05, bgChromaMul: 0.30, headingBrandPct: 0.22, linkBrandPct: 0.38 },
   ];
 
   const grid = document.getElementById('brandedTextGrid');
   grid.innerHTML = cards.map(card => {
-    const bgMix = mixOklch(l, c, h, card.bgPct);
-    const bgHex = oklchToHex(bgMix.l, bgMix.c, bgMix.h);
+    // Background: relative color from brand (not mix-based — gives clear surface)
+    const bgL = l + card.bgLift;
+    const bgC = c * card.bgChromaMul;
+    const bgHex = oklchToHex(bgL, bgC, h);
     const bgRgb = hexToRgb(bgHex);
 
     // Body text: pure contrast-color (black or white)
@@ -993,9 +996,8 @@ function renderBrandedTextSection() {
     </div>`;
   }).join('');
 
-  // Compare row: one swatch with matching surface
-  const compareBg = mixOklch(l, c, h, 0.22);
-  const compareBgHex = oklchToHex(compareBg.l, compareBg.c, compareBg.h);
+  // Compare row: relative-color surface, text comparison
+  const compareBgHex = oklchToHex(l + 0.22, c * 0.18, h);
   const compareBgRgb = hexToRgb(compareBgHex);
   const plainText = bestContrastText(compareBgRgb);
 
