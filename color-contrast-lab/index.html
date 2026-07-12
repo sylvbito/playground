@@ -627,7 +627,7 @@
 
     <style>
       .text-scale-demo {
-        background: oklch(from var(--brand) calc(l + 0.41) calc(c * 0.10) h);
+        background: oklch(from var(--brand) calc(l + 0.22) calc(c * 0.22) h);
         border-radius: var(--radius);
         padding: 2rem 1.5rem 1.75rem;
         margin-bottom: 1rem;
@@ -675,7 +675,7 @@
     </style>
 
     <p class="section-desc" style="margin-bottom:0.75rem">
-      <strong>One surface</strong> (derived from the brand with <code>oklch(from var(--brand) calc(l + 0.41) calc(c * 0.10) h)</code>). <strong>Four text ratios</strong> — watch the brand identity emerge as the ratio increases, while contrast stays in safe territory:
+      <strong>One surface</strong> (derived from the brand with <code>oklch(from var(--brand) calc(l + 0.22) calc(c * 0.22) h)</code>). <strong>Four text ratios</strong> — watch the brand identity emerge as the ratio increases, while contrast stays in safe territory:
     </p>
 
     <div class="text-scale-demo" id="textScaleSurface">
@@ -689,7 +689,7 @@
     <div class="code-container">
       <div class="code-block"><span class="co">/* Step 1: light surface derived from brand */</span>
 <span class="kw">.surface</span> {
-  <span class="prop">background</span>: <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--brand)</span> <span class="fn">calc</span>(l + 0.41) <span class="fn">calc</span>(c * 0.10) h);
+  <span class="prop">background</span>: <span class="fn">oklch</span>(<span class="kw">from</span> <span class="var">var(--brand)</span> <span class="fn">calc</span>(l + 0.22) <span class="fn">calc</span>(c * 0.22) h);
 }
 
 <span class="co">/* Step 2: text blends contrast-color with brand at varying ratios */</span>
@@ -925,9 +925,9 @@ function renderMixSection() {
 function renderBrandedTextSection() {
   const {l, c, h} = currentOklch;
 
-  // One light surface derived from brand via relative color
-  const bgL = l + 0.41;
-  const bgC = c * 0.10;
+  // One branded-but-light surface derived from brand via relative color
+  const bgL = l + 0.22;
+  const bgC = c * 0.22;
   const bgRgb = hexToRgb(oklchToHex(bgL, bgC, h));
   const surfaceText = bestContrastText(bgRgb);
 
