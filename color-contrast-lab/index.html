@@ -700,6 +700,104 @@
     </div>
   </section>
 
+  <hr class="divider">
+
+  <!-- ══════════ USE CASE 8 ══════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">★ Use case 8</span>
+      <h2 class="section-title">LCH lightness inversion — derived ink without <code>contrast-color()</code></h2>
+    </div>
+    <p class="section-desc">
+      This is the remembered trick: derive a surface from the brand, then derive its ink by <strong>inverting LCH lightness</strong>. Same hue, related chroma, inverted <code>l</code>: <code>calc(100% - l)</code>. No black, white, or <code>contrast-color()</code> involved.
+    </p>
+
+    <style>
+      .lch-invert-demo {
+        --v8-surface: lch(from var(--brand) 72% calc(c * 0.50) h);
+        --v8-ink: lch(from var(--v8-surface) calc(100% - l) calc(c * 1.20) h);
+        background: var(--v8-surface);
+        color: var(--v8-ink);
+        border-radius: var(--radius);
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+        transition: background 0.3s, color 0.3s;
+      }
+      .lch-invert-demo::after {
+        content: '';
+        position: absolute;
+        width: 18rem;
+        height: 18rem;
+        border-radius: 50%;
+        right: -7rem;
+        bottom: -11rem;
+        background: lch(from var(--v8-ink) l calc(c * 0.65) h / 0.14);
+        pointer-events: none;
+      }
+      .v8-kicker, .v8-copy, .v8-meta { position: relative; z-index: 1; }
+      .v8-kicker {
+        font-family: 'SF Mono', Menlo, monospace;
+        font-size: 0.7rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0.7;
+        margin-bottom: 1.75rem;
+      }
+      .v8-title {
+        max-width: 30rem;
+        font-size: clamp(1.8rem, 4vw, 3.1rem);
+        letter-spacing: -0.045em;
+        line-height: 0.98;
+        margin: 0 0 0.85rem;
+      }
+      .v8-copy { max-width: 29rem; line-height: 1.55; opacity: 0.84; }
+      .v8-meta {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        margin-top: 1.75rem;
+        flex-wrap: wrap;
+      }
+      .v8-pill {
+        border: 1px solid currentColor;
+        border-radius: 999px;
+        padding: 0.38rem 0.68rem;
+        font-family: 'SF Mono', Menlo, monospace;
+        font-size: 0.68rem;
+      }
+      .v8-note { font-size: 0.76rem; opacity: 0.75; }
+    </style>
+
+    <div class="lch-invert-demo" id="lchInvertDemo">
+      <div class="v8-kicker">Brand → LCH surface → inverse-LCH ink</div>
+      <h3 class="v8-title">The text is the background’s colour, turned through its own lightness axis.</h3>
+      <p class="v8-copy">Both colours remain in the same hue family. The surface is deliberately light; the derived ink lands dark and saturated rather than defaulting to anonymous black.</p>
+      <div class="v8-meta">
+        <span class="v8-pill" id="lchInvertRatio">measuring contrast…</span>
+        <span class="v8-note">Contrast shown for this exact rendered pair.</span>
+      </div>
+    </div>
+
+    <button class="code-toggle" onclick="this.classList.toggle('open'); this.nextElementSibling.classList.toggle('open')">
+      <span class="arrow">▶</span> View CSS
+    </button>
+    <div class="code-container">
+      <div class="code-block"><span class="co">/* One variable: the brand */</span>
+<span class="kw">.panel</span> {
+  <span class="prop">--surface</span>: <span class="fn">lch</span>(<span class="kw">from</span> <span class="var">var(--brand)</span> <span class="val">72%</span> <span class="fn">calc</span>(c * <span class="val">0.50</span>) h);
+
+  <span class="co">/* Same hue; lightness is inverted: 72% → 28% */</span>
+  <span class="prop">--ink</span>: <span class="fn">lch</span>(<span class="kw">from</span> <span class="var">var(--surface)</span>
+                  <span class="fn">calc</span>(<span class="val">100%</span> - l) <span class="fn">calc</span>(c * <span class="val">1.20</span>) h);
+
+  <span class="prop">background</span>: <span class="var">var(--surface)</span>;
+  <span class="prop">color</span>: <span class="var">var(--ink)</span>;
+}</div>
+    </div>
+    <p class="section-desc" style="margin-top:1rem;font-size:0.82rem"><strong>Important:</strong> this creates a deliberately related light/dark pair, but inversion alone cannot promise WCAG contrast for every arbitrary input. The live ratio is here so the system stays honest.</p>
+  </section>
+
   <!-- ══════════ SUPPORT ─═════════ -->
   <div class="support-note">
     <span class="support-badge ok">Baseline 2026</span>
@@ -780,6 +878,7 @@ function updateBrand(hex) {
   renderCards();
   renderMixSection();
   renderBrandedTextSection();
+  requestAnimationFrame(renderLchInversionSection);
 }
 
 // ── Badges ──
@@ -967,6 +1066,31 @@ function renderBrandedTextSection() {
       <span class="ts-contrast-badge" style="background:${badgeBg};color:${badgeText}">${cr}:1</span>
     </div>`;
   }).join('');
+}
+
+// ── Version 8: native LCH lightness inversion, no contrast-color() ──
+function cssRgbToRgb(value) {
+  const channels = value.match(/[\d.]+/g);
+  return channels && channels.length >= 3
+    ? { r: Number(channels[0]), g: Number(channels[1]), b: Number(channels[2]) }
+    : null;
+}
+
+function renderLchInversionSection() {
+  const demo = document.getElementById('lchInvertDemo');
+  const ratio = document.getElementById('lchInvertRatio');
+  if (!demo || !ratio) return;
+
+  // Read the browser's resolved LCH colours — this verifies the actual CSS, not a JS approximation.
+  const style = getComputedStyle(demo);
+  const bg = cssRgbToRgb(style.backgroundColor);
+  const ink = cssRgbToRgb(style.color);
+  if (!bg || !ink) {
+    ratio.textContent = 'contrast unavailable';
+    return;
+  }
+  const cr = contrastRatio(bg, ink).toFixed(1);
+  ratio.textContent = `${cr}:1 rendered contrast`;
 }
 
 // ── Init ──
