@@ -709,13 +709,17 @@
       <h2 class="section-title">LCH lightness inversion — derived ink without <code>contrast-color()</code></h2>
     </div>
     <p class="section-desc">
-      This is the remembered trick: derive a surface from the brand, then derive its ink by <strong>inverting LCH lightness</strong>. Same hue, related chroma, inverted <code>l</code>: <code>calc(100% - l)</code>. No black, white, or <code>contrast-color()</code> involved.
+      This is the remembered trick: derive a surface from the brand, then derive its ink by <strong>inverting LCH lightness</strong>. Same hue, related chroma, inverted <code>l</code>: <code>calc(100 - l)</code>. No black, white, or <code>contrast-color()</code> involved.
     </p>
 
     <style>
       .lch-invert-demo {
-        --v8-surface: lch(from var(--brand) 72% calc(c * 0.50) h);
-        --v8-ink: lch(from var(--v8-surface) calc(100 - l) calc(c * 1.20) h);
+        --v8-surface-l: 72;
+        --v8-surface-c: 0.50;
+        --v8-ink-shift: 0;
+        --v8-ink-c: 1.20;
+        --v8-surface: lch(from var(--brand) var(--v8-surface-l) calc(c * var(--v8-surface-c)) h);
+        --v8-ink: lch(from var(--v8-surface) calc(100 - l + var(--v8-ink-shift)) calc(c * var(--v8-ink-c)) h);
         background: var(--v8-surface);
         color: var(--v8-ink);
         border-radius: var(--radius);
@@ -767,6 +771,50 @@
         font-size: 0.68rem;
       }
       .v8-note { font-size: 0.76rem; opacity: 0.75; }
+      .v8-controls {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin: 0.85rem 0 1.25rem;
+      }
+      @media (max-width: 700px) { .v8-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      .v8-control {
+        border: 1px solid var(--rule);
+        border-radius: 0.45rem;
+        padding: 0.8rem 0.75rem 0.7rem;
+        background: color-mix(in srgb, var(--bg) 90%, var(--brand) 10%);
+      }
+      .v8-control label {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem;
+        font-size: 0.69rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        margin-bottom: 0.55rem;
+      }
+      .v8-control output {
+        font-family: 'SF Mono', Menlo, monospace;
+        color: var(--brand);
+      }
+      .v8-control input {
+        width: 100%;
+        margin: 0;
+        accent-color: var(--brand);
+        cursor: ew-resize;
+      }
+      .v8-reset {
+        appearance: none;
+        border: 1px solid var(--rule);
+        color: var(--muted);
+        background: transparent;
+        border-radius: 0.3rem;
+        font: 500 0.7rem 'SF Mono', Menlo, monospace;
+        padding: 0.42rem 0.58rem;
+        cursor: pointer;
+      }
+      .v8-reset:hover { color: var(--text); border-color: var(--brand); }
     </style>
 
     <div class="lch-invert-demo" id="lchInvertDemo">
@@ -778,6 +826,26 @@
         <span class="v8-note">Contrast shown for this exact rendered pair.</span>
       </div>
     </div>
+
+    <div class="v8-controls" aria-label="LCH inversion controls">
+      <div class="v8-control">
+        <label for="v8SurfaceL">Surface L <output id="v8SurfaceLValue">72</output></label>
+        <input id="v8SurfaceL" type="range" min="52" max="86" value="72" step="1">
+      </div>
+      <div class="v8-control">
+        <label for="v8SurfaceC">Surface chroma <output id="v8SurfaceCValue">0.50×</output></label>
+        <input id="v8SurfaceC" type="range" min="0" max="1" value="0.50" step="0.05">
+      </div>
+      <div class="v8-control">
+        <label for="v8InkShift">Ink L offset <output id="v8InkShiftValue">0</output></label>
+        <input id="v8InkShift" type="range" min="-18" max="18" value="0" step="1">
+      </div>
+      <div class="v8-control">
+        <label for="v8InkC">Ink chroma <output id="v8InkCValue">1.20×</output></label>
+        <input id="v8InkC" type="range" min="0" max="2" value="1.20" step="0.05">
+      </div>
+    </div>
+    <button class="v8-reset" type="button" id="v8Reset">Reset controls</button>
 
     <button class="code-toggle" onclick="this.classList.toggle('open'); this.nextElementSibling.classList.toggle('open')">
       <span class="arrow">▶</span> View CSS
@@ -1097,6 +1165,37 @@ function renderLchInversionSection() {
   ratio.textContent = `${cr}:1 rendered contrast`;
 }
 
+function setupLchControls() {
+  const demo = document.getElementById('lchInvertDemo');
+  const controls = [
+    { input: 'v8SurfaceL', output: 'v8SurfaceLValue', property: '--v8-surface-l', format: v => v },
+    { input: 'v8SurfaceC', output: 'v8SurfaceCValue', property: '--v8-surface-c', format: v => `${Number(v).toFixed(2)}×` },
+    { input: 'v8InkShift', output: 'v8InkShiftValue', property: '--v8-ink-shift', format: v => Number(v) > 0 ? `+${v}` : v },
+    { input: 'v8InkC', output: 'v8InkCValue', property: '--v8-ink-c', format: v => `${Number(v).toFixed(2)}×` },
+  ];
+
+  const apply = control => {
+    const input = document.getElementById(control.input);
+    document.getElementById(control.output).value = control.format(input.value);
+    demo.style.setProperty(control.property, input.value);
+  };
+  controls.forEach(control => {
+    const input = document.getElementById(control.input);
+    input.addEventListener('input', () => {
+      apply(control);
+      requestAnimationFrame(renderLchInversionSection);
+    });
+  });
+  document.getElementById('v8Reset').addEventListener('click', () => {
+    controls.forEach(control => {
+      const input = document.getElementById(control.input);
+      input.value = input.defaultValue;
+      apply(control);
+    });
+    requestAnimationFrame(renderLchInversionSection);
+  });
+}
+
 // ── Init ──
 document.getElementById('swatchBtn').addEventListener('click', () => {
   document.getElementById('colorPicker').click();
@@ -1104,6 +1203,7 @@ document.getElementById('swatchBtn').addEventListener('click', () => {
 document.getElementById('colorPicker').addEventListener('input', (e) => {
   updateBrand(e.target.value);
 });
+setupLchControls();
 updateBrand(currentHex);
 </script>
 
