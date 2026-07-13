@@ -1069,11 +1069,15 @@ function renderBrandedTextSection() {
 }
 
 // ── Version 8: native LCH lightness inversion, no contrast-color() ──
-function cssRgbToRgb(value) {
-  const channels = value.match(/[\d.]+/g);
-  return channels && channels.length >= 3
-    ? { r: Number(channels[0]), g: Number(channels[1]), b: Number(channels[2]) }
-    : null;
+function cssColorToRgb(value) {
+  // Browsers may preserve LCH in computed styles; canvas converts it to rendered sRGB.
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 1;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.fillStyle = value;
+  ctx.fillRect(0, 0, 1, 1);
+  const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+  return { r, g, b };
 }
 
 function renderLchInversionSection() {
@@ -1083,8 +1087,8 @@ function renderLchInversionSection() {
 
   // Read the browser's resolved LCH colours — this verifies the actual CSS, not a JS approximation.
   const style = getComputedStyle(demo);
-  const bg = cssRgbToRgb(style.backgroundColor);
-  const ink = cssRgbToRgb(style.color);
+  const bg = cssColorToRgb(style.backgroundColor);
+  const ink = cssColorToRgb(style.color);
   if (!bg || !ink) {
     ratio.textContent = 'contrast unavailable';
     return;
