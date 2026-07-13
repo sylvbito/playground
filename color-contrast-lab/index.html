@@ -715,7 +715,7 @@
     <style>
       .lch-invert-demo {
         --v8-surface: lch(from var(--brand) 72% calc(c * 0.50) h);
-        --v8-ink: lch(from var(--v8-surface) calc(100% - l) calc(c * 1.20) h);
+        --v8-ink: lch(from var(--v8-surface) calc(100 - l) calc(c * 1.20) h);
         background: var(--v8-surface);
         color: var(--v8-ink);
         border-radius: var(--radius);
@@ -789,7 +789,7 @@
 
   <span class="co">/* Same hue; lightness is inverted: 72% → 28% */</span>
   <span class="prop">--ink</span>: <span class="fn">lch</span>(<span class="kw">from</span> <span class="var">var(--surface)</span>
-                  <span class="fn">calc</span>(<span class="val">100%</span> - l) <span class="fn">calc</span>(c * <span class="val">1.20</span>) h);
+                  <span class="fn">calc</span>(<span class="val">100</span> - l) <span class="fn">calc</span>(c * <span class="val">1.20</span>) h);
 
   <span class="prop">background</span>: <span class="var">var(--surface)</span>;
   <span class="prop">color</span>: <span class="var">var(--ink)</span>;
