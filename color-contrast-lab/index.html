@@ -728,6 +728,7 @@
         overflow: hidden;
         transition: background 0.3s, color 0.3s;
       }
+      .lch-invert-demo.is-adjusting { transition: none; }
       .lch-invert-demo::after {
         content: '';
         position: absolute;
@@ -1182,11 +1183,13 @@ function setupLchControls() {
   controls.forEach(control => {
     const input = document.getElementById(control.input);
     input.addEventListener('input', () => {
+      demo.classList.add('is-adjusting');
       apply(control);
       requestAnimationFrame(renderLchInversionSection);
     });
   });
   document.getElementById('v8Reset').addEventListener('click', () => {
+    demo.classList.add('is-adjusting');
     controls.forEach(control => {
       const input = document.getElementById(control.input);
       input.value = input.defaultValue;
