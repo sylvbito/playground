@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A dual-palette semantic theme compiler inspired by Codex appearance architecture.">
+  <title>Chrome Theme Compiler — Orbit Systems</title>
+  <link rel="stylesheet" href="styles.css?v=compiler-4">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="site-header">
+      <a class="identity" href="../" aria-label="Orbit Systems playground">
+        <span class="identity-mark">O.</span>
+        <span><b>Theme compiler</b><small>Orbit systems / experiment 02</small></span>
+      </a>
+      <div class="pipeline" aria-label="Compiler pipeline">
+        <span class="done">Source</span><i></i><span class="done">Normalise</span><i></i><span class="done">Derive</span><i></i><span class="active">Apply</span>
+      </div>
+      <div class="saved-state"><i></i><span id="saveStatus">Settings confirmed</span></div>
+    </header>
+
+    <main class="page-grid">
+      <aside class="control-panel" aria-label="Appearance settings">
+        <div class="control-intro">
+          <span class="kicker">Appearance source</span>
+          <h1>Small palette.<br>Complete interface.</h1>
+          <p>Six editable colours compile into stable semantic roles for chrome, code and interaction.</p>
+        </div>
+
+        <section class="control-section">
+          <div class="section-head"><b>Appearance mode</b><code id="resolvedLabel">Light resolved</code></div>
+          <div class="segmented three" id="modeControl" role="group" aria-label="Appearance mode">
+            <button data-mode="system" aria-pressed="true">System</button>
+            <button data-mode="light" aria-pressed="false">Light</button>
+            <button data-mode="dark" aria-pressed="false">Dark</button>
+          </div>
+        </section>
+
+        <section class="control-section">
+          <div class="section-head"><b>Edit palette</b><code id="editingLabel">Light</code></div>
+          <div class="palette-tabs" id="paletteTabs" role="group" aria-label="Palette to edit">
+            <button data-palette="light" aria-pressed="true"><i class="light-chip"></i><span>Light<small id="lightSummary">#FFFFFF / #1A1C1F</small></span></button>
+            <button data-palette="dark" aria-pressed="false"><i class="dark-chip"></i><span>Dark<small id="darkSummary">#181818 / #FFFFFF</small></span></button>
+          </div>
+        </section>
+
+        <section class="control-section palette-controls">
+          <div class="section-head"><b>Primitive colours</b><code>6-digit hex</code></div>
+          <label class="colour-field"><span><b>Accent</b><small>Focus + primary action</small></span><input type="color" data-colour="accent"><input type="text" data-hex="accent" maxlength="7" spellcheck="false"></label>
+          <label class="colour-field"><span><b>Background</b><small>Root surface</small></span><input type="color" data-colour="surface"><input type="text" data-hex="surface" maxlength="7" spellcheck="false"></label>
+          <label class="colour-field"><span><b>Foreground</b><small>Primary ink</small></span><input type="color" data-colour="ink"><input type="text" data-hex="ink" maxlength="7" spellcheck="false"></label>
+          <details>
+            <summary>Semantic seeds <span>3</span></summary>
+            <div class="details-body">
+              <label class="colour-field compact"><span><b>Diff added</b></span><input type="color" data-colour="diffAdded"><input type="text" data-hex="diffAdded" maxlength="7" spellcheck="false"></label>
+              <label class="colour-field compact"><span><b>Diff removed</b></span><input type="color" data-colour="diffRemoved"><input type="text" data-hex="diffRemoved" maxlength="7" spellcheck="false"></label>
+              <label class="colour-field compact"><span><b>Skill</b></span><input type="color" data-colour="skill"><input type="text" data-hex="skill" maxlength="7" spellcheck="false"></label>
+            </div>
+          </details>
+        </section>
+
+        <section class="control-section">
+          <div class="section-head"><b>Contrast</b><code id="contrastValue">45</code></div>
+          <input class="range" id="contrastRange" type="range" min="0" max="100" step="1" value="45">
+          <div class="range-labels"><span>Subtle</span><span>Explicit</span></div>
+        </section>
+
+        <section class="control-section">
+          <div class="section-head"><b>Editor theme</b><code>Independent</code></div>
+          <select id="editorTheme" aria-label="Editor theme"></select>
+          <button class="seed-button" id="seedChrome">Seed chrome from editor <span>→</span></button>
+        </section>
+
+        <details class="advanced">
+          <summary>Type & behaviour <span>6 settings</span></summary>
+          <div class="details-body advanced-body">
+            <div class="number-grid">
+              <label><span>UI size</span><input id="uiFontSize" type="number" min="11" max="20" step="1"></label>
+              <label><span>Code size</span><input id="codeFontSize" type="number" min="10" max="20" step="1"></label>
+            </div>
+            <label class="text-setting"><span>UI font</span><input id="uiFont" type="text" placeholder="System default"></label>
+            <label class="text-setting"><span>Code font</span><input id="codeFont" type="text" placeholder="System mono"></label>
+            <label class="toggle"><span>Font smoothing</span><input id="fontSmoothing" type="checkbox"><i></i></label>
+            <label class="toggle"><span>Pointer cursors</span><input id="pointerCursors" type="checkbox"><i></i></label>
+          </div>
+        </details>
+
+        <div class="panel-actions">
+          <button id="shareTheme">Copy theme</button>
+          <button id="importTheme">Import</button>
+          <button id="resetTheme" class="quiet">Reset</button>
+        </div>
+      </aside>
+
+      <section class="workbench" aria-label="Compiled theme preview">
+        <header class="workbench-head">
+          <div>
+            <span class="kicker">Compiled output</span>
+            <h2>Application chrome + editor</h2>
+          </div>
+          <div class="head-meta">
+            <span id="previewBadge">Light palette</span>
+            <code id="tokenCount">24 semantic tokens</code>
+          </div>
+        </header>
+
+        <div class="product-frame" id="productFrame">
+          <div class="native-bar">
+            <div class="traffic"><i></i><i></i><i></i></div>
+            <div class="native-title"><b>Orbit</b><span>/</span><span>theme-compiler</span></div>
+            <div class="native-actions"><span id="modeGlyph">☼</span><button aria-label="Open settings">•••</button></div>
+          </div>
+
+          <div class="product-shell">
+            <nav class="app-rail" aria-label="Application navigation">
+              <button class="rail-logo" aria-label="Home">O</button>
+              <button class="active" aria-label="Threads">⌁</button>
+              <button aria-label="Code">&lt;/&gt;</button>
+              <button aria-label="Skills">✦</button>
+              <span></span>
+              <button aria-label="Settings">⚙</button>
+              <button class="avatar" aria-label="Profile">S</button>
+            </nav>
+
+            <aside class="thread-list">
+              <div class="pane-title"><b>Threads</b><button aria-label="New thread">＋</button></div>
+              <label class="search"><span>⌕</span><input value="" placeholder="Search" aria-label="Search threads"></label>
+              <div class="thread-group"><span>Today</span>
+                <button class="thread active"><i></i><span><b>Compile appearance tokens</b><small>Update theme architecture</small></span><time>Now</time></button>
+                <button class="thread"><i></i><span><b>Review colour contrast</b><small>12 semantic pairs</small></span><time>9m</time></button>
+              </div>
+              <div class="thread-group"><span>Previous 7 days</span>
+                <button class="thread"><i></i><span><b>Editor theme seed</b><small>Nord coordination</small></span><time>Tue</time></button>
+                <button class="thread"><i></i><span><b>Diff marker states</b><small>Symbols + colour</small></span><time>Mon</time></button>
+              </div>
+            </aside>
+
+            <section class="conversation">
+              <header class="conversation-head">
+                <div><span class="breadcrumbs">playground / theme /</span><b>derive-tokens.ts</b></div>
+                <div class="conversation-actions"><span class="branch">main</span><button>Share</button></div>
+              </header>
+              <div class="conversation-body">
+                <article class="message user-message"><div class="message-avatar">S</div><div><b>You</b><p>Make the chrome feel coordinated with the editor, but keep both systems independently swappable.</p></div></article>
+                <article class="message assistant-message"><div class="assistant-mark">O</div><div><b>Orbit compiler</b><p>The source palette stays intentionally small. It currently produces <strong id="inlineTokenCount">24 roles</strong>, with contrast and foreground decisions resolved before components see a colour.</p>
+                  <div class="code-window">
+                    <div class="code-head"><span>derive-tokens.ts</span><code id="editorThemeName">Codex Light</code></div>
+                    <pre id="codePreview"><code><span class="syntax-keyword">export const</span> tokens = derive({
+  <span class="syntax-property">surface</span>: <span class="syntax-string">"#ffffff"</span>,
+  <span class="syntax-property">accent</span>: <span class="syntax-string">"#339cff"</span>,
+  <span class="syntax-property">contrast</span>: <span class="syntax-number">45</span>,
+});</code></pre>
+                    <div class="diff-line removed"><i>−</i><code>color: rawTheme.accent;</code></div>
+                    <div class="diff-line added"><i>+</i><code>color: tokens.textAccent;</code></div>
+                  </div>
+                </div></article>
+                <div class="system-note"><i>✦</i><span><b>appearance-compiler</b> applied semantic roles to 18 components</span></div>
+              </div>
+              <footer class="composer"><div class="composer-box"><p>Ask for a theme change…</p><div><button>＋</button><span>⌘ ↵</span><button class="send" aria-label="Send">↑</button></div></div><small>Theme output is deterministic from validated settings.</small></footer>
+            </section>
+
+            <aside class="token-inspector">
+              <div class="inspector-head"><div><span>Output</span><b>Semantic tokens</b></div><button id="copyCss">Copy CSS</button></div>
+              <div class="primitive-strip" id="primitiveStrip"></div>
+              <div class="token-list" id="tokenList"></div>
+              <div class="contrast-proof" id="contrastProof"></div>
+            </aside>
+          </div>
+        </div>
+
+        <footer class="compiler-footer">
+          <div><i class="ok"></i><span><b>Schema valid</b><small>hex · ranges · nullable fonts</small></span></div>
+          <div><i class="ok"></i><span><b>Atomic apply</b><small>layout effect equivalent</small></span></div>
+          <div><i class="ok"></i><span><b>Host persisted</b><small>queued browser adapter</small></span></div>
+          <div id="contrastFooter"><i class="ok"></i><span><b>Contrast safe</b><small>accent ink resolved</small></span></div>
+        </footer>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="importDialog">
+    <form method="dialog">
+      <div class="dialog-head"><div><span class="kicker">Versioned theme string</span><h2>Import appearance</h2></div><button value="cancel" aria-label="Close">×</button></div>
+      <p>Paste a <code>orbit-theme-v1:</code> string. Colours, ranges, variant and editor theme are validated before anything changes.</p>
+      <textarea id="importValue" rows="7" spellcheck="false" placeholder="orbit-theme-v1:{...}"></textarea>
+      <div class="dialog-error" id="importError" role="alert"></div>
+      <div class="dialog-actions"><button value="cancel">Cancel</button><button type="button" id="confirmImport" class="primary-dialog">Validate & import</button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite">Copied</div>
+  <script type="module" src="app.js?v=compiler-2"></script>
+</body>
+</html>
