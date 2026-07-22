@@ -1,7 +1,7 @@
 import { DEFAULT_SETTINGS } from './theme/defaults.js';
 import { normaliseSettings, isHex } from './theme/schema.js';
-import { deriveSemanticTokens, TOKEN_GROUPS } from './theme/derive-tokens.js';
-import { applyAppearance } from './theme/apply-css.js';
+import { deriveSemanticTokens, TOKEN_GROUPS } from './theme/derive-tokens.js?v=compiler-2';
+import { applyAppearance, applyPlatformAppearance } from './theme/apply-css.js?v=compiler-2';
 import { EDITOR_THEMES, VALID_EDITOR_IDS, editorThemesFor, loadChromeThemeSeed, loadEditorTheme } from './theme/editor-themes.js';
 import { getSystemVariant, subscribeSystemVariant } from './theme/system-theme.js';
 import { createSettingsStore } from './theme/persistence.js';
@@ -106,6 +106,7 @@ async function render() {
   const theme = settings[themeKey(variant)];
   const tokens = deriveSemanticTokens(theme, variant);
   const editorTheme = await loadEditorTheme(settings[codeKey(variant)]);
+  applyPlatformAppearance(document.documentElement, tokens, theme, settings, variant);
   applyAppearance($('#productFrame'), tokens, theme, settings, variant, editorTheme);
   renderControls();
   renderInspector(tokens, theme);

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A dual-palette semantic theme compiler inspired by Codex appearance architecture.">
   <title>Chrome Theme Compiler — Orbit Systems</title>
-  <link rel="stylesheet" href="styles.css?v=compiler-4">
+  <link rel="stylesheet" href="styles.css?v=compiler-5">
 </head>
 <body>
   <div class="app-shell">
@@ -24,16 +24,16 @@
       <aside class="control-panel" aria-label="Appearance settings">
         <div class="control-intro">
           <span class="kicker">Appearance source</span>
-          <h1>Small palette.<br>Complete interface.</h1>
-          <p>Six editable colours compile into stable semantic roles for chrome, code and interaction.</p>
+          <h1>Theme the whole platform.</h1>
+          <p>Six source colours compile into every surface, control, border and text role. The editor stays independently swappable.</p>
         </div>
 
         <section class="control-section">
           <div class="section-head"><b>Appearance mode</b><code id="resolvedLabel">Light resolved</code></div>
           <div class="segmented three" id="modeControl" role="group" aria-label="Appearance mode">
-            <button data-mode="system" aria-pressed="true">System</button>
-            <button data-mode="light" aria-pressed="false">Light</button>
-            <button data-mode="dark" aria-pressed="false">Dark</button>
+            <button data-mode="system" aria-pressed="true"><span class="mode-preview system-preview"><i></i><i></i><i></i></span><b>System</b></button>
+            <button data-mode="light" aria-pressed="false"><span class="mode-preview light-preview"><i></i><i></i><i></i></span><b>Light</b></button>
+            <button data-mode="dark" aria-pressed="false"><span class="mode-preview dark-preview"><i></i><i></i><i></i></span><b>Dark</b></button>
           </div>
         </section>
 
@@ -97,7 +97,7 @@
         <header class="workbench-head">
           <div>
             <span class="kicker">Compiled output</span>
-            <h2>Application chrome + editor</h2>
+            <h2>Whole platform + editor</h2>
           </div>
           <div class="head-meta">
             <span id="previewBadge">Light palette</span>
@@ -189,6 +189,6 @@
     </form>
   </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite">Copied</div>
-  <script type="module" src="app.js?v=compiler-2"></script>
+  <script type="module" src="app.js?v=compiler-4"></script>
 </body>
 </html>

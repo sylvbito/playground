@@ -8,8 +8,8 @@ export function deriveSemanticTokens(theme, variant) {
   const { surface, ink, accent, semanticColors } = theme;
   const primaryTextTarget = interpolate(4.5, 7, strength);
   const primary = readableForeground(ink, surface, primaryTextTarget);
-  const secondary = readableForeground(mix(primary, surface, interpolate(0.31, 0.20, strength)), surface, interpolate(3.4, 4.5, strength));
-  const tertiary = readableForeground(mix(primary, surface, interpolate(0.48, 0.34, strength)), surface, 3);
+  const secondary = readableForeground(mix(primary, surface, interpolate(0.31, 0.20, strength)), surface, interpolate(4.5, 5.5, strength));
+  const tertiary = readableForeground(mix(primary, surface, interpolate(0.48, 0.34, strength)), surface, 4.5);
   const accentText = readableForeground(accent, surface, 4.5);
   const onAccent = bestInk(accent);
   const elevatedMix = dark ? interpolate(0.055, 0.11, strength) : interpolate(0.012, 0.038, strength);
