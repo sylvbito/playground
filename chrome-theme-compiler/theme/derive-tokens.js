@@ -7,7 +7,7 @@ export function deriveSemanticTokens(theme, variant) {
   const strength = theme.contrast / 100;
   const colourUsage = (theme.colourUsage ?? 50) / 100;
   const injection = colourUsage ** 2.2;
-  const infrastructureInjection = theme.neutralAtmosphere ? 0 : injection;
+  const infrastructureInjection = injection * (theme.atmosphereChromaticity ?? 1);
   const { surface, ink, accent, semanticColors } = theme;
   const primaryTextTarget = interpolate(4.5, 7, strength);
   const primary = readableForeground(ink, surface, primaryTextTarget);

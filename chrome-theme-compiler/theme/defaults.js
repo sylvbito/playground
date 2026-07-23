@@ -1,4 +1,4 @@
-import { paletteForPreset } from './editor-themes.js?v=compiler-9';
+import { paletteForPreset } from './editor-themes.js?v=compiler-11';
 
 export const DEFAULT_SETTINGS = Object.freeze({
   mode: 'system',

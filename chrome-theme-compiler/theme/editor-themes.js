@@ -30,21 +30,23 @@ export function compilePalette(palette, variant, contrast = 55, colourUsage = 65
   if (!['light', 'dark'].includes(variant)) return null;
   const dark = variant === 'dark';
   const usage = clamp(colourUsage, 0, 100) / 100;
-  // Near-white OKLCH has very little usable gamut. Keep the restrained end pale,
-  // then lower Light's tonal ceiling sharply enough for chroma to survive at Full.
+  // Map atmosphere lightness and chroma continuously: white resolves to white,
+  // dark neutrals resolve to grey, and chromatic sources gain room for colour.
   const injection = usage ** 2.2;
   const strength = clamp(contrast, 0, 100) / 100;
   const atmosphere = rgbToOklch(palette.atmosphere);
   const accent = rgbToOklch(palette.accent);
-  const neutralAtmosphere = atmosphere.c < 0.018;
-  const gravity = clamp((atmosphere.l - 0.5) * 2, -1, 1) * (atmosphere.c < 0.018 ? 1 : 0.28);
+  const atmosphereChromaticity = 1 - Math.exp(-220 * atmosphere.c * atmosphere.c);
+  const gravityWeight = 1 - atmosphereChromaticity * 0.72;
+  const gravity = clamp((atmosphere.l - 0.5) * 2, -1, 1) * gravityWeight;
   const neutralTargetLightness = 0.86 + atmosphere.l * 0.13;
+  const lightTargetLightness = neutralTargetLightness - atmosphereChromaticity * 0.09;
   const surfaceLightness = dark
     ? 0.145 + usage * 0.075 + gravity * 0.05
-    : neutralAtmosphere
-      ? 0.99 + (neutralTargetLightness - 0.99) * injection
-      : 0.99 - injection * 0.15 + gravity * (0.012 + injection * 0.026);
-  const surfaceChroma = dark ? 0.03 + usage * 0.58 : neutralAtmosphere ? 0 : 0.01 + injection * 1.22;
+    : 0.99 + (lightTargetLightness - 0.99) * injection;
+  const surfaceChroma = dark
+    ? 0.03 + usage * 0.58
+    : injection * (0.12 + atmosphereChromaticity * 1.1);
   const inkLightness = dark ? 0.84 + strength * 0.12 : 0.26 - strength * 0.18;
   const accentLightness = dark
     ? clamp(accent.l, 0.68, 0.9)
@@ -52,14 +54,16 @@ export function compilePalette(palette, variant, contrast = 55, colourUsage = 65
   const derivedAccent = tone(palette.accent, accentLightness, 0.62 + usage * 0.5);
   const atmosphereSurface = tone(palette.atmosphere, surfaceLightness, surfaceChroma);
   const accentWash = tone(palette.accent, 0.93 - injection * 0.13, 0.3 + injection);
-  const surface = dark || neutralAtmosphere ? atmosphereSurface : mix(atmosphereSurface, accentWash, injection * 0.14);
+  const surface = dark
+    ? atmosphereSurface
+    : mix(atmosphereSurface, accentWash, injection * 0.14 * atmosphereChromaticity);
   return {
     accent: derivedAccent,
     surface,
     ink: tone(palette.atmosphere, inkLightness, 0.08 + usage * 0.16),
     contrast: clamp(Math.round(contrast), 0, 100),
     colourUsage: clamp(Math.round(colourUsage), 0, 100),
-    neutralAtmosphere,
+    atmosphereChromaticity,
     fonts: { ui: fonts.ui || null, code: fonts.code || null },
     opaqueWindows: false,
     semanticColors: {
