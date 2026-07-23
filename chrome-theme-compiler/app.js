@@ -12,8 +12,7 @@ const clone = value => structuredClone(value);
 const store = createSettingsStore();
 let settings = normaliseSettings(store.read() || clone(DEFAULT_SETTINGS), DEFAULT_SETTINGS, VALID_EDITOR_IDS);
 let systemVariant = getSystemVariant();
-let editVariant = settings.mode === 'system' ? systemVariant : settings.mode;
-let previewOverride = null;
+let editVariant = 'light';
 let persistTimer;
 
 const $ = selector => document.querySelector(selector);
@@ -25,7 +24,7 @@ const colourPath = key => ['diffAdded', 'diffRemoved', 'skill'].includes(key) ? 
 function themeKey(variant) { return variant === 'dark' ? 'darkChromeTheme' : 'lightChromeTheme'; }
 function codeKey(variant) { return variant === 'dark' ? 'darkCodeThemeId' : 'lightCodeThemeId'; }
 function currentTheme() { return settings[themeKey(editVariant)]; }
-function resolvedVariant() { return previewOverride || (settings.mode === 'system' ? systemVariant : settings.mode); }
+function resolvedVariant() { return settings.mode === 'system' ? systemVariant : settings.mode; }
 
 function setNested(target, path, value) {
   let cursor = target;
@@ -110,7 +109,7 @@ async function render() {
   applyAppearance($('#productFrame'), tokens, theme, settings, variant, editorTheme);
   renderControls();
   renderInspector(tokens, theme);
-  $('#previewBadge').textContent = `${variant[0].toUpperCase() + variant.slice(1)} palette${previewOverride ? ' · preview' : ''}`;
+  $('#previewBadge').textContent = `${variant[0].toUpperCase() + variant.slice(1)} palette`;
   $('#modeGlyph').textContent = variant === 'dark' ? '◐' : '☼';
   $('#editorThemeName').textContent = editorTheme.name;
   $('#codePreview .syntax-string').textContent = `"${theme.surface.toLowerCase()}"`;
@@ -134,14 +133,11 @@ function updateColour(key, value) {
 
 $$('[data-mode]').forEach(button => button.addEventListener('click', () => {
   settings.mode = button.dataset.mode;
-  previewOverride = null;
-  editVariant = settings.mode === 'system' ? systemVariant : settings.mode;
   queuePersist(); render();
 }));
 
 $$('[data-palette]').forEach(button => button.addEventListener('click', () => {
   editVariant = button.dataset.palette;
-  previewOverride = editVariant;
   render();
 }));
 
@@ -192,7 +188,7 @@ $('#importTheme').addEventListener('click', () => { $('#importValue').value = ''
 $('#confirmImport').addEventListener('click', async () => {
   try {
     const imported = importTheme($('#importValue').value.trim());
-    editVariant = imported.variant; previewOverride = imported.variant;
+    editVariant = imported.variant;
     settings[themeKey(imported.variant)] = imported.theme;
     settings[codeKey(imported.variant)] = imported.codeThemeId;
     queuePersist(); await render(); importDialog.close(); notify('Theme imported');
@@ -201,7 +197,7 @@ $('#confirmImport').addEventListener('click', async () => {
 
 $('#resetTheme').addEventListener('click', async () => {
   store.clear(); settings = normaliseSettings(clone(DEFAULT_SETTINGS), DEFAULT_SETTINGS, VALID_EDITOR_IDS);
-  editVariant = settings.mode === 'system' ? systemVariant : settings.mode; previewOverride = null;
+  editVariant = 'light';
   await render(); queuePersist(); notify('Appearance reset');
 });
 
@@ -218,7 +214,7 @@ $('#tokenList').addEventListener('click', async event => {
 
 subscribeSystemVariant(variant => {
   systemVariant = variant;
-  if (settings.mode === 'system' && !previewOverride) { editVariant = variant; render(); }
+  if (settings.mode === 'system') render();
 });
 
 render();
