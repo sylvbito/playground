@@ -1,6 +1,15 @@
 import * as THREE from 'three';
 import { InteractionManager } from 'three/addons/interaction/InteractionManager.js';
 import { installHtmlInCanvasPolyfill } from 'three-html-render/polyfill';
+import {
+  createWorkspace,
+  dispatch as dispatchWorkspace,
+  materializeCards,
+  undo as undoWorkspace,
+  redo as redoWorkspace,
+  buildAmbientProposals,
+  serialiseWorkspace,
+} from './workspace-model.js?v=1';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -28,6 +37,7 @@ if (!nativeHtmlCanvas) {
 const spaces = {
   root: {
     name: 'Loose thoughts',
+    parentId: null,
     kicker: 'SPACE · 01',
     description: 'Depth is semantic: working thoughts stay near, context recedes, and nested spaces sit beyond.',
     camera: new THREE.Vector3(0, 0, 11.8),
@@ -35,6 +45,7 @@ const spaces = {
   },
   project: {
     name: 'Website redesign',
+    parentId: 'root',
     kicker: 'NESTED SPACE · 01.1',
     description: 'A project has emerged from the loose thoughts. The cards remain editable HTML.',
     camera: new THREE.Vector3(0.2, -0.1, -5.7),
@@ -42,7 +53,7 @@ const spaces = {
   },
 };
 
-const cardData = [
+const seedCards = [
   {
     id: 'memory', space: 'root', kind: 'thought', title: 'The interface should feel remembered',
     body: 'Position is part of meaning. Returning here should restore the same quiet geography.',
@@ -54,6 +65,7 @@ const cardData = [
     body: '<div class="portal-preview"><i></i><i></i></div>',
     footer: '<button class="space-action" type="button">Enter space <span aria-hidden="true">↗</span></button>', tone: 'green',
     position: [0.05, 0.65, -6.2], rotation: [-0.01, 0.025, 0.012], layer: 'portal', portal: true,
+    destinationSpace: 'project', protected: true,
   },
   {
     id: 'model', space: 'root', kind: 'principle', title: 'The canvas is a view, not the model',
@@ -99,16 +111,45 @@ const cardData = [
   },
 ];
 
-const STORAGE_KEY = 'orbit-spatial-lab-v3';
-const persisted = loadPersistedState();
+const LEGACY_STORAGE_KEY = 'orbit-spatial-lab-v3';
+const STORAGE_KEY = 'orbit-spatial-lab-v4';
+const legacyPersisted = loadPersistedState(LEGACY_STORAGE_KEY);
+const persisted = loadPersistedState(STORAGE_KEY);
+const seedSpaces = Object.entries(spaces).map(([id, space]) => ({
+  id,
+  name: space.name,
+  parentId: space.parentId,
+  kicker: space.kicker,
+  description: space.description,
+  camera: space.camera.toArray(),
+  look: space.look.toArray(),
+}));
+let workspace = createWorkspace({
+  seedSpaces,
+  seedCards,
+  persisted: persisted.workspace || legacyPersisted,
+});
+for (const space of workspace.spaces) {
+  if (!spaces[space.id]) {
+    spaces[space.id] = {
+      ...space,
+      camera: new THREE.Vector3(...space.camera),
+      look: new THREE.Vector3(...space.look),
+    };
+  }
+}
+const cardData = materializeCards(workspace);
+const persistedViews = persisted.views || legacyPersisted.views || {};
+const initialViews = Object.fromEntries(workspace.spaces.map((space) => [space.id, {
+  pan: new THREE.Vector2(...(persistedViews[space.id]?.pan || [0, 0])),
+  zoom: persistedViews[space.id]?.zoom || 0,
+  depth: persistedViews[space.id]?.depth || 0,
+}]));
 const state = {
-  space: 'root', selected: null, transitioning: false,
+  space: 'root', selected: null, selectedIds: new Set(), transitioning: false,
   pointer: new THREE.Vector2(), pointerSmooth: new THREE.Vector2(),
   cameraPosition: spaces.root.camera.clone(), cameraLook: spaces.root.look.clone(),
-  views: {
-    root: { pan: new THREE.Vector2(...(persisted.views?.root?.pan || [0, 0])), zoom: persisted.views?.root?.zoom || 0, depth: persisted.views?.root?.depth || 0 },
-    project: { pan: new THREE.Vector2(...(persisted.views?.project?.pan || [0, 0])), zoom: persisted.views?.project?.zoom || 0, depth: persisted.views?.project?.depth || 0 },
-  },
+  views: initialViews,
   activeNavigation: 'overview',
   viewTween: null,
   portalZoomProgress: 0,
@@ -118,6 +159,10 @@ const state = {
   portalHover: false,
   drag: null,
   panGesture: null,
+  lasso: null,
+  linkMode: false,
+  fallbackEditing: null,
+  aiDismissed: new Set(persisted.aiDismissed || []),
   transition: null,
   paintReady: false,
 };
@@ -166,16 +211,21 @@ function init() {
   interactions = new InteractionManager();
   interactions.connect(renderer, camera);
 
-  roots.root = new THREE.Group();
-  roots.project = new THREE.Group();
-  scene.add(roots.root, roots.project);
+  for (const spaceId of Object.keys(spaces)) {
+    roots[spaceId] = new THREE.Group();
+    roots[spaceId].name = `space-${spaceId}`;
+    scene.add(roots[spaceId]);
+  }
 
   addDepthField();
   cardMeshes = cardData.map(createCard);
   renderer.domElement.onpaint = (event) => {
     const changed = event.changedElements || [];
     for (const card of cardMeshes) {
-      if (changed.includes(card.userData.element)) card.material.map.needsUpdate = true;
+      if (changed.includes(card.userData.element)) {
+        card.material.map.needsUpdate = true;
+        card.visible = true;
+      }
     }
     if (!state.paintReady) {
       state.paintReady = true;
@@ -207,7 +257,15 @@ function init() {
     scene,
     cards: cardMeshes,
     connections,
+    get workspace() { return workspace; },
     portalPreview,
+    createThought: createThoughtAt,
+    duplicateSelection,
+    makeSpace: makeSpaceFromSelection,
+    deleteSelection,
+    undo: () => applyWorkspaceHistory('undo'),
+    redo: () => applyWorkspaceHistory('redo'),
+    createRelation,
     enterSpace: () => navigateSpace('project'),
     exitSpace: () => navigateSpace('root'),
     select: (id) => selectCard(cardMeshes.find((card) => card.userData.id === id)),
@@ -225,15 +283,14 @@ function createCard(data) {
   const element = $('#card-template').content.firstElementChild.cloneNode(true);
   element.dataset.id = data.id;
   if (data.tone) element.dataset.tone = data.tone;
-  if (data.portal) {
+  if (data.id === 'portal') {
     element.addEventListener('pointerenter', () => { state.portalHover = true; });
     element.addEventListener('pointerleave', () => { state.portalHover = false; });
   }
   $('.card-kind', element).textContent = data.kind;
   $('.card-depth', element).textContent = `${data.layer} · z ${data.position[2].toFixed(1)}`;
   $('.card-title', element).textContent = data.title;
-  const savedBody = data.editable ? persisted.bodies?.[data.id] : null;
-  $('.card-body', element).innerHTML = savedBody ? `<p>${escapeHtml(savedBody)}</p>` : data.body;
+  $('.card-body', element).innerHTML = data.editable ? `<p>${escapeHtml(data.body || '')}</p>` : data.body;
   $('.card-footer', element).innerHTML = data.footer + (data.editable ? '<button class="edit-action" type="button">Edit</button>' : '');
 
   const geometry = new THREE.PlaneGeometry(3.4, 2.14);
@@ -254,12 +311,12 @@ function createCard(data) {
   });
 
   const mesh = new THREE.Mesh(geometry, material);
-  const savedPosition = persisted.cards?.[data.id];
-  mesh.position.fromArray(Array.isArray(savedPosition) ? savedPosition : data.position);
+  mesh.visible = !state.paintReady;
+  mesh.position.fromArray(data.position);
   mesh.rotation.set(...data.rotation);
   mesh.userData = {
     ...data,
-    body: savedBody || data.body,
+    body: data.body,
     element,
     basePosition: mesh.position.clone(),
     baseRotation: mesh.rotation.clone(),
@@ -269,20 +326,17 @@ function createCard(data) {
   };
   roots[data.space].add(mesh);
   interactions.add(mesh);
+  if (state.paintReady) {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      mesh.visible = true;
+      mesh.material.map.needsUpdate = true;
+    }));
+  }
 
   element.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0 || state.transitioning || state.space !== data.space) return;
-    if (event.target.closest('button, textarea')) return;
-    state.drag = {
-      mesh,
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      lastX: event.clientX,
-      lastY: event.clientY,
-      moved: false,
-    };
-    element.setPointerCapture?.(event.pointerId);
+    if (event.button !== 0 || state.transitioning || state.space !== mesh.userData.space) return;
+    if (event.target.closest('button, textarea, input')) return;
+    startCardDrag(mesh, event, element);
   });
   element.addEventListener('click', (event) => {
     if (performance.now() < (mesh.userData.suppressClickUntil || 0)) {
@@ -290,21 +344,25 @@ function createCard(data) {
       event.stopPropagation();
       return;
     }
-    if (state.transitioning || state.space !== data.space) return;
-    selectCard(mesh);
-    if (!event.target.closest('button, textarea')) element.focus({ preventScroll: true });
+    if (state.transitioning || state.space !== mesh.userData.space) return;
+    if (state.linkMode && state.selected && state.selected !== mesh.userData.id) {
+      createRelation(state.selected, mesh.userData.id, $('#relation-label')?.value || 'related');
+      return;
+    }
+    selectCard(mesh, { additive: event.shiftKey || event.metaKey || event.ctrlKey });
+    if (!event.target.closest('button, textarea, input')) element.focus({ preventScroll: true });
   });
   element.addEventListener('keydown', (event) => {
     if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('textarea, button')) {
       event.preventDefault();
       selectCard(mesh);
     }
-    if (event.key === 'Escape' && data.space === 'project') navigateSpace('root');
+    if (event.key === 'Escape' && spaces[mesh.userData.space]?.parentId) navigateSpace(spaces[mesh.userData.space].parentId);
   });
 
   $('.space-action', element)?.addEventListener('click', (event) => {
     event.stopPropagation();
-    navigateSpace('project');
+    navigateSpace(data.destinationSpace || 'project');
   });
   $('.edit-action', element)?.addEventListener('click', (event) => {
     event.stopPropagation();
@@ -317,24 +375,297 @@ function createCard(data) {
   return mesh;
 }
 
+function syncWorkspaceScene() {
+  const selectedBefore = new Set(state.selectedIds);
+  for (const space of workspace.spaces) {
+    if (!spaces[space.id]) {
+      spaces[space.id] = {
+        ...space,
+        camera: new THREE.Vector3(...space.camera),
+        look: new THREE.Vector3(...space.look),
+      };
+      roots[space.id] = new THREE.Group();
+      roots[space.id].name = `space-${space.id}`;
+      scene.add(roots[space.id]);
+      state.views[space.id] = { pan: new THREE.Vector2(), zoom: 0, depth: 0 };
+    }
+  }
+
+  const cards = materializeCards(workspace);
+  const currentIds = new Set(cards.map((card) => card.id));
+  for (const mesh of [...cardMeshes]) {
+    if (currentIds.has(mesh.userData.id)) continue;
+    interactions.remove?.(mesh);
+    mesh.parent?.remove(mesh);
+    mesh.userData.element.remove();
+    mesh.geometry.dispose();
+    mesh.material.map?.dispose();
+    mesh.material.dispose();
+    cardMeshes.splice(cardMeshes.indexOf(mesh), 1);
+  }
+
+  for (const data of cards) {
+    let mesh = cardMeshes.find((card) => card.userData.id === data.id);
+    if (!mesh) {
+      mesh = createCard(data);
+      cardMeshes.push(mesh);
+      continue;
+    }
+    if (mesh.userData.space !== data.space) roots[data.space].add(mesh);
+    mesh.userData = {
+      ...mesh.userData,
+      ...data,
+      element: mesh.userData.element,
+      basePosition: mesh.userData.basePosition,
+      baseRotation: mesh.userData.baseRotation,
+      semanticScale: mesh.userData.semanticScale,
+    };
+    mesh.userData.basePosition.fromArray(data.position);
+    mesh.position.copy(mesh.userData.basePosition);
+    mesh.rotation.set(...data.rotation);
+    const element = mesh.userData.element;
+    element.dataset.tone = data.tone || '';
+    $('.card-depth', element).textContent = `${data.layer} · z ${data.position[2].toFixed(1)}`;
+    if (!$('.card-editor', element)) {
+      $('.card-title', element).textContent = data.title;
+      if (data.editable) $('.card-body', element).innerHTML = `<p>${escapeHtml(data.body || '')}</p>`;
+    }
+  }
+
+  state.selectedIds = new Set([...selectedBefore].filter((id) => {
+    const card = cardMeshes.find((item) => item.userData.id === id);
+    return card?.userData.space === state.space;
+  }));
+  refreshSelectionVisuals();
+  rebuildConnections();
+  updateSpaceInteractivity();
+  updateDepthNavigation();
+  renderAiProposals();
+  renderer.domElement.requestPaint?.();
+}
+
+function executeWorkspaceCommand(command, message) {
+  workspace = dispatchWorkspace(workspace, command);
+  syncWorkspaceScene();
+  persistSpatialState();
+  if (message) showToast(message);
+}
+
+function createThoughtAt(clientX = window.innerWidth / 2, clientY = window.innerHeight / 2) {
+  if (state.transitioning) return;
+  const depth = spaces[state.space].look.z + state.views[state.space].depth + 1.2;
+  const point = getWorldPointAtScreen(clientX, clientY, depth) || spaces[state.space].look.clone();
+  const before = new Set(workspace.placements.map((placement) => placement.id));
+  workspace = dispatchWorkspace(workspace, {
+    type: 'card.create',
+    payload: {
+      spaceId: state.space,
+      title: 'Untitled thought',
+      body: '',
+      position: [clamp(point.x, -11, 11), clamp(point.y, -6.5, 6.5), depth],
+      layer: 'working',
+    },
+  });
+  const createdId = workspace.placements.find((placement) => !before.has(placement.id))?.id;
+  syncWorkspaceScene();
+  persistSpatialState();
+  const mesh = cardMeshes.find((card) => card.userData.id === createdId);
+  if (mesh) {
+    selectCard(mesh);
+    beginEdit(mesh);
+  }
+  showToast('New thought · type to capture');
+}
+
+function duplicateSelection() {
+  const ids = [...state.selectedIds];
+  if (!ids.length) return;
+  const before = new Set(workspace.placements.map((placement) => placement.id));
+  workspace = dispatchWorkspace(workspace, { type: 'card.duplicate', payload: { placementIds: ids } });
+  const created = workspace.placements.filter((placement) => !before.has(placement.id)).map((placement) => placement.id);
+  syncWorkspaceScene();
+  for (const id of created) {
+    const mesh = cardMeshes.find((card) => card.userData.id === id);
+    if (mesh) selectCard(mesh, { additive: state.selectedIds.size > 0 });
+  }
+  persistSpatialState();
+  showToast(`${created.length} ${created.length === 1 ? 'thought' : 'thoughts'} duplicated`);
+}
+
+function deleteSelection() {
+  const ids = [...state.selectedIds];
+  if (!ids.length) return;
+  const removable = ids.filter((id) => !cardMeshes.find((card) => card.userData.id === id)?.userData.portal);
+  executeWorkspaceCommand({ type: 'card.delete', payload: { placementIds: ids } },
+    removable.length ? `${removable.length} ${removable.length === 1 ? 'thought' : 'thoughts'} deleted` : 'Spaces are structural; move or rename them instead');
+}
+
+function makeSpaceFromSelection() {
+  const ids = [...state.selectedIds].filter((id) => !cardMeshes.find((card) => card.userData.id === id)?.userData.portal);
+  if (!ids.length) return;
+  const selectedCards = ids.map((id) => cardMeshes.find((card) => card.userData.id === id)).filter(Boolean);
+  const words = selectedCards[0].userData.title.split(/\s+/).slice(0, 3).join(' ');
+  const name = selectedCards.length === 1 ? words : `${words} + ${selectedCards.length - 1}`;
+  const center = selectedCards.reduce((sum, card) => sum.add(card.userData.basePosition), new THREE.Vector3()).multiplyScalar(1 / selectedCards.length);
+  const portalDepth = spaces[state.space].look.z - 5.5;
+  const occupied = cardMeshes.filter((card) => card.userData.space === state.space && !ids.includes(card.userData.id));
+  const candidates = [
+    [center.x, center.y],
+    [6, -4.8],
+    [-6, -4.8],
+    [6, 4.4],
+    [-6, 4.4],
+    [0, -5.2],
+  ];
+  const openPosition = candidates.find(([x, y]) =>
+    occupied.every((card) => Math.hypot(card.userData.basePosition.x - x, card.userData.basePosition.y - y) >= 4.1),
+  ) || candidates.at(-1);
+  const portalPosition = new THREE.Vector3(openPosition[0], openPosition[1], portalDepth);
+  workspace = dispatchWorkspace(workspace, {
+    type: 'space.createFromCards',
+    payload: {
+      parentSpaceId: state.space,
+      placementIds: ids,
+      name,
+      portalPosition: portalPosition.toArray(),
+    },
+  });
+  syncWorkspaceScene();
+  persistSpatialState();
+  showToast(`Created space · ${name}`);
+}
+
+function createRelation(fromId, toId, label = 'related') {
+  const before = workspace.relations.length;
+  workspace = dispatchWorkspace(workspace, {
+    type: 'relation.create',
+    payload: { spaceId: state.space, fromId, toId, label },
+  });
+  state.linkMode = false;
+  syncWorkspaceScene();
+  persistSpatialState();
+  showToast(workspace.relations.length > before ? `${label} relationship added` : 'That relationship already exists');
+}
+
+function updateSelectionToolbar() {
+  const toolbar = $('#selection-toolbar');
+  if (!toolbar) return;
+  const count = state.selectedIds.size;
+  toolbar.hidden = count === 0 || state.transitioning;
+  $('#selection-count').textContent = `${count} selected`;
+  $('#link-selection').textContent = count >= 2 ? 'Link selected' : state.linkMode ? 'Choose target…' : 'Link';
+  $('#make-space').disabled = count === 0;
+  toolbar.classList.toggle('is-linking', state.linkMode);
+}
+
+function applyWorkspaceHistory(direction) {
+  const next = direction === 'undo' ? undoWorkspace(workspace) : redoWorkspace(workspace);
+  if (next === workspace) {
+    showToast(`Nothing to ${direction}`);
+    return;
+  }
+  workspace = next;
+  syncWorkspaceScene();
+  persistSpatialState();
+  showToast(direction === 'undo' ? 'Undid last change' : 'Redid last change');
+}
+
+function renderAiProposals() {
+  const root = $('#ai-proposals');
+  if (!root) return;
+  const proposals = buildAmbientProposals(workspace, state.space)
+    .filter((proposal) => !state.aiDismissed.has(proposal.id));
+  $('#ai-count').textContent = proposals.length;
+  $('#ai-summary').textContent = proposals.length ? `${proposals.length} reviewable ${proposals.length === 1 ? 'proposal' : 'proposals'}` : 'No pending proposals';
+  root.replaceChildren();
+  if (!proposals.length) {
+    root.innerHTML = '<p class="ai-empty">No obvious relationship is being forced. Add more thoughts or select a few to ask explicitly.</p>';
+    return;
+  }
+  for (const proposal of proposals) {
+    const item = document.createElement('article');
+    item.className = 'ai-proposal';
+    item.innerHTML = `<div><strong>${escapeHtml(proposal.title)}</strong><small>${escapeHtml(proposal.reason)}</small></div><menu><button type="button" data-apply>Apply</button><button type="button" data-dismiss>×</button></menu>`;
+    $('[data-apply]', item).addEventListener('click', () => {
+      executeWorkspaceCommand(proposal.command, 'AI proposal applied · undo remains available');
+    });
+    $('[data-dismiss]', item).addEventListener('click', () => {
+      state.aiDismissed.add(proposal.id);
+      persistSpatialState();
+      renderAiProposals();
+    });
+    root.appendChild(item);
+  }
+}
+
+function handleAiCommand(value) {
+  const command = value.trim().toLowerCase();
+  if (!command) return;
+  if ((command.includes('connect') || command.includes('link')) && state.selectedIds.size >= 2) {
+    const [fromId, toId] = [...state.selectedIds];
+    createRelation(fromId, toId, $('#relation-label').value);
+    return;
+  }
+  if ((command.includes('space') || command.includes('group') || command.includes('cluster')) && state.selectedIds.size) {
+    makeSpaceFromSelection();
+    return;
+  }
+  const cards = cardMeshes.filter((card) => card.userData.space === state.space && !card.userData.portal);
+  const relations = workspace.relations.filter((relation) => relation.spaceId === state.space);
+  if (command.includes('summar') || command.includes('what')) {
+    showToast(`${spaces[state.space].name}: ${cards.length} thoughts · ${relations.length} explicit links`);
+    return;
+  }
+  showToast('Try “connect selection”, “make a space”, or “summarise this space”');
+}
+
+function startCardDrag(mesh, event, captureTarget = renderer.domElement) {
+  state.drag = {
+    mesh,
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    lastX: event.clientX,
+    lastY: event.clientY,
+    moved: false,
+  };
+  captureTarget.setPointerCapture?.(event.pointerId);
+}
+
 function beginEdit(mesh) {
   if (state.transitioning) return;
   selectCard(mesh);
+  if (!nativeHtmlCanvas) {
+    state.fallbackEditing = mesh.userData.id;
+    document.documentElement.classList.add('is-fallback-editing');
+    $('#fallback-title').value = mesh.userData.title;
+    $('#fallback-body').value = mesh.userData.body.replace(/<[^>]+>/g, '').trim();
+    $('#fallback-editor').hidden = false;
+    $('#fallback-title').focus();
+    $('#fallback-title').select();
+    return;
+  }
   const { element } = mesh.userData;
   const body = $('.card-body', element);
+  const title = $('.card-title', element);
   const footer = $('.card-footer', element);
   if ($('.card-editor', element)) return;
 
   const current = mesh.userData.body.replace(/<[^>]+>/g, '').trim();
-  body.innerHTML = `<textarea class="card-editor" aria-label="Edit ${escapeHtml(mesh.userData.title)}">${escapeHtml(current)}</textarea>`;
+  const currentTitle = mesh.userData.title;
+  title.innerHTML = `<input class="card-title-editor" aria-label="Thought title" value="${escapeHtml(currentTitle)}">`;
+  body.innerHTML = `<textarea class="card-editor" aria-label="Edit ${escapeHtml(currentTitle)}">${escapeHtml(current)}</textarea>`;
   footer.innerHTML = '<button class="done-action" type="button">Save thought</button>';
+  const titleEditor = $('.card-title-editor', element);
   const editor = $('.card-editor', element);
-  editor.focus();
-  editor.select();
+  titleEditor.focus();
+  titleEditor.select();
 
   const save = () => {
     const value = editor.value.trim() || 'An unwritten thought.';
-    mesh.userData.body = value;
+    const nextTitle = titleEditor.value.trim() || 'Untitled thought';
+    commitCardEdit(mesh, nextTitle, value);
+    title.textContent = nextTitle;
     body.innerHTML = `<p>${escapeHtml(value)}</p>`;
     footer.innerHTML = `${mesh.userData.footer}<button class="edit-action" type="button">Edit</button>`;
     $('.edit-action', footer).addEventListener('click', (event) => {
@@ -342,8 +673,6 @@ function beginEdit(mesh) {
       beginEdit(mesh);
     });
     renderer.domElement.requestPaint?.();
-    persistSpatialState();
-    showToast('Thought updated locally');
     element.focus({ preventScroll: true });
   };
 
@@ -351,36 +680,84 @@ function beginEdit(mesh) {
     event.stopPropagation();
     save();
   });
-  editor.addEventListener('keydown', (event) => {
-    event.stopPropagation();
-    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') save();
-  });
-  renderer.domElement.requestPaint?.();
-}
-
-function selectCard(mesh) {
-  if (!mesh || state.space !== mesh.userData.space) return;
-  state.selected = mesh.userData.id;
-  $('#focus-selected').hidden = false;
-  for (const card of cardMeshes) {
-    const active = card === mesh;
-    card.userData.element.classList.toggle('is-selected', active);
-    card.userData.targetLift = active ? 0.48 : 0;
-    if (active) setSemanticLevel(card, 'full');
+  for (const input of [titleEditor, editor]) {
+    input.addEventListener('keydown', (event) => {
+      event.stopPropagation();
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') save();
+    });
   }
   renderer.domElement.requestPaint?.();
 }
 
+function commitCardEdit(mesh, nextTitle, value) {
+  mesh.userData.title = nextTitle;
+  mesh.userData.body = value;
+  workspace = dispatchWorkspace(workspace, {
+    type: 'card.update',
+    payload: { id: mesh.userData.id, title: nextTitle, body: value },
+  });
+  persistSpatialState();
+  renderer.domElement.requestPaint?.();
+  showToast('Thought updated locally');
+}
+
+function closeFallbackEditor() {
+  state.fallbackEditing = null;
+  document.documentElement.classList.remove('is-fallback-editing');
+  $('#fallback-editor').hidden = true;
+}
+
+function selectCard(mesh, { additive = false } = {}) {
+  if (!mesh || state.space !== mesh.userData.space) return;
+  if (additive) {
+    if (state.selectedIds.has(mesh.userData.id)) state.selectedIds.delete(mesh.userData.id);
+    else state.selectedIds.add(mesh.userData.id);
+  } else {
+    state.selectedIds = new Set([mesh.userData.id]);
+  }
+  state.selected = state.selectedIds.has(mesh.userData.id)
+    ? mesh.userData.id
+    : [...state.selectedIds].at(-1) || null;
+  $('#focus-selected').hidden = !state.selected;
+  for (const card of cardMeshes) {
+    const active = state.selectedIds.has(card.userData.id);
+    card.userData.element.classList.toggle('is-selected', active);
+    card.userData.targetLift = active ? 0.48 : 0;
+    if (active) setSemanticLevel(card, 'full');
+  }
+  updateSelectionToolbar();
+  renderer.domElement.requestPaint?.();
+}
+
+function refreshSelectionVisuals() {
+  state.selected = state.selectedIds.has(state.selected)
+    ? state.selected
+    : [...state.selectedIds].at(-1) || null;
+  $('#focus-selected').hidden = !state.selected;
+  for (const card of cardMeshes) {
+    const active = state.selectedIds.has(card.userData.id);
+    card.userData.element.classList.toggle('is-selected', active);
+    card.userData.targetLift = active ? 0.48 : 0;
+    if (active) setSemanticLevel(card, 'full');
+  }
+  updateSelectionToolbar();
+  renderer.domElement.requestPaint?.();
+}
+
 function navigateSpace(destination) {
-  if (state.transitioning || destination === state.space) return;
+  if (state.transitioning || destination === state.space || !spaces[destination]) return;
   const from = state.space;
-  const entering = destination === 'project';
+  const entering = spaces[destination].parentId === from;
+  const portal = entering
+    ? cardMeshes.find((card) => card.userData.space === from && card.userData.destinationSpace === destination)
+    : null;
   state.viewTween = null;
   state.transitioning = true;
   state.transition = {
     from,
     to: destination,
     entering,
+    portalId: portal?.userData.id || null,
     start: performance.now(),
     duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 80 : 1550,
     fromPosition: camera.position.clone(),
@@ -391,13 +768,13 @@ function navigateSpace(destination) {
   document.documentElement.classList.add('is-space-transitioning');
   $('.space-caption').classList.add('is-transitioning');
   $('#back-space').disabled = true;
-  setGroupPointerEvents('root', false);
-  setGroupPointerEvents('project', false);
+  setGroupPointerEvents(from, false);
+  setGroupPointerEvents(destination, false);
 
   window.setTimeout(() => {
     updateCaption(destination);
     updateDepthNavigation(destination);
-    $('#back-space').hidden = destination !== 'project';
+    $('#back-space').hidden = !spaces[destination].parentId;
   }, state.transition.duration * 0.46);
 }
 
@@ -416,10 +793,11 @@ function finishNavigation(destination) {
   state.cameraLook.copy(getViewLook(destination));
   updateSpaceInteractivity();
   updateDepthNavigation();
+  renderAiProposals();
   $('#back-space').disabled = false;
   document.documentElement.classList.remove('is-space-transitioning');
   $('.space-caption').classList.remove('is-transitioning');
-  showToast(destination === 'project' ? 'Entered Website redesign' : 'Returned to Loose thoughts');
+  showToast(`${spaces[destination].parentId ? 'Entered' : 'Returned to'} ${spaces[destination].name}`);
 }
 
 function updateCaption(spaceId) {
@@ -432,11 +810,14 @@ function updateCaption(spaceId) {
 
 function clearSelection() {
   state.selected = null;
+  state.selectedIds.clear();
+  state.linkMode = false;
   $('#focus-selected').hidden = true;
   for (const card of cardMeshes) {
     card.userData.element.classList.remove('is-selected');
     card.userData.targetLift = 0;
   }
+  updateSelectionToolbar();
   renderer.domElement.requestPaint?.();
 }
 
@@ -495,21 +876,66 @@ function addConnections() {
   addCurve('project', 'brief', 'hierarchy', 0x93b08a, 0.22);
   addCurve('project', 'hierarchy', 'motion', 0x86afbe, 0.2);
   addCurve('project', 'decision', 'hierarchy', 0xc3aa82, 0.18);
+  for (const relation of workspace.relations) {
+    addCurve(relation.spaceId, relation.fromId, relation.toId, 0xd9ff79, 0.5, relation.label, relation.id);
+  }
 }
 
-function addCurve(spaceId, fromId, toId, color, opacity) {
-  const from = cardMeshes.find((card) => card.userData.id === fromId);
-  const to = cardMeshes.find((card) => card.userData.id === toId);
-  if (!from || !to) return;
+function rebuildConnections() {
+  for (const connection of connections) {
+    connection.line.parent?.remove(connection.line);
+    connection.line.geometry.dispose();
+    connection.line.material.dispose();
+    if (connection.label) {
+      connection.label.parent?.remove(connection.label);
+      connection.label.material.map?.dispose();
+      connection.label.material.dispose();
+    }
+  }
+  connections.splice(0);
+  addConnections();
+}
+
+function createRelationLabel(text) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 64;
+  const context = canvas.getContext('2d');
+  context.fillStyle = 'rgba(13, 16, 11, .86)';
+  context.roundRect(12, 10, 232, 44, 15);
+  context.fill();
+  context.strokeStyle = 'rgba(217, 255, 121, .38)';
+  context.stroke();
+  context.fillStyle = '#e4f8b8';
+  context.font = '500 21px IBM Plex Mono, monospace';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(text, 128, 32);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false }));
+  sprite.scale.set(1.7, 0.43, 1);
+  sprite.renderOrder = 7;
+  return sprite;
+}
+
+function addCurve(spaceId, fromId, toId, color, opacity, labelText = '', relationId = null) {
+  const from = cardMeshes.find((card) => card.userData.id === fromId || card.userData.objectId === fromId);
+  const to = cardMeshes.find((card) => card.userData.id === toId || card.userData.objectId === toId);
+  if (!from || !to || from.userData.space !== spaceId || to.userData.space !== spaceId || !roots[spaceId]) return;
   const geometry = new THREE.BufferGeometry();
   const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity });
   const line = new THREE.Line(geometry, material);
+  line.renderOrder = 2;
   roots[spaceId].add(line);
-  connections.push({ spaceId, from, to, line, baseOpacity: opacity });
-  updateConnection({ from, to, line });
+  const label = labelText ? createRelationLabel(labelText) : null;
+  if (label) roots[spaceId].add(label);
+  const connection = { spaceId, from, to, line, label, relationId, baseOpacity: opacity };
+  connections.push(connection);
+  updateConnection(connection);
 }
 
-function updateConnection({ from, to, line }) {
+function updateConnection({ from, to, line, label }) {
   const middle = from.position.clone().lerp(to.position, 0.5);
   middle.z -= 0.42;
   middle.y += 0.2;
@@ -517,6 +943,7 @@ function updateConnection({ from, to, line }) {
   line.geometry.setFromPoints(curve.getPoints(36));
   line.geometry.attributes.position.needsUpdate = true;
   line.geometry.computeBoundingSphere();
+  if (label) label.position.copy(middle).add(new THREE.Vector3(0, 0.18, 0.08));
 }
 
 function updateConnections() {
@@ -783,7 +1210,28 @@ function bindUi() {
 
   renderer.domElement.addEventListener('pointerdown', (event) => {
     if (event.button !== 0 || state.transitioning) return;
-    if (event.target.closest?.('.spatial-card, button, textarea')) return;
+    if (event.target.closest?.('.spatial-card, button, textarea, input, select')) return;
+    if (event.shiftKey) {
+      state.lasso = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        currentX: event.clientX,
+        currentY: event.clientY,
+      };
+      const lasso = $('#selection-lasso');
+      lasso.hidden = false;
+      lasso.style.cssText = `left:${event.clientX}px;top:${event.clientY}px;width:0;height:0`;
+      renderer.domElement.setPointerCapture?.(event.pointerId);
+      return;
+    }
+    if (!nativeHtmlCanvas) {
+      const card = getCardAtScreenPoint(event.clientX, event.clientY);
+      if (card) {
+        startCardDrag(card, event);
+        return;
+      }
+    }
     state.panGesture = {
       pointerId: event.pointerId,
       lastX: event.clientX,
@@ -792,6 +1240,21 @@ function bindUi() {
     };
     renderer.domElement.setPointerCapture?.(event.pointerId);
     document.documentElement.classList.add('is-panning');
+  });
+
+  renderer.domElement.addEventListener('dblclick', (event) => {
+    if (event.target.closest?.('.spatial-card, button, textarea, input, select')) return;
+    if (!nativeHtmlCanvas) {
+      const card = getCardAtScreenPoint(event.clientX, event.clientY);
+      if (card) {
+        event.preventDefault();
+        if (card.userData.portal) navigateSpace(card.userData.destinationSpace);
+        else if (card.userData.editable) beginEdit(card);
+        return;
+      }
+    }
+    event.preventDefault();
+    createThoughtAt(event.clientX, event.clientY);
   });
 
   renderer.domElement.addEventListener('wheel', (event) => {
@@ -814,8 +1277,35 @@ function bindUi() {
   }, { passive: false });
 
   window.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && state.space === 'project' && !state.transitioning) navigateSpace('root');
     if (event.target.closest('textarea, input')) return;
+    if (event.key === 'Escape' && spaces[state.space].parentId && !state.transitioning) navigateSpace(spaces[state.space].parentId);
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
+      event.preventDefault();
+      applyWorkspaceHistory(event.shiftKey ? 'redo' : 'undo');
+      return;
+    }
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'd' && state.selectedIds.size) {
+      event.preventDefault();
+      duplicateSelection();
+      return;
+    }
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
+      event.preventDefault();
+      state.selectedIds = new Set(cardMeshes.filter((card) => card.userData.space === state.space).map((card) => card.userData.id));
+      state.selected = [...state.selectedIds].at(-1) || null;
+      refreshSelectionVisuals();
+      return;
+    }
+    if ((event.key === 'Delete' || event.key === 'Backspace') && state.selectedIds.size) {
+      event.preventDefault();
+      deleteSelection();
+      return;
+    }
+    if (event.key.toLowerCase() === 'n') {
+      event.preventDefault();
+      createThoughtAt();
+      return;
+    }
     if (event.key === '0' || event.key.toLowerCase() === 'o') {
       event.preventDefault();
       focusLayer('overview');
@@ -841,7 +1331,8 @@ function bindUi() {
       persistSpatialState();
     }
   });
-  $('#back-space').addEventListener('click', () => navigateSpace('root'));
+  $('#back-space').addEventListener('click', () => navigateSpace(spaces[state.space].parentId));
+  $('#new-thought').addEventListener('click', () => createThoughtAt());
   $('#reset-view').addEventListener('click', () => focusLayer('overview'));
   $('#focus-selected').addEventListener('click', () => {
     focusCard(cardMeshes.find((card) => card.userData.id === state.selected));
@@ -849,6 +1340,46 @@ function bindUi() {
   for (const button of document.querySelectorAll('[data-depth]')) {
     button.addEventListener('click', () => focusLayer(button.dataset.depth));
   }
+  $('#duplicate-selection').addEventListener('click', duplicateSelection);
+  $('#delete-selection').addEventListener('click', deleteSelection);
+  $('#make-space').addEventListener('click', makeSpaceFromSelection);
+  $('#link-selection').addEventListener('click', () => {
+    const ids = [...state.selectedIds];
+    if (ids.length >= 2) createRelation(ids[0], ids[1], $('#relation-label').value);
+    else {
+      state.linkMode = !state.linkMode;
+      updateSelectionToolbar();
+      showToast(state.linkMode ? 'Choose another card to complete the relationship' : 'Link cancelled');
+    }
+  });
+  const toggleAi = (open) => {
+    $('#ai-panel').hidden = !open;
+    $('#ai-dock').classList.toggle('is-open', open);
+    document.documentElement.classList.toggle('is-ai-open', open);
+    $('#ai-toggle').setAttribute('aria-expanded', String(open));
+    if (open) renderAiProposals();
+  };
+  $('#ai-toggle').addEventListener('click', () => toggleAi($('#ai-panel').hidden));
+  $('#ai-close').addEventListener('click', () => toggleAi(false));
+  $('#ai-command').addEventListener('submit', (event) => {
+    event.preventDefault();
+    handleAiCommand($('#ai-command-input').value);
+    $('#ai-command-input').value = '';
+  });
+  $('#fallback-editor-close').addEventListener('click', closeFallbackEditor);
+  $('#fallback-editor').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const mesh = cardMeshes.find((card) => card.userData.id === state.fallbackEditing);
+    if (!mesh) return closeFallbackEditor();
+    const nextTitle = $('#fallback-title').value.trim() || 'Untitled thought';
+    const value = $('#fallback-body').value.trim() || 'An unwritten thought.';
+    commitCardEdit(mesh, nextTitle, value);
+    const title = $('.card-title', mesh.userData.element);
+    const body = $('.card-body', mesh.userData.element);
+    title.textContent = nextTitle;
+    body.innerHTML = `<p>${escapeHtml(value)}</p>`;
+    closeFallbackEditor();
+  });
   $('#api-help').addEventListener('click', (event) => {
     event.stopPropagation();
     $('#api-popover').hidden = !$('#api-popover').hidden;
@@ -856,6 +1387,7 @@ function bindUi() {
   document.addEventListener('click', (event) => {
     if (!event.target.closest('#api-popover, #api-help')) $('#api-popover').hidden = true;
   });
+  renderAiProposals();
 }
 
 function getWorldPointAtScreen(clientX, clientY, depthZ = spaces[state.space].look.z + state.views[state.space].depth) {
@@ -955,27 +1487,64 @@ function handlePointerMove(event) {
   state.pointer.x = (event.clientX / window.innerWidth - 0.5) * 2;
   state.pointer.y = (event.clientY / window.innerHeight - 0.5) * 2;
 
+  if (state.lasso && event.pointerId === state.lasso.pointerId) {
+    event.preventDefault();
+    const lasso = state.lasso;
+    lasso.currentX = event.clientX;
+    lasso.currentY = event.clientY;
+    const left = Math.min(lasso.startX, lasso.currentX);
+    const top = Math.min(lasso.startY, lasso.currentY);
+    const right = Math.max(lasso.startX, lasso.currentX);
+    const bottom = Math.max(lasso.startY, lasso.currentY);
+    const element = $('#selection-lasso');
+    element.style.cssText = `left:${left}px;top:${top}px;width:${right - left}px;height:${bottom - top}px`;
+    const nextIds = cardMeshes
+      .filter((card) => card.userData.space === state.space && card.material.opacity > 0.25)
+      .filter((card) => {
+        const rect = card.userData.element.getBoundingClientRect();
+        return rect.right >= left && rect.left <= right && rect.bottom >= top && rect.top <= bottom;
+      })
+      .map((card) => card.userData.id);
+    const signature = nextIds.sort().join('|');
+    if (signature !== lasso.signature) {
+      lasso.signature = signature;
+      state.selectedIds = new Set(nextIds);
+      state.selected = nextIds.at(-1) || null;
+      refreshSelectionVisuals();
+    }
+    return;
+  }
+
   if (state.drag && event.pointerId === state.drag.pointerId) {
     const drag = state.drag;
     const totalDistance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
     if (!drag.moved && totalDistance > 4) {
       drag.moved = true;
-      selectCard(drag.mesh);
-      drag.mesh.userData.element.classList.add('is-dragging');
+      if (!state.selectedIds.has(drag.mesh.userData.id)) selectCard(drag.mesh);
+      drag.meshes = cardMeshes.filter((card) => state.selectedIds.has(card.userData.id));
+      for (const mesh of drag.meshes) mesh.userData.element.classList.add('is-dragging');
       document.documentElement.classList.add('is-card-dragging');
     }
     if (!drag.moved) return;
     event.preventDefault();
     const worldPerPixel = getWorldUnitsPerPixel(drag.mesh.position.z);
-    const dx = (event.clientX - drag.lastX) * worldPerPixel;
-    const dy = -(event.clientY - drag.lastY) * worldPerPixel;
-    drag.mesh.userData.basePosition.x = clamp(drag.mesh.userData.basePosition.x + dx, -12, 12);
-    drag.mesh.userData.basePosition.y = clamp(drag.mesh.userData.basePosition.y + dy, -7, 7);
-    drag.mesh.position.x = drag.mesh.userData.basePosition.x;
-    drag.mesh.position.y = drag.mesh.userData.basePosition.y;
-    if (drag.mesh.userData.id === 'portal' && portalHalo) {
-      portalHalo.position.x = drag.mesh.position.x;
-      portalHalo.position.y = drag.mesh.position.y;
+    let dx = (event.clientX - drag.lastX) * worldPerPixel;
+    let dy = -(event.clientY - drag.lastY) * worldPerPixel;
+    const others = cardMeshes.filter((card) => card.userData.space === state.space && !state.selectedIds.has(card.userData.id));
+    const xTarget = others.find((card) => Math.abs(card.userData.basePosition.x - (drag.mesh.userData.basePosition.x + dx)) < 0.16);
+    const yTarget = others.find((card) => Math.abs(card.userData.basePosition.y - (drag.mesh.userData.basePosition.y + dy)) < 0.16);
+    if (xTarget) dx = xTarget.userData.basePosition.x - drag.mesh.userData.basePosition.x;
+    if (yTarget) dy = yTarget.userData.basePosition.y - drag.mesh.userData.basePosition.y;
+    updateAlignmentGuides(xTarget, yTarget);
+    for (const mesh of drag.meshes) {
+      mesh.userData.basePosition.x = clamp(mesh.userData.basePosition.x + dx, -12, 12);
+      mesh.userData.basePosition.y = clamp(mesh.userData.basePosition.y + dy, -7, 7);
+      mesh.position.x = mesh.userData.basePosition.x;
+      mesh.position.y = mesh.userData.basePosition.y;
+      if (mesh.userData.id === 'portal' && portalHalo) {
+        portalHalo.position.x = mesh.position.x;
+        portalHalo.position.y = mesh.position.y;
+      }
     }
     drag.lastX = event.clientX;
     drag.lastY = event.clientY;
@@ -1001,16 +1570,48 @@ function handlePointerMove(event) {
   }
 }
 
+function updateAlignmentGuides(xTarget, yTarget) {
+  const xGuide = $('#guide-x');
+  const yGuide = $('#guide-y');
+  xGuide.hidden = !xTarget;
+  yGuide.hidden = !yTarget;
+  if (xTarget) {
+    const point = xTarget.position.clone().project(camera);
+    xGuide.style.left = `${(point.x * 0.5 + 0.5) * window.innerWidth}px`;
+  }
+  if (yTarget) {
+    const point = yTarget.position.clone().project(camera);
+    yGuide.style.top = `${(-point.y * 0.5 + 0.5) * window.innerHeight}px`;
+  }
+}
+
 function finishPointerInteraction(event) {
+  if (state.lasso && event.pointerId === state.lasso.pointerId) {
+    state.lasso = null;
+    $('#selection-lasso').hidden = true;
+    showToast(`${state.selectedIds.size} ${state.selectedIds.size === 1 ? 'thought' : 'thoughts'} selected`);
+  }
   if (state.drag && event.pointerId === state.drag.pointerId) {
-    const { mesh, moved } = state.drag;
+    const { mesh, meshes = [state.drag.mesh], moved } = state.drag;
     if (moved) {
-      mesh.userData.suppressClickUntil = performance.now() + 350;
-      mesh.userData.element.classList.remove('is-dragging');
+      const positions = Object.fromEntries(meshes.map((item) => [item.userData.id, item.userData.basePosition.toArray()]));
+      workspace = dispatchWorkspace(workspace, { type: 'placement.move', payload: { positions } });
+      for (const item of meshes) {
+        item.userData.suppressClickUntil = performance.now() + 350;
+        item.userData.element.classList.remove('is-dragging');
+      }
       persistSpatialState();
-      showToast('Card position saved locally');
+      showToast(`${meshes.length === 1 ? 'Card' : `${meshes.length} cards`} position saved locally`);
+    } else if (!nativeHtmlCanvas) {
+      if (state.linkMode && state.selected && state.selected !== mesh.userData.id) {
+        createRelation(state.selected, mesh.userData.id, $('#relation-label')?.value || 'related');
+      } else {
+        selectCard(mesh, { additive: event.shiftKey || event.metaKey || event.ctrlKey });
+      }
     }
     state.drag = null;
+    $('#guide-x').hidden = true;
+    $('#guide-y').hidden = true;
     document.documentElement.classList.remove('is-card-dragging');
   }
   if (state.panGesture && event.pointerId === state.panGesture.pointerId) {
@@ -1056,7 +1657,7 @@ function updateSemanticZoom() {
       card.userData.layer === state.activeNavigation;
     const level = mutedByNavigation
       ? 'far'
-      : promotedLayer || card.userData.portal || card.userData.id === state.selected ||
+      : promotedLayer || card.userData.portal || state.selectedIds.has(card.userData.id) ||
         (state.activeNavigation === 'overview' && card.userData.layer === 'working') || projectedHeight > 205
         ? 'full'
         : projectedHeight > 92 ? 'mid' : 'far';
@@ -1096,6 +1697,10 @@ function updateNavigationVisibility() {
       connection.baseOpacity * (relevant ? 1 : 0.13),
       0.12,
     );
+    if (connection.label) {
+      connection.label.material.opacity = lerp(connection.label.material.opacity, relevant ? 0.92 : 0.08, 0.12);
+      connection.label.visible = connection.line.material.opacity > 0.08;
+    }
   }
   if (state.space === 'root' && portalPreview) {
     const portal = cardMeshes.find((card) => card.userData.id === 'portal');
@@ -1219,7 +1824,8 @@ function updateTransition(time) {
   const destinationLook = getViewLook(transition.to);
 
   if (transition.entering) {
-    const portal = cardMeshes.find((card) => card.userData.id === 'portal').userData.basePosition;
+    const portalMesh = cardMeshes.find((card) => card.userData.id === transition.portalId);
+    const portal = portalMesh?.userData.basePosition || transition.fromLook;
     const approachZ = portal.z + 5;
     const focusT = clamp(raw / 0.42, 0, 1);
     const diveT = clamp((raw - 0.32) / 0.68, 0, 1);
@@ -1248,11 +1854,18 @@ function updateTransition(time) {
     state.cameraLook.lerpVectors(transition.fromLook, destinationLook, t);
   }
 
-  const rootOpacity = transition.entering ? 1 - clamp((raw - 0.32) / 0.28, 0, 1) : clamp((raw - 0.55) / 0.35, 0, 1);
-  const projectOpacity = transition.entering ? clamp((raw - 0.52) / 0.36, 0, 1) : 1 - clamp((raw - 0.12) / 0.34, 0, 1);
-  setSpaceOpacity('root', rootOpacity);
-  setSpaceOpacity('project', projectOpacity);
-  portalHalo.material.opacity = 0.22 * rootOpacity;
+  const fromOpacity = transition.entering
+    ? 1 - clamp((raw - 0.32) / 0.28, 0, 1)
+    : 1 - clamp((raw - 0.12) / 0.34, 0, 1);
+  const toOpacity = transition.entering
+    ? clamp((raw - 0.52) / 0.36, 0, 1)
+    : clamp((raw - 0.55) / 0.35, 0, 1);
+  setSpaceOpacity(transition.from, fromOpacity);
+  setSpaceOpacity(transition.to, toOpacity);
+  if (portalHalo) {
+    const rootOpacity = transition.from === 'root' ? fromOpacity : transition.to === 'root' ? toOpacity : 0;
+    portalHalo.material.opacity = 0.22 * rootOpacity;
+  }
 
   if (raw >= 1) finishNavigation(transition.to);
 }
@@ -1280,9 +1893,9 @@ function showToast(message) {
   toastTimer = window.setTimeout(() => toast.classList.remove('show'), 1800);
 }
 
-function loadPersistedState() {
+function loadPersistedState(key = STORAGE_KEY) {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    return JSON.parse(localStorage.getItem(key) || '{}');
   } catch {
     return {};
   }
@@ -1290,16 +1903,20 @@ function loadPersistedState() {
 
 function persistSpatialState() {
   try {
-    const cards = Object.fromEntries(cardMeshes.map((card) => [card.userData.id, card.userData.basePosition.toArray()]));
-    const bodies = Object.fromEntries(cardMeshes
-      .filter((card) => card.userData.editable)
-      .map((card) => [card.userData.id, card.userData.body]));
+    for (const placement of workspace.placements) {
+      const mesh = cardMeshes.find((card) => card.userData.id === placement.id);
+      if (mesh) placement.position = mesh.userData.basePosition.toArray();
+    }
     const views = Object.fromEntries(Object.entries(state.views).map(([id, view]) => [id, {
       pan: view.pan.toArray(),
       zoom: view.zoom,
       depth: view.depth,
     }]));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ cards, bodies, views }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      workspace: JSON.parse(serialiseWorkspace(workspace)),
+      views,
+      aiDismissed: [...state.aiDismissed],
+    }));
   } catch {
     // Persistence is a convenience; interaction should survive blocked storage.
   }

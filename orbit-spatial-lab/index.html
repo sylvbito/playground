@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=5">
+  <link rel="stylesheet" href="./styles.css?v=6">
   <script type="importmap">
     {
       "imports": {
@@ -31,6 +31,7 @@
         <span>Studio</span><i>›</i><strong id="space-name">Loose thoughts</strong>
       </div>
       <div class="top-actions">
+        <button id="new-thought" class="new-thought-button" type="button"><span aria-hidden="true">＋</span> New thought</button>
         <button id="focus-selected" class="quiet-button focus-button" type="button" hidden>Focus selected <kbd>F</kbd></button>
         <button id="reset-view" class="quiet-button" type="button">Reset view</button>
         <button id="back-space" class="back-button" type="button" hidden>
@@ -42,6 +43,26 @@
     <section class="scene-shell" aria-label="Spatial canvas">
       <div id="scene" class="scene"></div>
       <div class="vignette" aria-hidden="true"></div>
+      <div id="selection-lasso" class="selection-lasso" hidden aria-hidden="true"></div>
+      <div id="guide-x" class="alignment-guide is-vertical" hidden aria-hidden="true"></div>
+      <div id="guide-y" class="alignment-guide is-horizontal" hidden aria-hidden="true"></div>
+
+      <div id="selection-toolbar" class="selection-toolbar" hidden aria-label="Selection actions">
+        <output id="selection-count">1 selected</output>
+        <label>
+          <span class="sr-only">Relationship label</span>
+          <select id="relation-label">
+            <option>related</option>
+            <option>supports</option>
+            <option>references</option>
+            <option>contrasts</option>
+          </select>
+        </label>
+        <button id="link-selection" type="button">Link</button>
+        <button id="duplicate-selection" type="button">Duplicate</button>
+        <button id="make-space" type="button">Make space</button>
+        <button id="delete-selection" class="danger-action" type="button">Delete</button>
+      </div>
 
       <aside class="space-caption" aria-live="polite">
         <span class="eyebrow" id="space-kicker">SPACE · 01</span>
@@ -72,8 +93,32 @@
 
       <div class="gesture-hint" aria-hidden="true">
         <span class="mouse-glyph"><i></i></span>
-        <span>Drag canvas · wheel toward cursor · zoom into portals · F focus · O overview</span>
+        <span>Double-click to create · Shift-drag to select · ⌘Z undo · F focus</span>
       </div>
+
+      <aside class="ai-dock" id="ai-dock">
+        <button id="ai-toggle" class="ai-toggle" type="button" aria-expanded="false">
+          <span class="ai-orbit" aria-hidden="true"><i></i></span>
+          <span><strong>Orbit AI</strong><small id="ai-summary">Scanning this space…</small></span>
+          <output id="ai-count">0</output>
+        </button>
+        <div id="ai-panel" class="ai-panel" hidden>
+          <header><span>Background proposals</span><button id="ai-close" type="button" aria-label="Close AI proposals">×</button></header>
+          <p>Nothing moves without your approval.</p>
+          <div id="ai-proposals" class="ai-proposals"></div>
+          <form id="ai-command" class="ai-command">
+            <input id="ai-command-input" type="text" autocomplete="off" placeholder="Ask about this space…" aria-label="Ask Orbit AI">
+            <button type="submit">Ask</button>
+          </form>
+        </div>
+      </aside>
+
+      <form id="fallback-editor" class="fallback-editor" hidden>
+        <header><span>Editing thought</span><button id="fallback-editor-close" type="button" aria-label="Close editor">×</button></header>
+        <label>Title<input id="fallback-title" type="text" autocomplete="off"></label>
+        <label>Thought<textarea id="fallback-body"></textarea></label>
+        <button type="submit">Save thought</button>
+      </form>
 
       <div class="api-state" id="api-state">
         <span class="api-dot"></span>
@@ -103,6 +148,6 @@
     </article>
   </template>
 
-  <script type="module" src="./app.js?v=7"></script>
+  <script type="module" src="./app.js?v=8"></script>
 </body>
 </html>
