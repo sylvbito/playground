@@ -7,6 +7,7 @@ export function deriveSemanticTokens(theme, variant) {
   const strength = theme.contrast / 100;
   const colourUsage = (theme.colourUsage ?? 50) / 100;
   const injection = colourUsage ** 2.2;
+  const infrastructureInjection = theme.neutralAtmosphere ? 0 : injection;
   const { surface, ink, accent, semanticColors } = theme;
   const primaryTextTarget = interpolate(4.5, 7, strength);
   const primary = readableForeground(ink, surface, primaryTextTarget);
@@ -23,9 +24,9 @@ export function deriveSemanticTokens(theme, variant) {
   const elevatedSecondary = dark
     ? mix(surface, ink, elevatedMix * 1.65)
     : mix(surface, '#FFFFFF', 0.02 + injection * 0.08);
-  const control = mix(mix(surface, ink, controlMix), accent, dark ? 0 : injection * 0.085);
-  const controlHover = mix(mix(surface, ink, controlMix + interpolate(0.025, 0.055, strength)), accent, dark ? 0 : injection * 0.11);
-  const controlActive = mix(mix(surface, ink, controlMix + interpolate(0.06, 0.11, strength)), accent, dark ? 0 : injection * 0.135);
+  const control = mix(mix(surface, ink, controlMix), accent, dark ? 0 : infrastructureInjection * 0.085);
+  const controlHover = mix(mix(surface, ink, controlMix + interpolate(0.025, 0.055, strength)), accent, dark ? 0 : infrastructureInjection * 0.11);
+  const controlActive = mix(mix(surface, ink, controlMix + interpolate(0.06, 0.11, strength)), accent, dark ? 0 : infrastructureInjection * 0.135);
 
   return {
     '--color-background-surface': surface,

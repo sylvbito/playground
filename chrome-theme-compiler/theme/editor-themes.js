@@ -4,6 +4,7 @@ const families = [
   { id: 'codex', name: 'Codex', accent: '#339CFF', atmosphere: '#566D85', positive: '#40C977', negative: '#FA423E', special: '#AD7BF9' },
   { id: 'raycast', name: 'Raycast', accent: '#FF6363', atmosphere: '#FF6363', positive: '#2D9D78', negative: '#E5484D', special: '#8E4EC6' },
   { id: 'github', name: 'GitHub', accent: '#0969DA', atmosphere: '#57606A', positive: '#1A7F37', negative: '#CF222E', special: '#8250DF' },
+  { id: 'paper', name: 'Paper', accent: '#2563EB', atmosphere: '#FFFFFF', positive: '#16803C', negative: '#C92A2A', special: '#7048E8' },
   { id: 'rose-pine', name: 'Rosé Pine', accent: '#D7827E', atmosphere: '#D7827E', positive: '#286983', negative: '#B4637A', special: '#907AA9' },
   { id: 'solarized', name: 'Solarized', accent: '#268BD2', atmosphere: '#B58900', positive: '#859900', negative: '#DC322F', special: '#6C71C4' },
   { id: 'gruvbox', name: 'Gruvbox', accent: '#D79921', atmosphere: '#D79921', positive: '#79740E', negative: '#9D0006', special: '#8F3F71' },
@@ -35,11 +36,15 @@ export function compilePalette(palette, variant, contrast = 55, colourUsage = 65
   const strength = clamp(contrast, 0, 100) / 100;
   const atmosphere = rgbToOklch(palette.atmosphere);
   const accent = rgbToOklch(palette.accent);
+  const neutralAtmosphere = atmosphere.c < 0.018;
   const gravity = clamp((atmosphere.l - 0.5) * 2, -1, 1) * (atmosphere.c < 0.018 ? 1 : 0.28);
+  const neutralTargetLightness = 0.86 + atmosphere.l * 0.13;
   const surfaceLightness = dark
     ? 0.145 + usage * 0.075 + gravity * 0.05
-    : 0.99 - injection * 0.15 + gravity * (0.012 + injection * 0.026);
-  const surfaceChroma = dark ? 0.03 + usage * 0.58 : 0.01 + injection * 1.22;
+    : neutralAtmosphere
+      ? 0.99 + (neutralTargetLightness - 0.99) * injection
+      : 0.99 - injection * 0.15 + gravity * (0.012 + injection * 0.026);
+  const surfaceChroma = dark ? 0.03 + usage * 0.58 : neutralAtmosphere ? 0 : 0.01 + injection * 1.22;
   const inkLightness = dark ? 0.84 + strength * 0.12 : 0.26 - strength * 0.18;
   const accentLightness = dark
     ? clamp(accent.l, 0.68, 0.9)
@@ -47,13 +52,14 @@ export function compilePalette(palette, variant, contrast = 55, colourUsage = 65
   const derivedAccent = tone(palette.accent, accentLightness, 0.62 + usage * 0.5);
   const atmosphereSurface = tone(palette.atmosphere, surfaceLightness, surfaceChroma);
   const accentWash = tone(palette.accent, 0.93 - injection * 0.13, 0.3 + injection);
-  const surface = dark ? atmosphereSurface : mix(atmosphereSurface, accentWash, injection * 0.14);
+  const surface = dark || neutralAtmosphere ? atmosphereSurface : mix(atmosphereSurface, accentWash, injection * 0.14);
   return {
     accent: derivedAccent,
     surface,
     ink: tone(palette.atmosphere, inkLightness, 0.08 + usage * 0.16),
     contrast: clamp(Math.round(contrast), 0, 100),
     colourUsage: clamp(Math.round(colourUsage), 0, 100),
+    neutralAtmosphere,
     fonts: { ui: fonts.ui || null, code: fonts.code || null },
     opaqueWindows: false,
     semanticColors: {
