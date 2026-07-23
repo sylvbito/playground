@@ -106,6 +106,8 @@ const state = {
   },
   activeNavigation: 'overview',
   viewTween: null,
+  portalZoomProgress: 0,
+  portalZoomHinted: false,
   drag: null,
   panGesture: null,
   transition: null,
@@ -120,6 +122,7 @@ let cardMeshes = [];
 let connections = [];
 let roots = {};
 let portalHalo;
+let portalProgressHalo;
 let portalPreview;
 let toastTimer;
 
@@ -197,6 +200,9 @@ function init() {
     focus: (id) => focusCard(cardMeshes.find((card) => card.userData.id === id)),
     focusLayer,
     overview: () => focusLayer('overview'),
+    zoomAtCursor,
+    worldAtPoint: getWorldPointAtScreen,
+    cardAtPoint: getCardAtScreenPoint,
     nativeHtmlCanvas,
   };
 }
@@ -380,6 +386,9 @@ function finishNavigation(destination) {
   state.space = destination;
   state.transitioning = false;
   state.transition = null;
+  state.portalZoomProgress = 0;
+  state.portalZoomHinted = false;
+  updatePortalProgressHalo();
   const view = state.views[destination];
   state.activeNavigation = view.pan.lengthSq() < 0.001 && Math.abs(view.zoom) < 0.001 && Math.abs(view.depth) < 0.001
     ? 'overview' : 'free';
@@ -499,10 +508,36 @@ function addPortalHalo() {
     color: 0xb8f3a4, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false,
   });
   portalHalo = new THREE.Mesh(geometry, material);
+  portalHalo.name = 'portal-halo';
   const portal = cardMeshes.find((card) => card.userData.id === 'portal');
   portalHalo.position.copy(portal?.userData.basePosition || new THREE.Vector3(0.05, 0.65, -6.2));
   portalHalo.position.z -= 0.12;
+
+  portalProgressHalo = new THREE.Mesh(
+    new THREE.RingGeometry(2.08, 2.25, 96, 1, -Math.PI / 2, 0.001),
+    new THREE.MeshBasicMaterial({
+      color: 0xd8ff7a, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false,
+    }),
+  );
+  portalProgressHalo.name = 'portal-progress';
+  portalProgressHalo.position.z = 0.018;
+  portalProgressHalo.renderOrder = 8;
+  portalHalo.add(portalProgressHalo);
   roots.root.add(portalHalo);
+}
+
+function updatePortalProgressHalo() {
+  if (!portalProgressHalo) return;
+  portalProgressHalo.geometry.dispose();
+  portalProgressHalo.geometry = new THREE.RingGeometry(
+    2.08,
+    2.25,
+    96,
+    1,
+    -Math.PI / 2,
+    Math.max(0.001, state.portalZoomProgress * Math.PI * 2),
+  );
+  portalProgressHalo.material.opacity = state.portalZoomProgress > 0 ? 0.94 : 0;
 }
 
 function addPortalPreview() {
@@ -597,6 +632,9 @@ function updateDepthNavigation(spaceId = state.space) {
 
 function focusLayer(layerId) {
   if (state.transitioning) return;
+  state.portalZoomProgress = 0;
+  state.portalZoomHinted = false;
+  updatePortalProgressHalo();
   if (layerId === 'overview') {
     animateViewTo({ pan: new THREE.Vector2(0, 0), zoom: 0, depth: 0 }, 'overview');
     clearSelection();
@@ -660,6 +698,9 @@ function updateViewTween(time) {
 
 function markFreeNavigation() {
   state.viewTween = null;
+  state.portalZoomProgress = 0;
+  state.portalZoomHinted = false;
+  updatePortalProgressHalo();
   if (state.activeNavigation !== 'free') {
     state.activeNavigation = 'free';
     updateDepthNavigation();
@@ -688,10 +729,17 @@ function bindUi() {
   renderer.domElement.addEventListener('wheel', (event) => {
     if (state.transitioning) return;
     event.preventDefault();
-    markFreeNavigation();
-    const view = state.views[state.space];
     const delta = event.deltaY * (event.deltaMode === 1 ? 16 : 1);
-    view.zoom = clamp(view.zoom + delta * 0.006, -4.2, 8);
+    const hoveredCard = getCardAtScreenPoint(event.clientX, event.clientY);
+    const zoomingIntoPortal = state.space === 'root' && hoveredCard?.userData.portal && delta < 0;
+
+    if (zoomingIntoPortal) {
+      zoomTowardPortal(hoveredCard, event, delta);
+    } else {
+      state.portalZoomProgress = clamp(state.portalZoomProgress - Math.abs(delta) / 520, 0, 1);
+      markFreeNavigation();
+      zoomAtCursor(event.clientX, event.clientY, delta);
+    }
     persistSpatialState();
   }, { passive: false });
 
@@ -715,8 +763,8 @@ function bindUi() {
     if (event.key === 'ArrowRight') view.pan.x += step;
     if (event.key === 'ArrowUp') view.pan.y += step;
     if (event.key === 'ArrowDown') view.pan.y -= step;
-    if (event.key === '=' || event.key === '+') view.zoom = clamp(view.zoom - 0.7, -4.2, 8);
-    if (event.key === '-' || event.key === '_') view.zoom = clamp(view.zoom + 0.7, -4.2, 8);
+    if (event.key === '=' || event.key === '+') view.zoom = clamp(view.zoom - 0.7, -6.2, 8);
+    if (event.key === '-' || event.key === '_') view.zoom = clamp(view.zoom + 0.7, -6.2, 8);
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '=', '+', '-', '_'].includes(event.key)) {
       event.preventDefault();
       markFreeNavigation();
@@ -738,6 +786,79 @@ function bindUi() {
   document.addEventListener('click', (event) => {
     if (!event.target.closest('#api-popover, #api-help')) $('#api-popover').hidden = true;
   });
+}
+
+function getWorldPointAtScreen(clientX, clientY, depthZ = spaces[state.space].look.z + state.views[state.space].depth) {
+  const ndc = new THREE.Vector2(
+    (clientX / window.innerWidth) * 2 - 1,
+    1 - (clientY / window.innerHeight) * 2,
+  );
+  const raycaster = new THREE.Raycaster();
+  const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -depthZ);
+  const point = new THREE.Vector3();
+  camera.updateMatrixWorld();
+  raycaster.setFromCamera(ndc, camera);
+  return raycaster.ray.intersectPlane(plane, point);
+}
+
+function getCardAtScreenPoint(clientX, clientY) {
+  const direct = document.elementFromPoint(clientX, clientY)?.closest?.('.spatial-card');
+  if (direct?.dataset.id) {
+    const mesh = cardMeshes.find((card) => card.userData.id === direct.dataset.id);
+    if (mesh?.userData.space === state.space) return mesh;
+  }
+
+  return cardMeshes
+    .filter((card) => card.userData.space === state.space && card.material.opacity > 0.3)
+    .sort((a, b) => camera.position.distanceTo(a.position) - camera.position.distanceTo(b.position))
+    .find((card) => {
+      const rect = card.userData.element.getBoundingClientRect();
+      return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+    }) || null;
+}
+
+function zoomAtCursor(clientX, clientY, delta) {
+  const view = state.views[state.space];
+  const nextZoom = clamp(view.zoom + delta * 0.006, -6.2, 8);
+  if (nextZoom === view.zoom) return;
+
+  const baseDistance = spaces[state.space].camera.z - spaces[state.space].look.z;
+  const beforeDistance = Math.max(2.4, baseDistance + view.zoom);
+  const afterDistance = Math.max(2.4, baseDistance + nextZoom);
+  const halfFov = THREE.MathUtils.degToRad(camera.fov * 0.5);
+  const beforeHeight = 2 * beforeDistance * Math.tan(halfFov);
+  const afterHeight = 2 * afterDistance * Math.tan(halfFov);
+  const ndcX = (clientX / window.innerWidth) * 2 - 1;
+  const ndcY = 1 - (clientY / window.innerHeight) * 2;
+  const heightChange = beforeHeight - afterHeight;
+
+  view.pan.x += ndcX * heightChange * camera.aspect * 0.5;
+  view.pan.y += ndcY * heightChange * 0.5;
+  view.zoom = nextZoom;
+  state.pointer.set(ndcX, ndcY);
+}
+
+function zoomTowardPortal(portal, event, delta) {
+  const view = state.views.root;
+  const lookBase = spaces.root.look;
+  const strength = clamp(-delta / 430, 0.035, 0.26);
+  view.depth = lerp(view.depth, portal.userData.basePosition.z - lookBase.z, strength * 0.72);
+  zoomAtCursor(event.clientX, event.clientY, delta);
+
+  if (state.activeNavigation !== 'portal') {
+    state.viewTween = null;
+    state.activeNavigation = 'portal';
+    updateDepthNavigation();
+  }
+
+  const wasIdle = state.portalZoomProgress < 0.06;
+  state.portalZoomProgress = clamp(state.portalZoomProgress + (-delta / 420), 0, 1);
+  updatePortalProgressHalo();
+  if (wasIdle && !state.portalZoomHinted) {
+    state.portalZoomHinted = true;
+    showToast('Keep zooming to enter Website redesign');
+  }
+  if (state.portalZoomProgress >= 1) navigateSpace('project');
 }
 
 function handlePointerMove(event) {
@@ -925,9 +1046,12 @@ function renderFrame(time) {
   updateConnections();
 
   if (portalHalo) {
-    portalHalo.rotation.z = time * 0.000035;
+    portalHalo.rotation.z = time * 0.000035 + state.portalZoomProgress * 0.08;
     const pulse = 1 + Math.sin(time * 0.0012) * 0.015;
-    portalHalo.scale.setScalar(pulse);
+    portalHalo.scale.setScalar(pulse * (1 + state.portalZoomProgress * 0.16));
+    if (!state.transition && state.space === 'root') {
+      portalHalo.material.opacity = Math.max(portalHalo.material.opacity, 0.22 + state.portalZoomProgress * 0.56);
+    }
   }
 
   camera.lookAt(state.cameraLook);
