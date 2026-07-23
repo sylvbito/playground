@@ -1,4 +1,4 @@
-import { interpretPreset } from './editor-themes.js?v=compiler-4';
+import { interpretPreset } from './editor-themes.js?v=compiler-5';
 
 function defaultTheme(variant, contrast) {
   const preset = interpretPreset('codex', variant);
@@ -21,6 +21,7 @@ export const DEFAULT_THEMES = Object.freeze({
 export const DEFAULT_SETTINGS = Object.freeze({
   mode: 'system',
   presetId: 'codex',
+  presetVersion: 2,
   lightChromeTheme: DEFAULT_THEMES.light,
   darkChromeTheme: DEFAULT_THEMES.dark,
   sansFontSize: 14,

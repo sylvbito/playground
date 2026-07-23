@@ -54,6 +54,7 @@ export function normaliseSettings(source = {}, defaults, validEditorIds) {
   return {
     mode: MODES.has(source.mode) ? source.mode : defaults.mode,
     presetId: preset(source.presetId) || preset(legacyPreset) || defaults.presetId,
+    presetVersion: defaults.presetVersion,
     lightChromeTheme: normaliseTheme(source.lightChromeTheme, defaults.lightChromeTheme),
     darkChromeTheme: normaliseTheme(source.darkChromeTheme, defaults.darkChromeTheme),
     sansFontSize: integer(source.sansFontSize, defaults.sansFontSize, 11, 20),

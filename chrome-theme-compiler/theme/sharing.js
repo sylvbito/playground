@@ -1,6 +1,6 @@
-import { normaliseTheme } from './schema.js?v=compiler-2';
-import { DEFAULT_THEMES } from './defaults.js?v=compiler-2';
-import { VALID_EDITOR_IDS } from './editor-themes.js?v=compiler-4';
+import { normaliseTheme } from './schema.js?v=compiler-3';
+import { DEFAULT_THEMES } from './defaults.js?v=compiler-4';
+import { VALID_EDITOR_IDS } from './editor-themes.js?v=compiler-5';
 
 const PREFIX = 'orbit-theme-v1:';
 const LEGACY_PRESETS = new Map([

@@ -1,8 +1,8 @@
-import { DEFAULT_SETTINGS } from './theme/defaults.js?v=compiler-2';
-import { normaliseSettings, isHex } from './theme/schema.js?v=compiler-2';
+import { DEFAULT_SETTINGS } from './theme/defaults.js?v=compiler-4';
+import { normaliseSettings, isHex } from './theme/schema.js?v=compiler-3';
 import { deriveSemanticTokens, TOKEN_GROUPS } from './theme/derive-tokens.js?v=compiler-3';
 import { applyAppearance, applyPlatformAppearance } from './theme/apply-css.js?v=compiler-4';
-import { VALID_EDITOR_IDS, editorThemesFor, loadChromeThemeSeed, loadEditorTheme } from './theme/editor-themes.js?v=compiler-4';
+import { VALID_EDITOR_IDS, editorThemesFor, loadChromeThemeSeed, loadEditorTheme } from './theme/editor-themes.js?v=compiler-5';
 import { getSystemVariant, subscribeSystemVariant } from './theme/system-theme.js';
 import { createSettingsStore } from './theme/persistence.js';
 import { exportTheme, importTheme } from './theme/sharing.js?v=compiler-3';
@@ -11,7 +11,7 @@ import { contrast } from './theme/color.js?v=compiler-2';
 const clone = value => structuredClone(value);
 const store = createSettingsStore();
 const storedSettings = store.read();
-const needsPresetMigration = Boolean(storedSettings && !storedSettings.presetId);
+const needsPresetMigration = Boolean(storedSettings && (!storedSettings.presetId || storedSettings.presetVersion !== DEFAULT_SETTINGS.presetVersion));
 let settings = normaliseSettings(storedSettings || clone(DEFAULT_SETTINGS), DEFAULT_SETTINGS, VALID_EDITOR_IDS);
 let systemVariant = getSystemVariant();
 let editVariant = 'light';
@@ -136,6 +136,7 @@ async function applyPreset(id) {
   const variants = ['light', 'dark'];
   const seeds = await Promise.all(variants.map(variant => loadChromeThemeSeed(id, variant)));
   settings.presetId = id;
+  settings.presetVersion = DEFAULT_SETTINGS.presetVersion;
   variants.forEach((variant, index) => {
     const seed = seeds[index], theme = settings[themeKey(variant)];
     Object.assign(theme, { accent: seed.accent, surface: seed.surface, ink: seed.ink });
