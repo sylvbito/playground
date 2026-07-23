@@ -1,37 +1,28 @@
-import { DEFAULT_SETTINGS } from './theme/defaults.js?v=compiler-4';
-import { normaliseSettings, isHex } from './theme/schema.js?v=compiler-3';
-import { deriveSemanticTokens, TOKEN_GROUPS } from './theme/derive-tokens.js?v=compiler-3';
+import { DEFAULT_SETTINGS } from './theme/defaults.js?v=compiler-5';
+import { normaliseSettings, isHex } from './theme/schema.js?v=compiler-5';
+import { deriveSemanticTokens, TOKEN_GROUPS } from './theme/derive-tokens.js?v=compiler-4';
 import { applyAppearance, applyPlatformAppearance } from './theme/apply-css.js?v=compiler-4';
-import { VALID_EDITOR_IDS, editorThemesFor, loadChromeThemeSeed, loadEditorTheme } from './theme/editor-themes.js?v=compiler-5';
+import { PRESET_FAMILIES, VALID_PRESET_IDS, compileEditorPalette, compilePalette, paletteForPreset, presetOptions } from './theme/editor-themes.js?v=compiler-6';
 import { getSystemVariant, subscribeSystemVariant } from './theme/system-theme.js';
 import { createSettingsStore } from './theme/persistence.js';
-import { exportTheme, importTheme } from './theme/sharing.js?v=compiler-3';
-import { contrast } from './theme/color.js?v=compiler-2';
+import { exportTheme, importTheme } from './theme/sharing.js?v=compiler-5';
 
 const clone = value => structuredClone(value);
 const store = createSettingsStore();
 const storedSettings = store.read();
-const needsPresetMigration = Boolean(storedSettings && (!storedSettings.presetId || storedSettings.presetVersion !== DEFAULT_SETTINGS.presetVersion));
-let settings = normaliseSettings(storedSettings || clone(DEFAULT_SETTINGS), DEFAULT_SETTINGS, VALID_EDITOR_IDS);
+const needsPresetMigration = Boolean(storedSettings && (!storedSettings.palette || storedSettings.presetVersion !== DEFAULT_SETTINGS.presetVersion));
+let settings = normaliseSettings(storedSettings || clone(DEFAULT_SETTINGS), DEFAULT_SETTINGS, VALID_PRESET_IDS);
 let systemVariant = getSystemVariant();
-let editVariant = 'light';
 let persistTimer;
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const toast = $('#toast');
 const importDialog = $('#importDialog');
-const colourPath = key => ['diffAdded', 'diffRemoved', 'skill'].includes(key) ? ['semanticColors', key] : [key];
 
-function themeKey(variant) { return variant === 'dark' ? 'darkChromeTheme' : 'lightChromeTheme'; }
-function currentTheme() { return settings[themeKey(editVariant)]; }
 function resolvedVariant() { return settings.mode === 'system' ? systemVariant : settings.mode; }
-
-function setNested(target, path, value) {
-  let cursor = target;
-  path.slice(0, -1).forEach(key => { cursor = cursor[key]; });
-  cursor[path.at(-1)] = value;
-}
+function compiled(variant) { return compilePalette(settings.palette, variant, settings.contrast, settings.colourUsage, settings.fonts); }
+function editorCompiled(variant) { return compileEditorPalette(settings.palette, variant, settings.contrast, settings.colourUsage, settings.fonts); }
 
 function notify(message) {
   toast.textContent = message;
@@ -52,48 +43,48 @@ function queuePersist() {
 }
 
 function renderControls() {
-  const theme = currentTheme();
+  const light = compiled('light');
+  const dark = compiled('dark');
   $$('[data-mode]').forEach(button => button.setAttribute('aria-pressed', button.dataset.mode === settings.mode));
-  $$('[data-palette]').forEach(button => button.setAttribute('aria-pressed', button.dataset.palette === editVariant));
-  $('#editingLabel').textContent = editVariant[0].toUpperCase() + editVariant.slice(1);
   $('#resolvedLabel').textContent = `${resolvedVariant()[0].toUpperCase() + resolvedVariant().slice(1)} resolved`;
-  $('#lightSummary').textContent = `${settings.lightChromeTheme.surface} / ${settings.lightChromeTheme.ink}`;
-  $('#darkSummary').textContent = `${settings.darkChromeTheme.surface} / ${settings.darkChromeTheme.ink}`;
-  $$('[data-colour]').forEach(input => {
-    const path = colourPath(input.dataset.colour);
-    const value = path.length === 1 ? theme[path[0]] : theme[path[0]][path[1]];
-    input.value = value;
-  });
-  $$('[data-hex]').forEach(input => {
-    const path = colourPath(input.dataset.hex);
-    const value = path.length === 1 ? theme[path[0]] : theme[path[0]][path[1]];
-    input.value = value;
-  });
-  $('#contrastRange').value = theme.contrast;
-  $('#contrastValue').textContent = theme.contrast;
+  $('#lightSummary').textContent = `${light.surface} / ${light.ink}`;
+  $('#darkSummary').textContent = `${dark.surface} / ${dark.ink}`;
+  $('.light-chip').style.background = `linear-gradient(${light.surface} 50%, ${light.ink} 50%)`;
+  $('.dark-chip').style.background = `linear-gradient(${dark.surface} 50%, ${dark.ink} 50%)`;
+  $$('[data-colour]').forEach(input => { input.value = settings.palette[input.dataset.colour]; });
+  $$('[data-hex]').forEach(input => { input.value = settings.palette[input.dataset.hex]; });
+  $$('[data-palette-preview]').forEach(swatch => { swatch.style.background = settings.palette[swatch.dataset.palettePreview]; });
+  $('#contrastRange').value = settings.contrast;
+  $('#contrastValue').textContent = settings.contrast;
+  $('#colourUsageRange').value = settings.colourUsage;
+  $('#colourUsageValue').textContent = settings.colourUsage;
   $('#uiFontSize').value = settings.sansFontSize;
   $('#codeFontSize').value = settings.codeFontSize;
-  $('#uiFont').value = theme.fonts.ui || '';
-  $('#codeFont').value = theme.fonts.code || '';
+  $('#uiFont').value = settings.fonts.ui || '';
+  $('#codeFont').value = settings.fonts.code || '';
   $('#fontSmoothing').checked = settings.useFontSmoothing;
   $('#pointerCursors').checked = settings.usePointerCursors;
 
   const select = $('#editorTheme');
-  const options = editorThemesFor(editVariant);
-  select.innerHTML = options.map(themeOption => `<option value="${themeOption.id}">${themeOption.name}</option>`).join('');
-  select.value = settings.presetId;
+  const options = presetOptions();
+  select.innerHTML = options.map(option => `<option value="${option.id}">${option.name}</option>`).join('');
+  if (settings.paletteCustom) {
+    const baseName = PRESET_FAMILIES.get(settings.presetId)?.name || 'preset';
+    select.insertAdjacentHTML('beforeend', `<option value="custom" disabled>Custom · ${baseName}</option>`);
+    select.value = 'custom';
+  } else select.value = settings.presetId;
 }
 
 function renderInspector(tokens, theme) {
   $('#primitiveStrip').innerHTML = [
     ['Surface', theme.surface], ['Ink', theme.ink], ['Accent', theme.accent],
-    ['Added', theme.semanticColors.diffAdded], ['Removed', theme.semanticColors.diffRemoved], ['Skill', theme.semanticColors.skill],
+    ['Positive', theme.semanticColors.diffAdded], ['Negative', theme.semanticColors.diffRemoved], ['Special', theme.semanticColors.skill],
   ].map(([label, value]) => `<div style="--swatch:${value}"><i></i><span>${label}<code>${value}</code></span></div>`).join('');
 
   $('#tokenList').innerHTML = Object.entries(TOKEN_GROUPS).map(([group, names]) => `<section><h3>${group}</h3>${names.map(name => `<button data-token="${name}" title="Copy ${name}"><i style="--swatch:${tokens[name]}"></i><span>${name.replace('--color-', '')}</span><code>${tokens[name]}</code></button>`).join('')}</section>`).join('');
   const primaryRatio = Number(tokens['--theme-contrast-primary']);
   const accentRatio = Number(tokens['--theme-contrast-accent']);
-  const target = 4.5 + 2.5 * theme.contrast / 100;
+  const target = 4.5 + 2.5 * settings.contrast / 100;
   const targetMet = primaryRatio + 0.005 >= target && accentRatio >= 4.5;
   $('#contrastProof').innerHTML = `<div><span>Primary / surface</span><b>${primaryRatio.toFixed(2)}:1</b><em class="${primaryRatio >= 4.5 ? 'pass' : 'fail'}">${primaryRatio >= 7 ? 'AAA' : primaryRatio >= 4.5 ? 'AA' : 'Fail'}</em></div><div><span>Ink / accent</span><b>${accentRatio.toFixed(2)}:1</b><em class="${accentRatio >= 4.5 ? 'pass' : 'fail'}">${accentRatio >= 7 ? 'AAA' : accentRatio >= 4.5 ? 'AA' : 'Fail'}</em></div>`;
   $('#contrastFooter').classList.toggle('warning', !targetMet);
@@ -103,20 +94,22 @@ function renderInspector(tokens, theme) {
 
 async function render() {
   const variant = resolvedVariant();
-  const theme = settings[themeKey(variant)];
+  const theme = compiled(variant);
   const tokens = deriveSemanticTokens(theme, variant);
-  const editorTheme = await loadEditorTheme(settings.presetId, variant);
+  const editorTheme = editorCompiled(variant);
   applyPlatformAppearance(document.documentElement, tokens, theme, settings, variant);
   applyAppearance($('#productFrame'), tokens, theme, settings, variant, editorTheme);
   renderControls();
   renderInspector(tokens, theme);
-  $('#previewBadge').textContent = `${variant[0].toUpperCase() + variant.slice(1)} palette`;
+  $('#previewBadge').textContent = `${variant[0].toUpperCase() + variant.slice(1)} mapping`;
   $('#modeGlyph').textContent = variant === 'dark' ? '◐' : '☼';
-  $('#editorThemeName').textContent = editorTheme.name;
-  $('#codePreview .syntax-string').textContent = `"${theme.surface.toLowerCase()}"`;
+  const baseName = PRESET_FAMILIES.get(settings.presetId)?.name || 'Shared';
+  $('#editorThemeName').textContent = `${baseName}${settings.paletteCustom ? ' · custom' : ''}`;
   const strings = $$('#codePreview .syntax-string');
-  if (strings[1]) strings[1].textContent = `"${theme.accent.toLowerCase()}"`;
-  $('#codePreview .syntax-number').textContent = theme.contrast;
+  if (strings[0]) strings[0].textContent = `"${variant}"`;
+  const numbers = $$('#codePreview .syntax-number');
+  if (numbers[0]) numbers[0].textContent = settings.contrast;
+  if (numbers[1]) numbers[1].textContent = settings.colourUsage;
   const tokenCount = Object.keys(tokens).filter(key => key.startsWith('--color-')).length;
   $('#tokenCount').textContent = `${tokenCount} semantic tokens`;
   $('#inlineTokenCount').textContent = `${tokenCount} roles`;
@@ -126,32 +119,25 @@ async function render() {
 
 function updateColour(key, value) {
   if (!isHex(value)) return false;
-  setNested(currentTheme(), colourPath(key), value.toUpperCase());
+  settings.palette[key] = value.toUpperCase();
+  settings.paletteCustom = true;
   queuePersist();
   render();
   return true;
 }
 
-async function applyPreset(id) {
-  const variants = ['light', 'dark'];
-  const seeds = await Promise.all(variants.map(variant => loadChromeThemeSeed(id, variant)));
+function applyPreset(id) {
+  const palette = paletteForPreset(id);
+  if (!palette) throw new Error('Unknown palette preset');
   settings.presetId = id;
   settings.presetVersion = DEFAULT_SETTINGS.presetVersion;
-  variants.forEach((variant, index) => {
-    const seed = seeds[index], theme = settings[themeKey(variant)];
-    Object.assign(theme, { accent: seed.accent, surface: seed.surface, ink: seed.ink });
-    Object.assign(theme.semanticColors, seed.semanticColors);
-  });
+  settings.paletteCustom = false;
+  settings.palette = palette;
 }
 
 $$('[data-mode]').forEach(button => button.addEventListener('click', () => {
   settings.mode = button.dataset.mode;
   queuePersist(); render();
-}));
-
-$$('[data-palette]').forEach(button => button.addEventListener('click', () => {
-  editVariant = button.dataset.palette;
-  render();
 }));
 
 $$('[data-colour]').forEach(input => input.addEventListener('input', event => updateColour(event.currentTarget.dataset.colour, event.currentTarget.value)));
@@ -166,49 +152,52 @@ $$('[data-hex]').forEach(input => {
 });
 
 $('#contrastRange').addEventListener('input', event => {
-  currentTheme().contrast = Number(event.currentTarget.value);
+  settings.contrast = Number(event.currentTarget.value);
   $('#contrastValue').textContent = event.currentTarget.value;
   queuePersist(); render();
 });
 
-$('#editorTheme').addEventListener('change', async event => {
-  const themeId = event.currentTarget.value;
-  await applyPreset(themeId);
-  queuePersist(); await render(); notify('Preset interpreted for light + dark');
+$('#colourUsageRange').addEventListener('input', event => {
+  settings.colourUsage = Number(event.currentTarget.value);
+  $('#colourUsageValue').textContent = event.currentTarget.value;
+  queuePersist(); render();
+});
+
+$('#editorTheme').addEventListener('change', event => {
+  if (event.currentTarget.value === 'custom') return;
+  applyPreset(event.currentTarget.value);
+  queuePersist(); render(); notify('Shared palette loaded');
 });
 
 $('#uiFontSize').addEventListener('change', event => { settings.sansFontSize = Number(event.currentTarget.value); queuePersist(); render(); });
 $('#codeFontSize').addEventListener('change', event => { settings.codeFontSize = Number(event.currentTarget.value); queuePersist(); render(); });
-$('#uiFont').addEventListener('change', event => { currentTheme().fonts.ui = event.currentTarget.value.trim() || null; queuePersist(); render(); });
-$('#codeFont').addEventListener('change', event => { currentTheme().fonts.code = event.currentTarget.value.trim() || null; queuePersist(); render(); });
+$('#uiFont').addEventListener('change', event => { settings.fonts.ui = event.currentTarget.value.trim() || null; queuePersist(); render(); });
+$('#codeFont').addEventListener('change', event => { settings.fonts.code = event.currentTarget.value.trim() || null; queuePersist(); render(); });
 $('#fontSmoothing').addEventListener('change', event => { settings.useFontSmoothing = event.currentTarget.checked; queuePersist(); render(); });
 $('#pointerCursors').addEventListener('change', event => { settings.usePointerCursors = event.currentTarget.checked; queuePersist(); render(); });
 
 $('#shareTheme').addEventListener('click', async () => {
-  const value = exportTheme(editVariant, settings.presetId, currentTheme());
-  try { await navigator.clipboard.writeText(value); notify('Versioned theme copied'); }
+  const value = exportTheme(settings);
+  try { await navigator.clipboard.writeText(value); notify('Shared palette copied'); }
   catch { notify('Copy blocked by browser'); }
 });
 
 $('#importTheme').addEventListener('click', () => { $('#importValue').value = ''; $('#importError').textContent = ''; importDialog.showModal(); });
-$('#confirmImport').addEventListener('click', async () => {
+$('#confirmImport').addEventListener('click', () => {
   try {
     const imported = importTheme($('#importValue').value.trim());
-    editVariant = imported.variant;
-    await applyPreset(imported.codeThemeId);
-    settings[themeKey(imported.variant)] = imported.theme;
-    queuePersist(); await render(); importDialog.close(); notify('Theme imported');
+    Object.assign(settings, imported);
+    queuePersist(); render(); importDialog.close(); notify('Shared palette imported');
   } catch (error) { $('#importError').textContent = error.message; }
 });
 
-$('#resetTheme').addEventListener('click', async () => {
-  store.clear(); settings = normaliseSettings(clone(DEFAULT_SETTINGS), DEFAULT_SETTINGS, VALID_EDITOR_IDS);
-  editVariant = 'light';
-  await render(); queuePersist(); notify('Appearance reset');
+$('#resetTheme').addEventListener('click', () => {
+  store.clear(); settings = normaliseSettings(clone(DEFAULT_SETTINGS), DEFAULT_SETTINGS, VALID_PRESET_IDS);
+  render(); queuePersist(); notify('Appearance reset');
 });
 
 $('#copyCss').addEventListener('click', async () => {
-  const variant = resolvedVariant(), theme = settings[themeKey(variant)], tokens = deriveSemanticTokens(theme, variant);
+  const variant = resolvedVariant(), theme = compiled(variant), tokens = deriveSemanticTokens(theme, variant);
   const css = `:root {\n${Object.entries(tokens).filter(([key]) => key.startsWith('--color-')).map(([key, value]) => `  ${key}: ${value};`).join('\n')}\n}`;
   try { await navigator.clipboard.writeText(css); notify('Semantic CSS copied'); } catch { notify('Copy blocked by browser'); }
 });
@@ -224,5 +213,6 @@ subscribeSystemVariant(variant => {
 });
 
 if (needsPresetMigration) {
-  applyPreset(settings.presetId).then(() => { queuePersist(); return render(); });
+  applyPreset(settings.presetId);
+  queuePersist(); render();
 } else render();

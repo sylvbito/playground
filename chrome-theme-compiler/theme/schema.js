@@ -7,6 +7,7 @@ const LEGACY_PRESETS = new Map([
   ['rose-pine-dawn', 'rose-pine'], ['solarized-light', 'solarized'],
   ['gruvbox-light', 'gruvbox'], ['gruvbox-dark', 'gruvbox'],
   ['mint-light', 'mint'], ['high-contrast-light', 'monochrome'],
+  ['temple-dark', 'temple'], ['nord-dark', 'nord'],
   ['catppuccin-mocha', 'catppuccin'],
 ]);
 
@@ -25,38 +26,35 @@ function nullableFont(value) {
   return trimmed || null;
 }
 
-export function normaliseTheme(source = {}, fallback) {
-  const semantic = source.semanticColors || {};
+export function normalisePalette(source = {}, fallback) {
   return {
     accent: normaliseHex(source.accent, fallback.accent),
-    surface: normaliseHex(source.surface, fallback.surface),
-    ink: normaliseHex(source.ink, fallback.ink),
-    contrast: integer(source.contrast, fallback.contrast, 0, 100),
-    fonts: {
-      ui: nullableFont(source.fonts?.ui),
-      code: nullableFont(source.fonts?.code),
-    },
-    opaqueWindows: Boolean(source.opaqueWindows),
-    semanticColors: {
-      diffAdded: normaliseHex(semantic.diffAdded, fallback.semanticColors.diffAdded),
-      diffRemoved: normaliseHex(semantic.diffRemoved, fallback.semanticColors.diffRemoved),
-      skill: normaliseHex(semantic.skill, fallback.semanticColors.skill),
-    },
+    atmosphere: normaliseHex(source.atmosphere, fallback.atmosphere),
+    positive: normaliseHex(source.positive, fallback.positive),
+    negative: normaliseHex(source.negative, fallback.negative),
+    special: normaliseHex(source.special, fallback.special),
   };
 }
 
-export function normaliseSettings(source = {}, defaults, validEditorIds) {
+export function normaliseSettings(source = {}, defaults, validPresetIds) {
   const preset = value => {
     const migrated = LEGACY_PRESETS.get(value) || value;
-    return validEditorIds.has(migrated) ? migrated : null;
+    return validPresetIds.has(migrated) ? migrated : null;
   };
   const legacyPreset = source.mode === 'dark' ? source.darkCodeThemeId : source.lightCodeThemeId;
+  const legacyTheme = source.mode === 'dark' ? source.darkChromeTheme : source.lightChromeTheme;
   return {
     mode: MODES.has(source.mode) ? source.mode : defaults.mode,
     presetId: preset(source.presetId) || preset(legacyPreset) || defaults.presetId,
     presetVersion: defaults.presetVersion,
-    lightChromeTheme: normaliseTheme(source.lightChromeTheme, defaults.lightChromeTheme),
-    darkChromeTheme: normaliseTheme(source.darkChromeTheme, defaults.darkChromeTheme),
+    paletteCustom: Boolean(source.paletteCustom),
+    palette: normalisePalette(source.palette, defaults.palette),
+    contrast: integer(source.contrast ?? legacyTheme?.contrast, defaults.contrast, 0, 100),
+    colourUsage: integer(source.colourUsage, defaults.colourUsage, 0, 100),
+    fonts: {
+      ui: nullableFont(source.fonts?.ui ?? legacyTheme?.fonts?.ui),
+      code: nullableFont(source.fonts?.code ?? legacyTheme?.fonts?.code),
+    },
     sansFontSize: integer(source.sansFontSize, defaults.sansFontSize, 11, 20),
     codeFontSize: integer(source.codeFontSize, defaults.codeFontSize, 10, 20),
     diffMarkerStyle: MARKERS.has(source.diffMarkerStyle) ? source.diffMarkerStyle : defaults.diffMarkerStyle,

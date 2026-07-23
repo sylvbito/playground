@@ -5,6 +5,7 @@ const interpolate = (min, max, amount) => min + (max - min) * amount;
 export function deriveSemanticTokens(theme, variant) {
   const dark = variant === 'dark';
   const strength = theme.contrast / 100;
+  const colourUsage = (theme.colourUsage ?? 50) / 100;
   const { surface, ink, accent, semanticColors } = theme;
   const primaryTextTarget = interpolate(4.5, 7, strength);
   const primary = readableForeground(ink, surface, primaryTextTarget);
@@ -24,7 +25,7 @@ export function deriveSemanticTokens(theme, variant) {
     '--color-background-control-hover': mix(surface, ink, controlMix + interpolate(0.025, 0.055, strength)),
     '--color-background-control-active': mix(surface, ink, controlMix + interpolate(0.06, 0.11, strength)),
     '--color-background-accent': accent,
-    '--color-background-accent-soft': mix(accent, surface, dark ? 0.76 : 0.88),
+    '--color-background-accent-soft': mix(accent, surface, dark ? interpolate(0.92, 0.7, colourUsage) : interpolate(0.96, 0.82, colourUsage)),
     '--color-border-light': mix(surface, ink, interpolate(0.08, 0.15, strength)),
     '--color-border-normal': mix(surface, ink, interpolate(0.14, 0.27, strength)),
     '--color-border-heavy': mix(surface, ink, interpolate(0.25, 0.43, strength)),

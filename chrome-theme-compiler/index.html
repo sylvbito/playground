@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A dual-palette semantic theme compiler inspired by Codex appearance architecture.">
+  <meta name="description" content="A shared-palette semantic theme compiler inspired by Codex appearance architecture.">
   <title>Chrome Theme Compiler — Orbit Systems</title>
-  <link rel="stylesheet" href="styles.css?v=compiler-5">
+  <link rel="stylesheet" href="styles.css?v=compiler-8">
 </head>
 <body>
   <div class="app-shell">
@@ -24,8 +24,8 @@
       <aside class="control-panel" aria-label="Appearance settings">
         <div class="control-intro">
           <span class="kicker">Appearance source</span>
-          <h1>Theme the whole platform.</h1>
-          <p>One preset is interpreted into light and dark palettes. Appearance chooses which output the platform uses; either can still be tuned independently.</p>
+          <h1>One palette. Two mappings.</h1>
+          <p>Choose source colours once. Light and dark decide how they become surfaces and ink; contrast and colour usage tune both.</p>
         </div>
 
         <section class="control-section">
@@ -38,37 +38,45 @@
         </section>
 
         <section class="control-section">
-          <div class="section-head"><b>Theme preset</b><code>Light + dark</code></div>
-          <select id="editorTheme" aria-label="Theme preset"></select>
+          <div class="section-head"><b>Palette preset</b><code>Shared source</code></div>
+          <select id="editorTheme" aria-label="Palette preset"></select>
         </section>
 
-        <section class="control-section">
-          <div class="section-head"><b>Edit palette</b><code id="editingLabel">Light</code></div>
-          <div class="palette-tabs" id="paletteTabs" role="group" aria-label="Palette to edit">
-            <button data-palette="light" aria-pressed="true"><i class="light-chip"></i><span>Light<small id="lightSummary">#FFFFFF / #1A1C1F</small></span></button>
-            <button data-palette="dark" aria-pressed="false"><i class="dark-chip"></i><span>Dark<small id="darkSummary">#181818 / #FFFFFF</small></span></button>
+        <section class="control-section compiler-axes">
+          <div class="section-head"><b>Compiler axes</b><code>Both mappings</code></div>
+          <div class="axis-control">
+            <div><span>Contrast</span><code id="contrastValue">55</code></div>
+            <input class="range" id="contrastRange" type="range" min="0" max="100" step="1" value="55">
+            <div class="range-labels"><span>Subtle</span><span>Explicit</span></div>
+          </div>
+          <div class="axis-control">
+            <div><span>Colour usage</span><code id="colourUsageValue">65</code></div>
+            <input class="range colour-usage-range" id="colourUsageRange" type="range" min="0" max="100" step="1" value="65">
+            <div class="range-labels"><span>Restrained</span><span>Immersive</span></div>
           </div>
         </section>
 
         <section class="control-section palette-controls">
-          <div class="section-head"><b>Primitive colours</b><code>6-digit hex</code></div>
-          <label class="colour-field"><span><b>Accent</b><small>Focus + primary action</small></span><input type="color" data-colour="accent"><input type="text" data-hex="accent" maxlength="7" spellcheck="false"></label>
-          <label class="colour-field"><span><b>Background</b><small>Root surface</small></span><input type="color" data-colour="surface"><input type="text" data-hex="surface" maxlength="7" spellcheck="false"></label>
-          <label class="colour-field"><span><b>Foreground</b><small>Primary ink</small></span><input type="color" data-colour="ink"><input type="text" data-hex="ink" maxlength="7" spellcheck="false"></label>
+          <div class="section-head"><b>Shared palette</b><code>5 source colours</code></div>
+          <label class="colour-field"><span><b>Accent</b><small>Action + focus identity</small></span><input type="color" data-colour="accent"><input type="text" data-hex="accent" maxlength="7" spellcheck="false"></label>
+          <label class="colour-field"><span><b>Atmosphere</b><small>Surface family, not a background</small></span><input type="color" data-colour="atmosphere"><input type="text" data-hex="atmosphere" maxlength="7" spellcheck="false"></label>
           <details>
-            <summary>Semantic seeds <span>3</span></summary>
+            <summary>Functional colours <span class="functional-preview" aria-hidden="true"><i data-palette-preview="positive"></i><i data-palette-preview="negative"></i><i data-palette-preview="special"></i></span></summary>
             <div class="details-body">
-              <label class="colour-field compact"><span><b>Diff added</b></span><input type="color" data-colour="diffAdded"><input type="text" data-hex="diffAdded" maxlength="7" spellcheck="false"></label>
-              <label class="colour-field compact"><span><b>Diff removed</b></span><input type="color" data-colour="diffRemoved"><input type="text" data-hex="diffRemoved" maxlength="7" spellcheck="false"></label>
-              <label class="colour-field compact"><span><b>Skill</b></span><input type="color" data-colour="skill"><input type="text" data-hex="skill" maxlength="7" spellcheck="false"></label>
+              <label class="colour-field compact"><span><b>Positive</b></span><input type="color" data-colour="positive"><input type="text" data-hex="positive" maxlength="7" spellcheck="false"></label>
+              <label class="colour-field compact"><span><b>Negative</b></span><input type="color" data-colour="negative"><input type="text" data-hex="negative" maxlength="7" spellcheck="false"></label>
+              <label class="colour-field compact"><span><b>Special</b></span><input type="color" data-colour="special"><input type="text" data-hex="special" maxlength="7" spellcheck="false"></label>
             </div>
           </details>
         </section>
 
-        <section class="control-section">
-          <div class="section-head"><b>Contrast</b><code id="contrastValue">45</code></div>
-          <input class="range" id="contrastRange" type="range" min="0" max="100" step="1" value="45">
-          <div class="range-labels"><span>Subtle</span><span>Explicit</span></div>
+
+        <section class="control-section derived-section">
+          <div class="section-head"><b>Light + dark outputs</b><code>Surface / ink</code></div>
+          <div class="output-pair">
+            <div><i class="light-chip"></i><span>Light<small id="lightSummary">#FFFFFF / #1A1C1F</small></span></div>
+            <div><i class="dark-chip"></i><span>Dark<small id="darkSummary">#181818 / #FFFFFF</small></span></div>
+          </div>
         </section>
 
         <details class="advanced">
@@ -96,7 +104,7 @@
         <header class="workbench-head">
           <div>
             <span class="kicker">Compiled output</span>
-            <h2>Whole platform + editor</h2>
+            <h2>Resolved appearance</h2>
           </div>
           <div class="head-meta">
             <span id="previewBadge">Light palette</span>
@@ -130,7 +138,7 @@
                 <button class="thread"><i></i><span><b>Review colour contrast</b><small>12 semantic pairs</small></span><time>9m</time></button>
               </div>
               <div class="thread-group"><span>Previous 7 days</span>
-                <button class="thread"><i></i><span><b>Unified preset family</b><small>Light + dark interpretation</small></span><time>Tue</time></button>
+                <button class="thread"><i></i><span><b>Shared source palette</b><small>Light + dark mappings</small></span><time>Tue</time></button>
                 <button class="thread"><i></i><span><b>Diff marker states</b><small>Symbols + colour</small></span><time>Mon</time></button>
               </div>
             </aside>
@@ -141,14 +149,15 @@
                 <div class="conversation-actions"><span class="branch">main</span><button>Share</button></div>
               </header>
               <div class="conversation-body">
-                <article class="message user-message"><div class="message-avatar">S</div><div><b>You</b><p>Use one colour identity, then interpret it properly for light and dark.</p></div></article>
-                <article class="message assistant-message"><div class="assistant-mark">O</div><div><b>Orbit compiler</b><p>The source palette stays intentionally small. It currently produces <strong id="inlineTokenCount">24 roles</strong>, with contrast and foreground decisions resolved before components see a colour.</p>
+                <article class="message user-message"><div class="message-avatar">S</div><div><b>You</b><p>Keep the palette shared; let appearance decide how each colour is used.</p></div></article>
+                <article class="message assistant-message"><div class="assistant-mark">O</div><div><b>Orbit compiler</b><p>Five source colours become <strong id="inlineTokenCount">24 roles</strong>. Surface and ink are contextual outputs, not authored colours.</p>
                   <div class="code-window">
                     <div class="code-head"><span>derive-tokens.ts</span><code id="editorThemeName">Codex</code></div>
                     <pre id="codePreview"><code><span class="syntax-keyword">export const</span> tokens = derive({
-  <span class="syntax-property">surface</span>: <span class="syntax-string">"#ffffff"</span>,
-  <span class="syntax-property">accent</span>: <span class="syntax-string">"#339cff"</span>,
+  <span class="syntax-property">palette</span>: sharedPalette,
+  <span class="syntax-property">appearance</span>: <span class="syntax-string">"light"</span>,
   <span class="syntax-property">contrast</span>: <span class="syntax-number">45</span>,
+  <span class="syntax-property">colourUsage</span>: <span class="syntax-number">65</span>,
 });</code></pre>
                     <div class="diff-line removed"><i>−</i><code>color: rawTheme.accent;</code></div>
                     <div class="diff-line added"><i>+</i><code>color: tokens.textAccent;</code></div>
@@ -181,13 +190,13 @@
   <dialog id="importDialog">
     <form method="dialog">
       <div class="dialog-head"><div><span class="kicker">Versioned theme string</span><h2>Import appearance</h2></div><button value="cancel" aria-label="Close">×</button></div>
-      <p>Paste a <code>orbit-theme-v1:</code> string. Colours, ranges, variant and editor theme are validated before anything changes.</p>
-      <textarea id="importValue" rows="7" spellcheck="false" placeholder="orbit-theme-v1:{...}"></textarea>
+      <p>Paste an <code>orbit-theme-v2:</code> string. Shared colours and compiler axes are validated before anything changes. Version 1 strings still migrate.</p>
+      <textarea id="importValue" rows="7" spellcheck="false" placeholder="orbit-theme-v2:{...}"></textarea>
       <div class="dialog-error" id="importError" role="alert"></div>
       <div class="dialog-actions"><button value="cancel">Cancel</button><button type="button" id="confirmImport" class="primary-dialog">Validate & import</button></div>
     </form>
   </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite">Copied</div>
-  <script type="module" src="app.js?v=compiler-12"></script>
+  <script type="module" src="app.js?v=compiler-16"></script>
 </body>
 </html>
