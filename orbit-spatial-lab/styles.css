@@ -128,7 +128,16 @@ body::before {
 
 .scene-shell, .scene { position: absolute; inset: 0; }
 .scene { cursor: default; }
-.scene canvas { width: 100%; height: 100%; display: block; outline: none; }
+.scene canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  outline: none;
+  cursor: grab;
+  touch-action: none;
+}
+html.is-panning .scene canvas { cursor: grabbing; }
+html.is-card-dragging, html.is-card-dragging * { cursor: grabbing !important; }
 
 .vignette {
   position: absolute;
@@ -191,7 +200,6 @@ body::before {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   pointer-events: none;
-  animation: hint-out 900ms 8s both;
 }
 
 .mouse-glyph {
@@ -283,10 +291,14 @@ body::before {
   border-radius: 18px;
   box-shadow: inset 0 1px rgba(255,255,255,.8);
   font-family: var(--ui);
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
   user-select: none;
   transition: background-color 160ms ease, border-color 160ms ease;
 }
+
+.spatial-card.is-dragging { cursor: grabbing; }
+.spatial-card button, .spatial-card textarea { touch-action: manipulation; }
 
 .spatial-card:focus-visible { outline: 4px solid var(--lime); outline-offset: -4px; }
 .spatial-card.is-selected { background: #f5f8ef; border-color: rgba(73, 101, 53, 0.52); }
@@ -383,8 +395,6 @@ body::before {
   width: 7px; height: 7px; border-radius: 50%; background: #78a760;
   box-shadow: 11px 2px 0 #b0cda1, 21px -2px 0 #4d7340;
 }
-
-@keyframes hint-out { to { opacity: 0; } }
 
 @media (max-width: 720px) {
   .topbar { grid-template-columns: 1fr auto; height: 3.8rem; padding: 0 .85rem; }

@@ -94,10 +94,18 @@ const cardData = [
   },
 ];
 
+const STORAGE_KEY = 'orbit-spatial-lab-v2';
+const persisted = loadPersistedState();
 const state = {
   space: 'root', selected: null, transitioning: false,
   pointer: new THREE.Vector2(), pointerSmooth: new THREE.Vector2(),
   cameraPosition: spaces.root.camera.clone(), cameraLook: spaces.root.look.clone(),
+  views: {
+    root: { pan: new THREE.Vector2(...(persisted.views?.root?.pan || [0, 0])), zoom: persisted.views?.root?.zoom || 0 },
+    project: { pan: new THREE.Vector2(...(persisted.views?.project?.pan || [0, 0])), zoom: persisted.views?.project?.zoom || 0 },
+  },
+  drag: null,
+  panGesture: null,
   transition: null,
   paintReady: false,
 };
@@ -107,6 +115,7 @@ let camera;
 let scene;
 let interactions;
 let cardMeshes = [];
+let connections = [];
 let roots = {};
 let portalHalo;
 let toastTimer;
@@ -175,6 +184,7 @@ function init() {
     renderer,
     scene,
     cards: cardMeshes,
+    connections,
     enterSpace: () => navigateSpace('project'),
     exitSpace: () => navigateSpace('root'),
     select: (id) => selectCard(cardMeshes.find((card) => card.userData.id === id)),
@@ -189,7 +199,8 @@ function createCard(data) {
   $('.card-kind', element).textContent = data.kind;
   $('.card-depth', element).textContent = data.space === 'root' ? `z ${data.position[2].toFixed(1)}` : 'inside 01.1';
   $('.card-title', element).textContent = data.title;
-  $('.card-body', element).innerHTML = data.body;
+  const savedBody = data.editable ? persisted.bodies?.[data.id] : null;
+  $('.card-body', element).innerHTML = savedBody ? `<p>${escapeHtml(savedBody)}</p>` : data.body;
   $('.card-footer', element).innerHTML = data.footer + (data.editable ? '<button class="edit-action" type="button">Edit</button>' : '');
 
   const geometry = new THREE.PlaneGeometry(3.4, 2.14);
@@ -210,10 +221,12 @@ function createCard(data) {
   });
 
   const mesh = new THREE.Mesh(geometry, material);
-  mesh.position.fromArray(data.position);
+  const savedPosition = persisted.cards?.[data.id];
+  mesh.position.fromArray(Array.isArray(savedPosition) ? savedPosition : data.position);
   mesh.rotation.set(...data.rotation);
   mesh.userData = {
     ...data,
+    body: savedBody || data.body,
     element,
     basePosition: mesh.position.clone(),
     baseRotation: mesh.rotation.clone(),
@@ -222,7 +235,26 @@ function createCard(data) {
   roots[data.space].add(mesh);
   interactions.add(mesh);
 
+  element.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0 || state.transitioning || state.space !== data.space) return;
+    if (event.target.closest('button, textarea')) return;
+    state.drag = {
+      mesh,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      moved: false,
+    };
+    element.setPointerCapture?.(event.pointerId);
+  });
   element.addEventListener('click', (event) => {
+    if (performance.now() < (mesh.userData.suppressClickUntil || 0)) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     if (state.transitioning || state.space !== data.space) return;
     selectCard(mesh);
     if (!event.target.closest('button, textarea')) element.focus({ preventScroll: true });
@@ -275,6 +307,7 @@ function beginEdit(mesh) {
       beginEdit(mesh);
     });
     renderer.domElement.requestPaint?.();
+    persistSpatialState();
     showToast('Thought updated locally');
     element.focus({ preventScroll: true });
   };
@@ -332,8 +365,8 @@ function finishNavigation(destination) {
   state.space = destination;
   state.transitioning = false;
   state.transition = null;
-  state.cameraPosition.copy(spaces[destination].camera);
-  state.cameraLook.copy(spaces[destination].look);
+  state.cameraPosition.copy(getViewCamera(destination));
+  state.cameraLook.copy(getViewLook(destination));
   updateSpaceInteractivity();
   $('#back-space').disabled = false;
   $('.space-caption').classList.remove('is-transitioning');
@@ -415,16 +448,29 @@ function addConnections() {
 }
 
 function addCurve(spaceId, fromId, toId, color, opacity) {
-  const from = cardMeshes.find((card) => card.userData.id === fromId)?.position;
-  const to = cardMeshes.find((card) => card.userData.id === toId)?.position;
+  const from = cardMeshes.find((card) => card.userData.id === fromId);
+  const to = cardMeshes.find((card) => card.userData.id === toId);
   if (!from || !to) return;
-  const middle = from.clone().lerp(to, 0.5);
+  const geometry = new THREE.BufferGeometry();
+  const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity });
+  const line = new THREE.Line(geometry, material);
+  roots[spaceId].add(line);
+  connections.push({ spaceId, from, to, line });
+  updateConnection({ from, to, line });
+}
+
+function updateConnection({ from, to, line }) {
+  const middle = from.position.clone().lerp(to.position, 0.5);
   middle.z -= 0.42;
   middle.y += 0.2;
-  const curve = new THREE.QuadraticBezierCurve3(from.clone(), middle, to.clone());
-  const geometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(36));
-  const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity });
-  roots[spaceId].add(new THREE.Line(geometry, material));
+  const curve = new THREE.QuadraticBezierCurve3(from.position.clone(), middle, to.position.clone());
+  line.geometry.setFromPoints(curve.getPoints(36));
+  line.geometry.attributes.position.needsUpdate = true;
+  line.geometry.computeBoundingSphere();
+}
+
+function updateConnections() {
+  for (const connection of connections) updateConnection(connection);
 }
 
 function addPortalHalo() {
@@ -433,19 +479,56 @@ function addPortalHalo() {
     color: 0xb8f3a4, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false,
   });
   portalHalo = new THREE.Mesh(geometry, material);
-  portalHalo.position.set(0.05, 0.65, -0.67);
+  const portal = cardMeshes.find((card) => card.userData.id === 'portal');
+  portalHalo.position.copy(portal?.userData.basePosition || new THREE.Vector3(0.05, 0.65, -0.55));
+  portalHalo.position.z -= 0.12;
   roots.root.add(portalHalo);
 }
 
 function bindUi() {
   window.addEventListener('resize', onResize);
-  window.addEventListener('pointermove', (event) => {
-    state.pointer.x = (event.clientX / window.innerWidth - 0.5) * 2;
-    state.pointer.y = (event.clientY / window.innerHeight - 0.5) * 2;
-  }, { passive: true });
+  window.addEventListener('pointermove', handlePointerMove, { passive: false });
+  window.addEventListener('pointerup', finishPointerInteraction);
+  window.addEventListener('pointercancel', finishPointerInteraction);
+
+  renderer.domElement.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0 || state.transitioning) return;
+    if (event.target.closest?.('.spatial-card, button, textarea')) return;
+    state.panGesture = {
+      pointerId: event.pointerId,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      moved: false,
+    };
+    renderer.domElement.setPointerCapture?.(event.pointerId);
+    document.documentElement.classList.add('is-panning');
+  });
+
+  renderer.domElement.addEventListener('wheel', (event) => {
+    if (state.transitioning) return;
+    event.preventDefault();
+    const view = state.views[state.space];
+    const delta = event.deltaY * (event.deltaMode === 1 ? 16 : 1);
+    view.zoom = clamp(view.zoom + delta * 0.006, -4.2, 8);
+    persistSpatialState();
+  }, { passive: false });
+
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && state.space === 'project' && !state.transitioning) navigateSpace('root');
-    if (event.key === '0' && !event.target.closest('textarea')) resetView();
+    if (event.target.closest('textarea, input, button')) return;
+    if (event.key === '0') resetView();
+    const view = state.views[state.space];
+    const step = event.shiftKey ? 0.85 : 0.35;
+    if (event.key === 'ArrowLeft') view.pan.x -= step;
+    if (event.key === 'ArrowRight') view.pan.x += step;
+    if (event.key === 'ArrowUp') view.pan.y += step;
+    if (event.key === 'ArrowDown') view.pan.y -= step;
+    if (event.key === '=' || event.key === '+') view.zoom = clamp(view.zoom - 0.7, -4.2, 8);
+    if (event.key === '-' || event.key === '_') view.zoom = clamp(view.zoom + 0.7, -4.2, 8);
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '=', '+', '-', '_'].includes(event.key)) {
+      event.preventDefault();
+      persistSpatialState();
+    }
   });
   $('#back-space').addEventListener('click', () => navigateSpace('root'));
   $('#reset-view').addEventListener('click', resetView);
@@ -458,14 +541,90 @@ function bindUi() {
   });
 }
 
+function handlePointerMove(event) {
+  state.pointer.x = (event.clientX / window.innerWidth - 0.5) * 2;
+  state.pointer.y = (event.clientY / window.innerHeight - 0.5) * 2;
+
+  if (state.drag && event.pointerId === state.drag.pointerId) {
+    const drag = state.drag;
+    const totalDistance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+    if (!drag.moved && totalDistance > 4) {
+      drag.moved = true;
+      selectCard(drag.mesh);
+      drag.mesh.userData.element.classList.add('is-dragging');
+      document.documentElement.classList.add('is-card-dragging');
+    }
+    if (!drag.moved) return;
+    event.preventDefault();
+    const worldPerPixel = getWorldUnitsPerPixel(drag.mesh.position.z);
+    const dx = (event.clientX - drag.lastX) * worldPerPixel;
+    const dy = -(event.clientY - drag.lastY) * worldPerPixel;
+    drag.mesh.userData.basePosition.x = clamp(drag.mesh.userData.basePosition.x + dx, -12, 12);
+    drag.mesh.userData.basePosition.y = clamp(drag.mesh.userData.basePosition.y + dy, -7, 7);
+    drag.mesh.position.x = drag.mesh.userData.basePosition.x;
+    drag.mesh.position.y = drag.mesh.userData.basePosition.y;
+    if (drag.mesh.userData.id === 'portal' && portalHalo) {
+      portalHalo.position.x = drag.mesh.position.x;
+      portalHalo.position.y = drag.mesh.position.y;
+    }
+    drag.lastX = event.clientX;
+    drag.lastY = event.clientY;
+    updateConnections();
+    return;
+  }
+
+  if (state.panGesture && event.pointerId === state.panGesture.pointerId) {
+    event.preventDefault();
+    const gesture = state.panGesture;
+    const dx = event.clientX - gesture.lastX;
+    const dy = event.clientY - gesture.lastY;
+    if (Math.hypot(dx, dy) > 0) gesture.moved = true;
+    const view = state.views[state.space];
+    const worldPerPixel = getWorldUnitsPerPixel(state.cameraLook.z);
+    view.pan.x -= dx * worldPerPixel;
+    view.pan.y += dy * worldPerPixel;
+    gesture.lastX = event.clientX;
+    gesture.lastY = event.clientY;
+  }
+}
+
+function finishPointerInteraction(event) {
+  if (state.drag && event.pointerId === state.drag.pointerId) {
+    const { mesh, moved } = state.drag;
+    if (moved) {
+      mesh.userData.suppressClickUntil = performance.now() + 350;
+      mesh.userData.element.classList.remove('is-dragging');
+      persistSpatialState();
+      showToast('Card position saved locally');
+    }
+    state.drag = null;
+    document.documentElement.classList.remove('is-card-dragging');
+  }
+  if (state.panGesture && event.pointerId === state.panGesture.pointerId) {
+    if (state.panGesture.moved) persistSpatialState();
+    state.panGesture = null;
+    document.documentElement.classList.remove('is-panning');
+  }
+}
+
+function getWorldUnitsPerPixel(depthZ) {
+  const distance = Math.max(2, Math.abs(camera.position.z - depthZ));
+  const visibleHeight = 2 * distance * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
+  return visibleHeight / window.innerHeight;
+}
+
 function resetView() {
   state.pointer.set(0, 0);
   state.pointerSmooth.set(0, 0);
   clearSelection();
+  const view = state.views[state.space];
+  view.pan.set(0, 0);
+  view.zoom = 0;
   state.cameraPosition.copy(spaces[state.space].camera);
   state.cameraLook.copy(spaces[state.space].look);
   camera.position.copy(state.cameraPosition);
   camera.lookAt(state.cameraLook);
+  persistSpatialState();
   showToast('View reset');
 }
 
@@ -510,6 +669,7 @@ function renderFrame(time) {
     card.scale.x = lerp(card.scale.x, targetScale, 0.09);
     card.scale.y = lerp(card.scale.y, targetScale, 0.09);
   }
+  updateConnections();
 
   if (portalHalo) {
     portalHalo.rotation.z = time * 0.000035;
@@ -525,22 +685,34 @@ function renderFrame(time) {
 function updateCameraParallax() {
   const base = spaces[state.space].camera;
   const lookBase = spaces[state.space].look;
+  const view = state.views[state.space];
   const multiplier = state.space === 'root' ? 0.38 : 0.31;
-  const targetX = base.x + state.pointerSmooth.x * multiplier;
-  const targetY = base.y - state.pointerSmooth.y * multiplier * 0.58;
-  camera.position.x = lerp(camera.position.x, targetX, 0.045);
-  camera.position.y = lerp(camera.position.y, targetY, 0.045);
-  camera.position.z = lerp(camera.position.z, base.z, 0.045);
-  state.cameraLook.x = lerp(state.cameraLook.x, lookBase.x + state.pointerSmooth.x * 0.16, 0.045);
-  state.cameraLook.y = lerp(state.cameraLook.y, lookBase.y - state.pointerSmooth.y * 0.09, 0.045);
-  state.cameraLook.z = lerp(state.cameraLook.z, lookBase.z, 0.045);
+  const targetX = base.x + view.pan.x + state.pointerSmooth.x * multiplier;
+  const targetY = base.y + view.pan.y - state.pointerSmooth.y * multiplier * 0.58;
+  camera.position.x = lerp(camera.position.x, targetX, 0.085);
+  camera.position.y = lerp(camera.position.y, targetY, 0.085);
+  camera.position.z = lerp(camera.position.z, base.z + view.zoom, 0.085);
+  state.cameraLook.x = lerp(state.cameraLook.x, lookBase.x + view.pan.x + state.pointerSmooth.x * 0.16, 0.085);
+  state.cameraLook.y = lerp(state.cameraLook.y, lookBase.y + view.pan.y - state.pointerSmooth.y * 0.09, 0.085);
+  state.cameraLook.z = lerp(state.cameraLook.z, lookBase.z, 0.085);
+}
+
+function getViewCamera(spaceId) {
+  const view = state.views[spaceId];
+  return spaces[spaceId].camera.clone().add(new THREE.Vector3(view.pan.x, view.pan.y, view.zoom));
+}
+
+function getViewLook(spaceId) {
+  const view = state.views[spaceId];
+  return spaces[spaceId].look.clone().add(new THREE.Vector3(view.pan.x, view.pan.y, 0));
 }
 
 function updateTransition(time) {
   const transition = state.transition;
   const raw = clamp((time - transition.start) / transition.duration, 0, 1);
   const t = easeInOutQuint(raw);
-  const destination = spaces[transition.to];
+  const destinationCamera = getViewCamera(transition.to);
+  const destinationLook = getViewLook(transition.to);
 
   if (transition.entering) {
     const portal = cardMeshes.find((card) => card.userData.id === 'portal').userData.basePosition;
@@ -548,17 +720,21 @@ function updateTransition(time) {
     const diveT = clamp((raw - 0.32) / 0.68, 0, 1);
     const focusEase = easeInOutQuint(focusT);
     const diveEase = easeInOutQuint(diveT);
-    camera.position.x = lerp(transition.fromPosition.x, portal.x, focusEase);
-    camera.position.y = lerp(transition.fromPosition.y, portal.y, focusEase);
+    camera.position.x = raw < 0.32
+      ? lerp(transition.fromPosition.x, portal.x, focusEase)
+      : lerp(portal.x, destinationCamera.x, diveEase);
+    camera.position.y = raw < 0.32
+      ? lerp(transition.fromPosition.y, portal.y, focusEase)
+      : lerp(portal.y, destinationCamera.y, diveEase);
     camera.position.z = raw < 0.32
       ? lerp(transition.fromPosition.z, 6.4, focusEase)
-      : lerp(6.4, destination.camera.z, diveEase);
-    state.cameraLook.x = lerp(transition.fromLook.x, destination.look.x, t);
-    state.cameraLook.y = lerp(transition.fromLook.y, destination.look.y, t);
-    state.cameraLook.z = lerp(transition.fromLook.z, destination.look.z, diveEase);
+      : lerp(6.4, destinationCamera.z, diveEase);
+    state.cameraLook.x = lerp(transition.fromLook.x, destinationLook.x, t);
+    state.cameraLook.y = lerp(transition.fromLook.y, destinationLook.y, t);
+    state.cameraLook.z = lerp(transition.fromLook.z, destinationLook.z, diveEase);
   } else {
-    camera.position.lerpVectors(transition.fromPosition, destination.camera, t);
-    state.cameraLook.lerpVectors(transition.fromLook, destination.look, t);
+    camera.position.lerpVectors(transition.fromPosition, destinationCamera, t);
+    state.cameraLook.lerpVectors(transition.fromLook, destinationLook, t);
   }
 
   const rootOpacity = transition.entering ? 1 - clamp((raw - 0.32) / 0.28, 0, 1) : clamp((raw - 0.55) / 0.35, 0, 1);
@@ -590,6 +766,30 @@ function showToast(message) {
   toast.classList.add('show');
   window.clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => toast.classList.remove('show'), 1800);
+}
+
+function loadPersistedState() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function persistSpatialState() {
+  try {
+    const cards = Object.fromEntries(cardMeshes.map((card) => [card.userData.id, card.userData.basePosition.toArray()]));
+    const bodies = Object.fromEntries(cardMeshes
+      .filter((card) => card.userData.editable)
+      .map((card) => [card.userData.id, card.userData.body]));
+    const views = Object.fromEntries(Object.entries(state.views).map(([id, view]) => [id, {
+      pan: view.pan.toArray(),
+      zoom: view.zoom,
+    }]));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ cards, bodies, views }));
+  } catch {
+    // Persistence is a convenience; interaction should survive blocked storage.
+  }
 }
 
 function escapeHtml(value) {
