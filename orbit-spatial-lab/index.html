@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=2">
+  <link rel="stylesheet" href="./styles.css?v=4">
   <script type="importmap">
     {
       "imports": {
@@ -31,6 +31,7 @@
         <span>Studio</span><i>›</i><strong id="space-name">Loose thoughts</strong>
       </div>
       <div class="top-actions">
+        <button id="focus-selected" class="quiet-button focus-button" type="button" hidden>Focus selected <kbd>F</kbd></button>
         <button id="reset-view" class="quiet-button" type="button">Reset view</button>
         <button id="back-space" class="back-button" type="button" hidden>
           <span aria-hidden="true">←</span> Parent space
@@ -45,12 +46,33 @@
       <aside class="space-caption" aria-live="polite">
         <span class="eyebrow" id="space-kicker">SPACE · 01</span>
         <h1 id="space-title">Loose thoughts</h1>
-        <p id="space-description">Select a card, write directly into it, or enter the green space.</p>
+        <p id="space-description">Depth is semantic: working thoughts stay near, context recedes, and nested spaces sit beyond.</p>
       </aside>
+
+      <nav class="depth-nav" aria-label="Depth navigation">
+        <header>
+          <span>Depth index</span>
+          <output id="depth-readout">Overview</output>
+        </header>
+        <div class="depth-options" id="depth-options">
+          <button type="button" data-depth="overview" aria-current="true">
+            <i aria-hidden="true"></i><span>Overview<small>All planes</small></span>
+          </button>
+          <button type="button" data-depth="working">
+            <i aria-hidden="true"></i><span>Working plane<small>2 cards</small></span>
+          </button>
+          <button type="button" data-depth="context">
+            <i aria-hidden="true"></i><span>Context<small>2 cards</small></span>
+          </button>
+          <button type="button" data-depth="portal">
+            <i aria-hidden="true"></i><span>Nested space<small>1 portal</small></span>
+          </button>
+        </div>
+      </nav>
 
       <div class="gesture-hint" aria-hidden="true">
         <span class="mouse-glyph"><i></i></span>
-        <span>Drag canvas · wheel zoom · drag cards</span>
+        <span>Drag canvas · wheel zoom · F focus · O overview</span>
       </div>
 
       <div class="api-state" id="api-state">
@@ -81,6 +103,6 @@
     </article>
   </template>
 
-  <script type="module" src="./app.js?v=2"></script>
+  <script type="module" src="./app.js?v=5"></script>
 </body>
 </html>

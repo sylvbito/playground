@@ -24,7 +24,7 @@ const spaces = {
   root: {
     name: 'Loose thoughts',
     kicker: 'SPACE · 01',
-    description: 'Select a card, write directly into it, or enter the green space.',
+    description: 'Depth is semantic: working thoughts stay near, context recedes, and nested spaces sit beyond.',
     camera: new THREE.Vector3(0, 0, 11.8),
     look: new THREE.Vector3(0, -0.2, -0.7),
   },
@@ -42,68 +42,70 @@ const cardData = [
     id: 'memory', space: 'root', kind: 'thought', title: 'The interface should feel remembered',
     body: 'Position is part of meaning. Returning here should restore the same quiet geography.',
     footer: '<span class="tag">spatial memory</span>', tone: '',
-    position: [-4.15, 1.55, 0.55], rotation: [0.03, -0.035, -0.025], editable: true,
+    position: [-4.15, 1.55, 1.8], rotation: [0.03, -0.035, -0.025], layer: 'working', editable: true,
   },
   {
     id: 'portal', space: 'root', kind: 'space · 4 cards', title: 'Website redesign',
     body: '<div class="portal-preview"><i></i><i></i></div>',
     footer: '<button class="space-action" type="button">Enter space <span aria-hidden="true">↗</span></button>', tone: 'green',
-    position: [0.05, 0.65, -0.55], rotation: [-0.01, 0.025, 0.012], portal: true,
+    position: [0.05, 0.65, -6.2], rotation: [-0.01, 0.025, 0.012], layer: 'portal', portal: true,
   },
   {
     id: 'model', space: 'root', kind: 'principle', title: 'The canvas is a view, not the model',
     body: 'One thought can appear in several spaces without becoming several thoughts.',
     footer: '<span class="link-chip">2 linked objects</span>', tone: 'blue',
-    position: [4.05, 1.45, -1.55], rotation: [0.025, 0.055, 0.018], editable: true,
+    position: [4.05, 1.45, -3.1], rotation: [0.025, 0.055, 0.018], layer: 'context', editable: true,
   },
   {
     id: 'background-ai', space: 'root', kind: 'direction', title: 'AI in the background',
     body: 'Small assists around ordinary actions; explicit conversation only when it earns the foreground.',
     footer: '<span class="tag">product thesis</span>', tone: 'warm',
-    position: [-2.15, -2.05, -0.95], rotation: [-0.02, 0.015, -0.022], editable: true,
+    position: [-2.15, -2.05, 0.6], rotation: [-0.02, 0.015, -0.022], layer: 'working', editable: true,
   },
   {
     id: 'question', space: 'root', kind: 'open question', title: 'How much depth is enough?',
     body: 'Use depth to communicate nesting and focus—not to make a desk float in space.',
     footer: '<span class="card-spark" aria-hidden="true"></span>', tone: 'dark',
-    position: [2.7, -2.05, -2.05], rotation: [0.02, -0.04, 0.018], editable: true,
+    position: [2.7, -2.05, -4.4], rotation: [0.02, -0.04, 0.018], layer: 'context', editable: true,
   },
   {
     id: 'brief', space: 'project', kind: 'brief', title: 'Clarify what changed',
     body: 'The new homepage should reveal the service model before it asks for trust.',
     footer: '<span class="tag">priority</span>', tone: '',
-    position: [-3.65, 1.55, -17.15], rotation: [0.025, -0.04, -0.015], editable: true,
+    position: [-3.25, 1.25, -15.2], rotation: [0.025, -0.04, -0.015], layer: 'working', editable: true,
   },
   {
     id: 'hierarchy', space: 'project', kind: 'reference', title: 'Homepage hierarchy',
     body: 'Promise → evidence → process → proof → clear next step. No decorative detours.',
     footer: '<span class="link-chip">source · review 03</span>', tone: 'blue',
-    position: [0.05, 1.35, -18.05], rotation: [-0.015, 0.02, 0.01], editable: true,
+    position: [0.05, 1.35, -18.1], rotation: [-0.015, 0.02, 0.01], layer: 'context', editable: true,
   },
   {
     id: 'motion', space: 'project', kind: 'prototype', title: 'Test the reveal',
     body: 'Start narrow after navigation, then let the working surface settle into place.',
     footer: '<span class="tag">motion study</span>', tone: 'green',
-    position: [3.65, 0.65, -18.75], rotation: [0.015, 0.045, 0.022], editable: true,
+    position: [3.65, 0.65, -20.3], rotation: [0.015, 0.045, 0.022], layer: 'context', editable: true,
   },
   {
     id: 'decision', space: 'project', kind: 'decision', title: 'Keep forms visible',
     body: 'The action belongs beside the evidence. Do not hide it behind a generated panel.',
     footer: '<span class="tag">accepted</span>', tone: 'warm',
-    position: [-0.8, -2.15, -17.35], rotation: [-0.015, -0.025, -0.02], editable: true,
+    position: [-0.8, -2.15, -15.9], rotation: [-0.015, -0.025, -0.02], layer: 'working', editable: true,
   },
 ];
 
-const STORAGE_KEY = 'orbit-spatial-lab-v2';
+const STORAGE_KEY = 'orbit-spatial-lab-v3';
 const persisted = loadPersistedState();
 const state = {
   space: 'root', selected: null, transitioning: false,
   pointer: new THREE.Vector2(), pointerSmooth: new THREE.Vector2(),
   cameraPosition: spaces.root.camera.clone(), cameraLook: spaces.root.look.clone(),
   views: {
-    root: { pan: new THREE.Vector2(...(persisted.views?.root?.pan || [0, 0])), zoom: persisted.views?.root?.zoom || 0 },
-    project: { pan: new THREE.Vector2(...(persisted.views?.project?.pan || [0, 0])), zoom: persisted.views?.project?.zoom || 0 },
+    root: { pan: new THREE.Vector2(...(persisted.views?.root?.pan || [0, 0])), zoom: persisted.views?.root?.zoom || 0, depth: persisted.views?.root?.depth || 0 },
+    project: { pan: new THREE.Vector2(...(persisted.views?.project?.pan || [0, 0])), zoom: persisted.views?.project?.zoom || 0, depth: persisted.views?.project?.depth || 0 },
   },
+  activeNavigation: 'overview',
+  viewTween: null,
   drag: null,
   panGesture: null,
   transition: null,
@@ -118,6 +120,7 @@ let cardMeshes = [];
 let connections = [];
 let roots = {};
 let portalHalo;
+let portalPreview;
 let toastTimer;
 
 await document.fonts.ready;
@@ -174,7 +177,9 @@ function init() {
   }));
   addConnections();
   addPortalHalo();
+  addPortalPreview();
   updateSpaceInteractivity();
+  updateDepthNavigation();
   setApiState();
   bindUi();
 
@@ -185,9 +190,13 @@ function init() {
     scene,
     cards: cardMeshes,
     connections,
+    portalPreview,
     enterSpace: () => navigateSpace('project'),
     exitSpace: () => navigateSpace('root'),
     select: (id) => selectCard(cardMeshes.find((card) => card.userData.id === id)),
+    focus: (id) => focusCard(cardMeshes.find((card) => card.userData.id === id)),
+    focusLayer,
+    overview: () => focusLayer('overview'),
     nativeHtmlCanvas,
   };
 }
@@ -197,7 +206,7 @@ function createCard(data) {
   element.dataset.id = data.id;
   if (data.tone) element.dataset.tone = data.tone;
   $('.card-kind', element).textContent = data.kind;
-  $('.card-depth', element).textContent = data.space === 'root' ? `z ${data.position[2].toFixed(1)}` : 'inside 01.1';
+  $('.card-depth', element).textContent = `${data.layer} · z ${data.position[2].toFixed(1)}`;
   $('.card-title', element).textContent = data.title;
   const savedBody = data.editable ? persisted.bodies?.[data.id] : null;
   $('.card-body', element).innerHTML = savedBody ? `<p>${escapeHtml(savedBody)}</p>` : data.body;
@@ -231,6 +240,8 @@ function createCard(data) {
     basePosition: mesh.position.clone(),
     baseRotation: mesh.rotation.clone(),
     targetLift: 0,
+    semanticLevel: 'full',
+    semanticScale: new THREE.Vector2(1, 1),
   };
   roots[data.space].add(mesh);
   interactions.add(mesh);
@@ -326,10 +337,12 @@ function beginEdit(mesh) {
 function selectCard(mesh) {
   if (!mesh || state.space !== mesh.userData.space) return;
   state.selected = mesh.userData.id;
+  $('#focus-selected').hidden = false;
   for (const card of cardMeshes) {
     const active = card === mesh;
     card.userData.element.classList.toggle('is-selected', active);
     card.userData.targetLift = active ? 0.48 : 0;
+    if (active) setSemanticLevel(card, 'full');
   }
   renderer.domElement.requestPaint?.();
 }
@@ -338,6 +351,7 @@ function navigateSpace(destination) {
   if (state.transitioning || destination === state.space) return;
   const from = state.space;
   const entering = destination === 'project';
+  state.viewTween = null;
   state.transitioning = true;
   state.transition = {
     from,
@@ -357,6 +371,7 @@ function navigateSpace(destination) {
 
   window.setTimeout(() => {
     updateCaption(destination);
+    updateDepthNavigation(destination);
     $('#back-space').hidden = destination !== 'project';
   }, state.transition.duration * 0.46);
 }
@@ -365,9 +380,13 @@ function finishNavigation(destination) {
   state.space = destination;
   state.transitioning = false;
   state.transition = null;
+  const view = state.views[destination];
+  state.activeNavigation = view.pan.lengthSq() < 0.001 && Math.abs(view.zoom) < 0.001 && Math.abs(view.depth) < 0.001
+    ? 'overview' : 'free';
   state.cameraPosition.copy(getViewCamera(destination));
   state.cameraLook.copy(getViewLook(destination));
   updateSpaceInteractivity();
+  updateDepthNavigation();
   $('#back-space').disabled = false;
   $('.space-caption').classList.remove('is-transitioning');
   showToast(destination === 'project' ? 'Entered Website redesign' : 'Returned to Loose thoughts');
@@ -383,6 +402,7 @@ function updateCaption(spaceId) {
 
 function clearSelection() {
   state.selected = null;
+  $('#focus-selected').hidden = true;
   for (const card of cardMeshes) {
     card.userData.element.classList.remove('is-selected');
     card.userData.targetLift = 0;
@@ -455,7 +475,7 @@ function addCurve(spaceId, fromId, toId, color, opacity) {
   const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity });
   const line = new THREE.Line(geometry, material);
   roots[spaceId].add(line);
-  connections.push({ spaceId, from, to, line });
+  connections.push({ spaceId, from, to, line, baseOpacity: opacity });
   updateConnection({ from, to, line });
 }
 
@@ -480,9 +500,170 @@ function addPortalHalo() {
   });
   portalHalo = new THREE.Mesh(geometry, material);
   const portal = cardMeshes.find((card) => card.userData.id === 'portal');
-  portalHalo.position.copy(portal?.userData.basePosition || new THREE.Vector3(0.05, 0.65, -0.55));
+  portalHalo.position.copy(portal?.userData.basePosition || new THREE.Vector3(0.05, 0.65, -6.2));
   portalHalo.position.z -= 0.12;
   roots.root.add(portalHalo);
+}
+
+function addPortalPreview() {
+  const portal = cardMeshes.find((card) => card.userData.id === 'portal');
+  const projectCards = cardMeshes.filter((card) => card.userData.space === 'project');
+  if (!portal || !projectCards.length) return;
+
+  const previewScene = new THREE.Scene();
+  previewScene.background = new THREE.Color(0x172216);
+  const previewCamera = new THREE.PerspectiveCamera(34, 3.9, 0.1, 30);
+  previewCamera.position.set(0, 0, 10.5);
+  previewCamera.lookAt(0, -0.15, 0);
+
+  const target = new THREE.WebGLRenderTarget(768, 196, {
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
+    depthBuffer: true,
+  });
+  target.texture.colorSpace = THREE.SRGBColorSpace;
+
+  const clones = projectCards.map((source) => {
+    const material = new THREE.MeshBasicMaterial({
+      map: source.material.map,
+      transparent: true,
+      opacity: 1,
+      side: THREE.DoubleSide,
+      depthWrite: true,
+    });
+    const clone = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 2.14), material);
+    clone.scale.setScalar(0.44);
+    clone.userData.source = source;
+    previewScene.add(clone);
+    return clone;
+  });
+
+  const material = new THREE.MeshBasicMaterial({ map: target.texture, transparent: true, depthWrite: false });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2.72, 0.7), material);
+  mesh.position.set(0, -0.28, 0.026);
+  mesh.renderOrder = 4;
+  portal.add(mesh);
+  portalPreview = { scene: previewScene, camera: previewCamera, target, mesh, clones };
+}
+
+function renderPortalPreview() {
+  if (!portalPreview) return;
+  for (const clone of portalPreview.clones) {
+    const source = clone.userData.source;
+    clone.position.set(
+      source.userData.basePosition.x * 0.72,
+      source.userData.basePosition.y * 0.68,
+      (source.userData.basePosition.z + 17.8) * 0.2,
+    );
+  }
+  renderer.setRenderTarget(portalPreview.target);
+  renderer.render(portalPreview.scene, portalPreview.camera);
+  renderer.setRenderTarget(null);
+}
+
+function updateDepthNavigation(spaceId = state.space) {
+  const labels = spaceId === 'root'
+    ? {
+      working: ['Working plane', 'Active thoughts'],
+      context: ['Context', 'Principles + questions'],
+      portal: ['Nested space', 'Live project portal'],
+    }
+    : {
+      working: ['Working plane', 'Brief + decision'],
+      context: ['Context', 'Reference + prototype'],
+      portal: ['Nested space', 'No deeper space yet'],
+    };
+
+  for (const button of document.querySelectorAll('[data-depth]')) {
+    const layer = button.dataset.depth;
+    const cards = layer === 'overview'
+      ? cardMeshes.filter((card) => card.userData.space === spaceId)
+      : cardMeshes.filter((card) => card.userData.space === spaceId && card.userData.layer === layer);
+    if (layer === 'portal') button.hidden = cards.length === 0;
+    if (layer !== 'overview') {
+      const [title, fallback] = labels[layer];
+      $('span', button).firstChild.textContent = title;
+      $('small', button).textContent = cards.length ? `${cards.length} ${cards.length === 1 ? 'card' : 'cards'}` : fallback;
+    }
+    button.setAttribute('aria-current', String(layer === state.activeNavigation));
+  }
+  const readout = $('#depth-readout');
+  readout.textContent = state.activeNavigation === 'free'
+    ? 'Free view'
+    : state.activeNavigation === 'focus'
+      ? 'Focused'
+      : state.activeNavigation[0].toUpperCase() + state.activeNavigation.slice(1);
+}
+
+function focusLayer(layerId) {
+  if (state.transitioning) return;
+  if (layerId === 'overview') {
+    animateViewTo({ pan: new THREE.Vector2(0, 0), zoom: 0, depth: 0 }, 'overview');
+    clearSelection();
+    showToast('Overview restored');
+    return;
+  }
+  const cards = cardMeshes.filter((card) => card.userData.space === state.space && card.userData.layer === layerId);
+  if (!cards.length) return;
+  const center = cards.reduce((sum, card) => sum.add(card.userData.basePosition), new THREE.Vector3()).multiplyScalar(1 / cards.length);
+  const lookBase = spaces[state.space].look;
+  animateViewTo({
+    pan: new THREE.Vector2(center.x - lookBase.x, center.y - lookBase.y),
+    zoom: layerId === 'portal' ? -3.1 : -2.35,
+    depth: center.z - lookBase.z,
+  }, layerId);
+  clearSelection();
+  showToast(`${layerId === 'portal' ? 'Nested space' : layerId} layer`);
+}
+
+function focusCard(mesh) {
+  if (!mesh || mesh.userData.space !== state.space || state.transitioning) return;
+  selectCard(mesh);
+  const target = mesh.userData.basePosition;
+  const lookBase = spaces[state.space].look;
+  animateViewTo({
+    pan: new THREE.Vector2(target.x - lookBase.x, target.y - lookBase.y),
+    zoom: -5,
+    depth: target.z - lookBase.z,
+  }, 'focus');
+  showToast(`Focused · ${mesh.userData.title}`);
+}
+
+function animateViewTo(target, navigation) {
+  const view = state.views[state.space];
+  state.pointer.set(0, 0);
+  state.viewTween = {
+    space: state.space,
+    start: performance.now(),
+    duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 720,
+    from: { pan: view.pan.clone(), zoom: view.zoom, depth: view.depth },
+    to: target,
+  };
+  state.activeNavigation = navigation;
+  updateDepthNavigation();
+}
+
+function updateViewTween(time) {
+  const tween = state.viewTween;
+  if (!tween || tween.space !== state.space) return;
+  const raw = clamp((time - tween.start) / tween.duration, 0, 1);
+  const eased = easeInOutQuint(raw);
+  const view = state.views[state.space];
+  view.pan.lerpVectors(tween.from.pan, tween.to.pan, eased);
+  view.zoom = lerp(tween.from.zoom, tween.to.zoom, eased);
+  view.depth = lerp(tween.from.depth, tween.to.depth, eased);
+  if (raw >= 1) {
+    state.viewTween = null;
+    persistSpatialState();
+  }
+}
+
+function markFreeNavigation() {
+  state.viewTween = null;
+  if (state.activeNavigation !== 'free') {
+    state.activeNavigation = 'free';
+    updateDepthNavigation();
+  }
 }
 
 function bindUi() {
@@ -507,6 +688,7 @@ function bindUi() {
   renderer.domElement.addEventListener('wheel', (event) => {
     if (state.transitioning) return;
     event.preventDefault();
+    markFreeNavigation();
     const view = state.views[state.space];
     const delta = event.deltaY * (event.deltaMode === 1 ? 16 : 1);
     view.zoom = clamp(view.zoom + delta * 0.006, -4.2, 8);
@@ -515,8 +697,18 @@ function bindUi() {
 
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && state.space === 'project' && !state.transitioning) navigateSpace('root');
-    if (event.target.closest('textarea, input, button')) return;
-    if (event.key === '0') resetView();
+    if (event.target.closest('textarea, input')) return;
+    if (event.key === '0' || event.key.toLowerCase() === 'o') {
+      event.preventDefault();
+      focusLayer('overview');
+      return;
+    }
+    if (event.key.toLowerCase() === 'f' && state.selected) {
+      event.preventDefault();
+      focusCard(cardMeshes.find((card) => card.userData.id === state.selected));
+      return;
+    }
+    if (event.target.closest('button')) return;
     const view = state.views[state.space];
     const step = event.shiftKey ? 0.85 : 0.35;
     if (event.key === 'ArrowLeft') view.pan.x -= step;
@@ -527,11 +719,18 @@ function bindUi() {
     if (event.key === '-' || event.key === '_') view.zoom = clamp(view.zoom + 0.7, -4.2, 8);
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '=', '+', '-', '_'].includes(event.key)) {
       event.preventDefault();
+      markFreeNavigation();
       persistSpatialState();
     }
   });
   $('#back-space').addEventListener('click', () => navigateSpace('root'));
-  $('#reset-view').addEventListener('click', resetView);
+  $('#reset-view').addEventListener('click', () => focusLayer('overview'));
+  $('#focus-selected').addEventListener('click', () => {
+    focusCard(cardMeshes.find((card) => card.userData.id === state.selected));
+  });
+  for (const button of document.querySelectorAll('[data-depth]')) {
+    button.addEventListener('click', () => focusLayer(button.dataset.depth));
+  }
   $('#api-help').addEventListener('click', (event) => {
     event.stopPropagation();
     $('#api-popover').hidden = !$('#api-popover').hidden;
@@ -578,7 +777,10 @@ function handlePointerMove(event) {
     const gesture = state.panGesture;
     const dx = event.clientX - gesture.lastX;
     const dy = event.clientY - gesture.lastY;
-    if (Math.hypot(dx, dy) > 0) gesture.moved = true;
+    if (Math.hypot(dx, dy) > 0) {
+      gesture.moved = true;
+      markFreeNavigation();
+    }
     const view = state.views[state.space];
     const worldPerPixel = getWorldUnitsPerPixel(state.cameraLook.z);
     view.pan.x -= dx * worldPerPixel;
@@ -613,21 +815,6 @@ function getWorldUnitsPerPixel(depthZ) {
   return visibleHeight / window.innerHeight;
 }
 
-function resetView() {
-  state.pointer.set(0, 0);
-  state.pointerSmooth.set(0, 0);
-  clearSelection();
-  const view = state.views[state.space];
-  view.pan.set(0, 0);
-  view.zoom = 0;
-  state.cameraPosition.copy(spaces[state.space].camera);
-  state.cameraLook.copy(spaces[state.space].look);
-  camera.position.copy(state.cameraPosition);
-  camera.lookAt(state.cameraLook);
-  persistSpatialState();
-  showToast('View reset');
-}
-
 function setApiState() {
   const root = $('#api-state');
   const title = $('#api-popover-title');
@@ -645,6 +832,67 @@ function setApiState() {
   }
 }
 
+function updateSemanticZoom() {
+  const perspective = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
+  for (const card of cardMeshes) {
+    if (card.userData.space !== state.space) continue;
+    const distance = Math.max(0.1, camera.position.distanceTo(card.position));
+    const projectedHeight = (2.14 / (perspective * distance)) * window.innerHeight;
+    const mutedByNavigation = state.activeNavigation === 'focus'
+      ? card.userData.id !== state.selected
+      : ['working', 'context', 'portal'].includes(state.activeNavigation) && card.userData.layer !== state.activeNavigation;
+    const promotedLayer = ['working', 'context', 'portal'].includes(state.activeNavigation) &&
+      card.userData.layer === state.activeNavigation;
+    const level = mutedByNavigation
+      ? 'far'
+      : promotedLayer || card.userData.portal || card.userData.id === state.selected ||
+        (state.activeNavigation === 'overview' && card.userData.layer === 'working') || projectedHeight > 205
+        ? 'full'
+        : projectedHeight > 92 ? 'mid' : 'far';
+    setSemanticLevel(card, level);
+  }
+}
+
+function setSemanticLevel(card, level) {
+  if (card.userData.semanticLevel === level) return;
+  card.userData.semanticLevel = level;
+  card.userData.element.classList.toggle('semantic-mid', level === 'mid');
+  card.userData.element.classList.toggle('semantic-far', level === 'far');
+  const scale = level === 'full'
+    ? [1, 1]
+    : level === 'mid' ? [300 / 340, 132 / 214] : [244 / 340, 64 / 214];
+  card.userData.semanticScale.set(...scale);
+  renderer.domElement.requestPaint?.();
+}
+
+function updateNavigationVisibility() {
+  const focusedLayer = ['working', 'context', 'portal'].includes(state.activeNavigation)
+    ? state.activeNavigation : null;
+  for (const card of cardMeshes) {
+    if (card.userData.space !== state.space) continue;
+    const isPrimary = state.activeNavigation === 'focus'
+      ? card.userData.id === state.selected
+      : !focusedLayer || card.userData.layer === focusedLayer;
+    card.material.opacity = lerp(card.material.opacity, isPrimary ? 1 : 0.13, 0.12);
+  }
+  for (const connection of connections) {
+    if (connection.spaceId !== state.space) continue;
+    const relevant = state.activeNavigation === 'focus'
+      ? [connection.from.userData.id, connection.to.userData.id].includes(state.selected)
+      : !focusedLayer || (connection.from.userData.layer === focusedLayer && connection.to.userData.layer === focusedLayer);
+    connection.line.material.opacity = lerp(
+      connection.line.material.opacity,
+      connection.baseOpacity * (relevant ? 1 : 0.13),
+      0.12,
+    );
+  }
+  if (state.space === 'root' && portalPreview) {
+    const portal = cardMeshes.find((card) => card.userData.id === 'portal');
+    portalPreview.mesh.material.opacity = lerp(portalPreview.mesh.material.opacity, portal.material.opacity, 0.12);
+    portalHalo.material.opacity = lerp(portalHalo.material.opacity, portal.material.opacity * 0.22, 0.12);
+  }
+}
+
 function render(time) {
   try {
     renderFrame(time);
@@ -658,16 +906,21 @@ function render(time) {
 function renderFrame(time) {
   state.pointerSmooth.lerp(state.pointer, 0.035);
 
+  if (state.viewTween && !state.transition) updateViewTween(time);
   if (state.transition) updateTransition(time);
   else updateCameraParallax();
+  updateSemanticZoom();
+  if (!state.transition) updateNavigationVisibility();
 
   for (const card of cardMeshes) {
     const selectedLift = card.userData.targetLift;
     const targetZ = card.userData.basePosition.z + selectedLift;
     card.position.z = lerp(card.position.z, targetZ, 0.09);
-    const targetScale = selectedLift ? 1.035 : 1;
-    card.scale.x = lerp(card.scale.x, targetScale, 0.09);
-    card.scale.y = lerp(card.scale.y, targetScale, 0.09);
+    const selectionScale = selectedLift ? 1.035 : 1;
+    const targetScaleX = selectionScale * card.userData.semanticScale.x;
+    const targetScaleY = selectionScale * card.userData.semanticScale.y;
+    card.scale.x = lerp(card.scale.x, targetScaleX, 0.09);
+    card.scale.y = lerp(card.scale.y, targetScaleY, 0.09);
   }
   updateConnections();
 
@@ -678,6 +931,7 @@ function renderFrame(time) {
   }
 
   camera.lookAt(state.cameraLook);
+  renderPortalPreview();
   interactions.update();
   renderer.render(scene, camera);
 }
@@ -691,20 +945,20 @@ function updateCameraParallax() {
   const targetY = base.y + view.pan.y - state.pointerSmooth.y * multiplier * 0.58;
   camera.position.x = lerp(camera.position.x, targetX, 0.085);
   camera.position.y = lerp(camera.position.y, targetY, 0.085);
-  camera.position.z = lerp(camera.position.z, base.z + view.zoom, 0.085);
+  camera.position.z = lerp(camera.position.z, base.z + view.depth + view.zoom, 0.085);
   state.cameraLook.x = lerp(state.cameraLook.x, lookBase.x + view.pan.x + state.pointerSmooth.x * 0.16, 0.085);
   state.cameraLook.y = lerp(state.cameraLook.y, lookBase.y + view.pan.y - state.pointerSmooth.y * 0.09, 0.085);
-  state.cameraLook.z = lerp(state.cameraLook.z, lookBase.z, 0.085);
+  state.cameraLook.z = lerp(state.cameraLook.z, lookBase.z + view.depth, 0.085);
 }
 
 function getViewCamera(spaceId) {
   const view = state.views[spaceId];
-  return spaces[spaceId].camera.clone().add(new THREE.Vector3(view.pan.x, view.pan.y, view.zoom));
+  return spaces[spaceId].camera.clone().add(new THREE.Vector3(view.pan.x, view.pan.y, view.depth + view.zoom));
 }
 
 function getViewLook(spaceId) {
   const view = state.views[spaceId];
-  return spaces[spaceId].look.clone().add(new THREE.Vector3(view.pan.x, view.pan.y, 0));
+  return spaces[spaceId].look.clone().add(new THREE.Vector3(view.pan.x, view.pan.y, view.depth));
 }
 
 function updateTransition(time) {
@@ -716,6 +970,7 @@ function updateTransition(time) {
 
   if (transition.entering) {
     const portal = cardMeshes.find((card) => card.userData.id === 'portal').userData.basePosition;
+    const approachZ = portal.z + 5;
     const focusT = clamp(raw / 0.42, 0, 1);
     const diveT = clamp((raw - 0.32) / 0.68, 0, 1);
     const focusEase = easeInOutQuint(focusT);
@@ -727,8 +982,8 @@ function updateTransition(time) {
       ? lerp(transition.fromPosition.y, portal.y, focusEase)
       : lerp(portal.y, destinationCamera.y, diveEase);
     camera.position.z = raw < 0.32
-      ? lerp(transition.fromPosition.z, 6.4, focusEase)
-      : lerp(6.4, destinationCamera.z, diveEase);
+      ? lerp(transition.fromPosition.z, approachZ, focusEase)
+      : lerp(approachZ, destinationCamera.z, diveEase);
     state.cameraLook.x = lerp(transition.fromLook.x, destinationLook.x, t);
     state.cameraLook.y = lerp(transition.fromLook.y, destinationLook.y, t);
     state.cameraLook.z = lerp(transition.fromLook.z, destinationLook.z, diveEase);
@@ -750,6 +1005,7 @@ function setSpaceOpacity(spaceId, opacity) {
   for (const child of roots[spaceId].children) {
     if (child.material && child !== portalHalo) child.material.opacity = opacity * (child.isLine ? 0.22 : 1);
   }
+  if (spaceId === 'root' && portalPreview) portalPreview.mesh.material.opacity = opacity;
 }
 
 function onResize() {
@@ -785,6 +1041,7 @@ function persistSpatialState() {
     const views = Object.fromEntries(Object.entries(state.views).map(([id, view]) => [id, {
       pan: view.pan.toArray(),
       zoom: view.zoom,
+      depth: view.depth,
     }]));
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ cards, bodies, views }));
   } catch {
