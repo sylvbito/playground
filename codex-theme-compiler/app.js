@@ -2,7 +2,7 @@ import { DEFAULT_SETTINGS } from './theme/defaults.js?v=codex-2';
 import { normaliseChromeTheme, normaliseSettings, isHex } from './theme/schema.js?v=codex-2';
 import { deriveSemanticTokens, TOKEN_GROUPS } from './theme/derive-tokens.js?v=codex-2';
 import { applyAppearance, applyPlatformAppearance } from './theme/apply-css.js?v=codex-2';
-import { EDITOR_THEMES, VALID_EDITOR_IDS, editorOptions, getEditorTheme, loadChromeThemeSeed } from './theme/editor-themes.js?v=codex-2';
+import { EDITOR_THEMES, VALID_EDITOR_IDS, chromeThemeForEditor, editorOptions, getEditorTheme } from './theme/editor-themes.js?v=codex-3';
 import { getSystemVariant, subscribeSystemVariant } from './theme/system-theme.js';
 import { createSettingsStore } from './theme/persistence.js?v=codex-2';
 import { exportTheme, importTheme } from './theme/sharing.js?v=codex-2';
@@ -182,13 +182,10 @@ $('#contrastRange').addEventListener('input', event => {
 });
 
 $('#editorTheme').addEventListener('change', event => {
-  settings[codeKey(settings.editVariant)] = event.currentTarget.value;
-  commitAndRender('Editor theme selected');
-});
-
-$('#seedChrome').addEventListener('click', () => {
-  const seed = loadChromeThemeSeed(settings[codeKey(settings.editVariant)]);
-  if (!seed) return notify('No chrome seed is registered');
+  const id = event.currentTarget.value;
+  const seed = chromeThemeForEditor(id);
+  if (!seed) return notify('Theme registration is unavailable');
+  settings[codeKey(settings.editVariant)] = id;
   const current = editingTheme();
   settings[themeKey(settings.editVariant)] = normaliseChromeTheme({
     ...current,
@@ -197,7 +194,7 @@ $('#seedChrome').addEventListener('click', () => {
     opaqueWindows: current.opaqueWindows,
     semanticColors: { ...current.semanticColors, ...seed.semanticColors },
   }, current);
-  commitAndRender(`${titleCase(settings.editVariant)} chrome seeded`);
+  commitAndRender(`${EDITOR_THEMES.get(id).name} applied`);
 });
 
 $('#uiFontSize').addEventListener('change', event => { settings.sansFontSize = Number(event.currentTarget.value); commitAndRender(); });

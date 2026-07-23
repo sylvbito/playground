@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A direct dual-palette implementation of the Codex appearance architecture.">
   <title>Codex Theme Compiler — Orbit Systems</title>
-  <link rel="stylesheet" href="styles.css?v=codex-2">
+  <link rel="stylesheet" href="styles.css?v=codex-3">
 </head>
 <body>
   <div class="app-shell">
@@ -25,7 +25,7 @@
         <div class="control-intro">
           <span class="kicker">Codex appearance model</span>
           <h1>Two palettes. Direct inputs.</h1>
-          <p>Author Light and Dark independently. Codex-style sRGB token derivation handles hierarchy—not palette interpretation.</p>
+          <p>Choose Light and Dark themes independently. Each selection applies its editor colours and direct chrome primitives together.</p>
         </div>
 
         <section class="control-section">
@@ -46,9 +46,8 @@
         </section>
 
         <section class="control-section editor-source">
-          <div class="section-head"><b>Editor theme</b><code>Independent</code></div>
-          <select id="editorTheme" aria-label="Editor theme"></select>
-          <button class="seed-button" id="seedChrome">Load chrome seed</button>
+          <div class="section-head"><b>Theme preset</b><code>Editor + chrome</code></div>
+          <select id="editorTheme" aria-label="Theme preset"></select>
         </section>
 
         <section class="control-section palette-controls">
@@ -140,7 +139,7 @@
                 <button class="thread"><i></i><span><b>Review colour contrast</b><small>12 semantic pairs</small></span><time>9m</time></button>
               </div>
               <div class="thread-group"><span>Previous 7 days</span>
-                <button class="thread"><i></i><span><b>Independent editor theme</b><small>Optional chrome seed</small></span><time>Tue</time></button>
+                <button class="thread"><i></i><span><b>Coordinated theme presets</b><small>Editor + chrome together</small></span><time>Tue</time></button>
                 <button class="thread"><i></i><span><b>Diff marker states</b><small>Symbols + colour</small></span><time>Mon</time></button>
               </div>
             </aside>
@@ -151,8 +150,8 @@
                 <div class="conversation-actions"><span class="branch">main</span><button>Share</button></div>
               </header>
               <div class="conversation-body">
-                <article class="message user-message"><div class="message-avatar">S</div><div><b>You</b><p>Use the direct Codex architecture: separate Light and Dark chrome, with the editor kept independent.</p></div></article>
-                <article class="message assistant-message"><div class="assistant-mark">O</div><div><b>Codex compiler</b><p>Seven authored primitives become <strong id="inlineTokenCount">24 roles</strong> through simple sRGB mixing and contrast repair.</p>
+                <article class="message user-message"><div class="message-avatar">S</div><div><b>You</b><p>Keep Light and Dark independent, but make each theme set its matching editor and chrome in one step.</p></div></article>
+                <article class="message assistant-message"><div class="assistant-mark">O</div><div><b>Codex compiler</b><p>One preset applies editor colours and seven direct chrome primitives, then expands them into <strong id="inlineTokenCount">24 roles</strong>.</p>
                   <div class="code-window">
                     <div class="code-head"><span>derive-tokens.ts</span><code id="editorThemeName">Codex</code></div>
                     <pre id="codePreview"><code><span class="syntax-keyword">const</span> source = settings[<span class="syntax-string">"lightChromeTheme"</span>];
@@ -196,6 +195,6 @@
     </form>
   </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite">Copied</div>
-  <script type="module" src="app.js?v=codex-2"></script>
+  <script type="module" src="app.js?v=codex-3"></script>
 </body>
 </html>
