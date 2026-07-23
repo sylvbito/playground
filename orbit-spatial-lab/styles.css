@@ -149,6 +149,7 @@ body::before {
   border-color: rgba(217, 255, 121, 0.28);
   color: #e9ffae;
 }
+.back-button[hidden] { display: none; }
 .back-progress {
   width: .85rem;
   height: .85rem;
