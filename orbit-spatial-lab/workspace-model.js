@@ -47,9 +47,22 @@ function resolveObjectId(model, id) {
   return model.placements.find((placement) => placement.id === id)?.objectId || id;
 }
 
+function enforcePortalCameraContinuity(model) {
+  for (const space of model.spaces || []) {
+    if (!space.parentId || !Array.isArray(space.camera)) continue;
+    const portalRecord = model.records?.find((record) => record.portal && record.destinationSpace === space.id);
+    const portalPlacement = model.placements?.find((placement) =>
+      placement.objectId === portalRecord?.id && placement.spaceId === space.parentId);
+    const portalZ = portalPlacement?.position?.[2];
+    if (!Number.isFinite(portalZ)) continue;
+    if (space.camera[2] >= portalZ - 0.35) space.camera[2] = portalZ - 2;
+  }
+  return model;
+}
+
 export function createWorkspace({ seedSpaces = [], seedCards = [], persisted = {} } = {}) {
   if (persisted?.schemaVersion === 1 && Array.isArray(persisted.records)) {
-    return { ...clone(persisted), history: { past: [], future: [] } };
+    return enforcePortalCameraContinuity({ ...clone(persisted), history: { past: [], future: [] } });
   }
 
   const records = seedCards.map(recordFromCard);
@@ -61,7 +74,7 @@ export function createWorkspace({ seedSpaces = [], seedCards = [], persisted = {
     if (record.editable && typeof persisted.bodies?.[record.id] === 'string') record.body = persisted.bodies[record.id];
   }
 
-  return {
+  return enforcePortalCameraContinuity({
     schemaVersion: 1,
     sequence: 0,
     spaces: clone(seedSpaces),
@@ -69,7 +82,7 @@ export function createWorkspace({ seedSpaces = [], seedCards = [], persisted = {
     placements,
     relations: [],
     history: { past: [], future: [] },
-  };
+  });
 }
 
 export function materializeCards(model) {
@@ -198,7 +211,7 @@ export function dispatch(model, command) {
         parentId: payload.parentSpaceId,
         kicker: 'NESTED SPACE',
         description: `${selected.length} thoughts gathered into a bounded working space.`,
-        camera: [0, 0, lookZ + 12.1],
+        camera: [0, 0, portalPosition[2] - 2],
         look: [0, -0.2, lookZ],
       });
       next.records.push({

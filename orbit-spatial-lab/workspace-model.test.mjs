@@ -81,6 +81,8 @@ test('converts selected cards into a bounded child space and leaves a portal beh
   });
   const child = next.spaces.find((space) => space.name === 'Memory system');
   assert.equal(child.parentId, 'root');
+  assert.ok(child.camera[2] < -5, 'child camera must settle beyond its parent portal plane');
+  assert.equal(child.camera[2], -7, 'child camera keeps travelling forward through the portal');
   const cards = materializeCards(next);
   assert.ok(cards.some((card) => card.portal && card.destinationSpace === child.id && card.space === 'root'));
   assert.deepEqual(cards.filter((card) => ['a', 'b'].includes(card.id)).map((card) => card.space), [child.id, child.id]);

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=6">
+  <link rel="stylesheet" href="./styles.css?v=7">
   <script type="importmap">
     {
       "imports": {
@@ -35,7 +35,8 @@
         <button id="focus-selected" class="quiet-button focus-button" type="button" hidden>Focus selected <kbd>F</kbd></button>
         <button id="reset-view" class="quiet-button" type="button">Reset view</button>
         <button id="back-space" class="back-button" type="button" hidden>
-          <span aria-hidden="true">←</span> Parent space
+          <span class="back-progress" aria-hidden="true"></span>
+          <span id="back-label">Zoom out to parent</span>
         </button>
       </div>
     </header>
@@ -143,11 +144,13 @@
         <span class="card-depth"></span>
       </header>
       <h2 class="card-title"></h2>
-      <div class="card-body"></div>
-      <footer class="card-footer"></footer>
+      <div class="card-detail">
+        <div class="card-body"></div>
+        <footer class="card-footer"></footer>
+      </div>
     </article>
   </template>
 
-  <script type="module" src="./app.js?v=8"></script>
+  <script type="module" src="./app.js?v=9"></script>
 </body>
 </html>

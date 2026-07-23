@@ -9,7 +9,7 @@ import {
   redo as redoWorkspace,
   buildAmbientProposals,
   serialiseWorkspace,
-} from './workspace-model.js?v=1';
+} from './workspace-model.js?v=2';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -48,7 +48,7 @@ const spaces = {
     parentId: 'root',
     kicker: 'NESTED SPACE · 01.1',
     description: 'A project has emerged from the loose thoughts. The cards remain editable HTML.',
-    camera: new THREE.Vector3(0.2, -0.1, -5.7),
+    camera: new THREE.Vector3(0.2, -0.1, -8.2),
     look: new THREE.Vector3(0.1, -0.25, -17.8),
   },
 };
@@ -130,13 +130,12 @@ let workspace = createWorkspace({
   persisted: persisted.workspace || legacyPersisted,
 });
 for (const space of workspace.spaces) {
-  if (!spaces[space.id]) {
-    spaces[space.id] = {
-      ...space,
-      camera: new THREE.Vector3(...space.camera),
-      look: new THREE.Vector3(...space.look),
-    };
-  }
+  spaces[space.id] = {
+    ...spaces[space.id],
+    ...space,
+    camera: new THREE.Vector3(...space.camera),
+    look: new THREE.Vector3(...space.look),
+  };
 }
 const cardData = materializeCards(workspace);
 const persistedViews = persisted.views || legacyPersisted.views || {};
@@ -157,6 +156,9 @@ const state = {
   portalEntryQueued: false,
   portalZoomHinted: false,
   portalHover: false,
+  parentZoomProgress: 0,
+  parentZoomVisual: 0,
+  parentExitQueued: false,
   drag: null,
   panGesture: null,
   lasso: null,
@@ -165,6 +167,7 @@ const state = {
   aiDismissed: new Set(persisted.aiDismissed || []),
   transition: null,
   paintReady: false,
+  lodPaintUntil: 0,
 };
 const restoredRootView = state.views.root;
 if (restoredRootView.pan.lengthSq() > 0.001 || Math.abs(restoredRootView.zoom) > 0.001 || Math.abs(restoredRootView.depth) > 0.001) {
@@ -322,7 +325,7 @@ function createCard(data) {
     baseRotation: mesh.rotation.clone(),
     targetLift: 0,
     semanticLevel: 'full',
-    semanticScale: new THREE.Vector2(1, 1),
+    visualSelectionScale: 1,
   };
   roots[data.space].add(mesh);
   interactions.add(mesh);
@@ -418,7 +421,6 @@ function syncWorkspaceScene() {
       element: mesh.userData.element,
       basePosition: mesh.userData.basePosition,
       baseRotation: mesh.userData.baseRotation,
-      semanticScale: mesh.userData.semanticScale,
     };
     mesh.userData.basePosition.fromArray(data.position);
     mesh.position.copy(mesh.userData.basePosition);
@@ -750,7 +752,7 @@ function navigateSpace(destination) {
   const entering = spaces[destination].parentId === from;
   const portal = entering
     ? cardMeshes.find((card) => card.userData.space === from && card.userData.destinationSpace === destination)
-    : null;
+    : cardMeshes.find((card) => card.userData.space === destination && card.userData.destinationSpace === from);
   state.viewTween = null;
   state.transitioning = true;
   state.transition = {
@@ -759,7 +761,7 @@ function navigateSpace(destination) {
     entering,
     portalId: portal?.userData.id || null,
     start: performance.now(),
-    duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 80 : 1550,
+    duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 80 : 1900,
     fromPosition: camera.position.clone(),
     fromLook: state.cameraLook.clone(),
   };
@@ -775,17 +777,24 @@ function navigateSpace(destination) {
     updateCaption(destination);
     updateDepthNavigation(destination);
     $('#back-space').hidden = !spaces[destination].parentId;
-  }, state.transition.duration * 0.46);
+  }, state.transition.duration * 0.54);
 }
 
 function finishNavigation(destination) {
+  const previous = state.transition?.from;
+  if (previous) setSpaceOpacity(previous, 0);
+  setSpaceOpacity(destination, 1);
   state.space = destination;
   state.transitioning = false;
   state.transition = null;
   state.portalZoomProgress = 0;
   state.portalEntryQueued = false;
   state.portalZoomHinted = false;
+  state.parentZoomProgress = 0;
+  state.parentZoomVisual = 0;
+  state.parentExitQueued = false;
   updatePortalProgressHalo();
+  updateParentZoomIndicator();
   const view = state.views[destination];
   state.activeNavigation = view.pan.lengthSq() < 0.001 && Math.abs(view.zoom) < 0.001 && Math.abs(view.depth) < 0.001
     ? 'overview' : 'free';
@@ -806,6 +815,8 @@ function updateCaption(spaceId) {
   $('#space-kicker').textContent = target.kicker;
   $('#space-title').textContent = target.name;
   $('#space-description').textContent = target.description;
+  const parent = target.parentId ? spaces[target.parentId] : null;
+  $('#back-label').textContent = parent ? `Zoom out to ${parent.name}` : 'Zoom out to parent';
 }
 
 function clearSelection() {
@@ -1033,6 +1044,38 @@ function updatePortalProgressHalo() {
   }
 }
 
+function resetParentZoomIntent() {
+  state.parentZoomProgress = 0;
+  state.parentExitQueued = false;
+  updateParentZoomIndicator();
+}
+
+function updateParentZoomIndicator() {
+  const button = $('#back-space');
+  if (!button) return;
+  const progress = clamp(state.parentZoomVisual, 0, 1);
+  button.style.setProperty('--parent-progress', progress.toFixed(3));
+  button.classList.toggle('has-exit-intent', progress > 0.01);
+  const parent = spaces[state.space]?.parentId ? spaces[spaces[state.space].parentId] : null;
+  button.setAttribute('aria-label', parent
+    ? `${state.parentExitQueued ? 'Returning to' : 'Zoom out to'} ${parent.name}`
+    : 'Zoom out to parent space');
+}
+
+function updateParentZoomVisual() {
+  const smoothing = state.parentZoomProgress > state.parentZoomVisual ? 0.18 : 0.12;
+  state.parentZoomVisual = lerp(state.parentZoomVisual, state.parentZoomProgress, smoothing);
+  if (Math.abs(state.parentZoomVisual - state.parentZoomProgress) < 0.001) {
+    state.parentZoomVisual = state.parentZoomProgress;
+  }
+  updateParentZoomIndicator();
+  if (state.parentExitQueued && !state.transition && state.parentZoomVisual >= 0.965) {
+    const childView = state.views[state.space];
+    childView.zoom = 0;
+    navigateSpace(spaces[state.space].parentId);
+  }
+}
+
 function addPortalPreview() {
   const portal = cardMeshes.find((card) => card.userData.id === 'portal');
   const projectCards = cardMeshes.filter((card) => card.userData.space === 'project');
@@ -1125,6 +1168,8 @@ function updateDepthNavigation(spaceId = state.space) {
 
 function focusLayer(layerId) {
   if (state.transitioning) return;
+  resetParentZoomIntent();
+  state.parentZoomVisual = 0;
   state.portalZoomProgress = 0;
   state.portalEntryQueued = false;
   state.portalZoomHinted = false;
@@ -1262,13 +1307,20 @@ function bindUi() {
     event.preventDefault();
     const delta = event.deltaY * (event.deltaMode === 1 ? 16 : 1);
     const hoveredCard = getCardAtScreenPoint(event.clientX, event.clientY);
+    const parentTarget = spaces[state.space].parentId && delta > 0;
     const portalTarget = state.space === 'root' && delta < 0
       ? getPortalIntentTarget(event.clientX, event.clientY, hoveredCard)
       : null;
 
-    if (portalTarget) {
+    if (parentTarget) {
+      state.portalZoomProgress = 0;
+      state.portalEntryQueued = false;
+      zoomTowardParent(event, delta);
+    } else if (portalTarget) {
+      resetParentZoomIntent();
       zoomTowardPortal(portalTarget, event, delta);
     } else {
+      resetParentZoomIntent();
       state.portalZoomProgress = clamp(state.portalZoomProgress - Math.abs(delta) / 520, 0, 1);
       markFreeNavigation();
       zoomAtCursor(event.clientX, event.clientY, delta);
@@ -1483,6 +1535,25 @@ function zoomTowardPortal(portal, event, delta) {
   if (state.portalEntryQueued) showToast('Entering Website redesign');
 }
 
+function zoomTowardParent(event, delta) {
+  if (state.parentExitQueued) return;
+  const guidedDelta = clamp(delta, 1, 120);
+  zoomAtCursor(event.clientX, event.clientY, guidedDelta);
+  state.viewTween = null;
+  if (state.activeNavigation !== 'free') {
+    state.activeNavigation = 'free';
+    updateDepthNavigation();
+  }
+  const wasIdle = state.parentZoomProgress < 0.06;
+  const intentStep = clamp(guidedDelta / 440, 0.018, 0.24);
+  state.parentZoomProgress = clamp(state.parentZoomProgress + intentStep, 0, 1);
+  if (state.parentZoomProgress >= 1) {
+    state.parentZoomProgress = 1;
+    state.parentExitQueued = true;
+  }
+  if (wasIdle) showToast(`Keep zooming out to return to ${spaces[spaces[state.space].parentId].name}`);
+}
+
 function handlePointerMove(event) {
   state.pointer.x = (event.clientX / window.innerWidth - 0.5) * 2;
   state.pointer.y = (event.clientY / window.innerHeight - 0.5) * 2;
@@ -1668,12 +1739,15 @@ function updateSemanticZoom() {
 function setSemanticLevel(card, level) {
   if (card.userData.semanticLevel === level) return;
   card.userData.semanticLevel = level;
-  card.userData.element.classList.toggle('semantic-mid', level === 'mid');
-  card.userData.element.classList.toggle('semantic-far', level === 'far');
-  const scale = level === 'full'
-    ? [1, 1]
-    : level === 'mid' ? [300 / 340, 132 / 214] : [244 / 340, 64 / 214];
-  card.userData.semanticScale.set(...scale);
+  const element = card.userData.element;
+  const meta = $('.card-meta', element);
+  const detail = $('.card-detail', element);
+
+  meta.hidden = level === 'far';
+  detail.hidden = level !== 'full';
+  element.classList.toggle('semantic-mid', level === 'mid');
+  element.classList.toggle('semantic-far', level === 'far');
+  state.lodPaintUntil = Math.max(state.lodPaintUntil, performance.now() + 360);
   renderer.domElement.requestPaint?.();
 }
 
@@ -1760,14 +1834,22 @@ function renderFrame(time) {
     const selectedLift = card.userData.targetLift;
     const targetZ = card.userData.basePosition.z + selectedLift;
     card.position.z = lerp(card.position.z, targetZ, 0.09);
-    const selectionScale = selectedLift ? 1.035 : 1;
-    const targetScaleX = selectionScale * card.userData.semanticScale.x;
-    const targetScaleY = selectionScale * card.userData.semanticScale.y;
-    card.scale.x = lerp(card.scale.x, targetScaleX, 0.09);
-    card.scale.y = lerp(card.scale.y, targetScaleY, 0.09);
+    const targetSelectionScale = selectedLift ? 1.035 : 1;
+    card.userData.visualSelectionScale = lerp(card.userData.visualSelectionScale || 1, targetSelectionScale, 0.09);
+    const style = getComputedStyle(card.userData.element);
+    const width = Number.parseFloat(style.width) || 340;
+    const height = Number.parseFloat(style.height) || 214;
+    card.scale.x = card.userData.visualSelectionScale * width / 340;
+    card.scale.y = card.userData.visualSelectionScale * height / 214;
+  }
+  if (time < state.lodPaintUntil) renderer.domElement.requestPaint?.();
+  if (portalPreview) {
+    const portal = cardMeshes.find((card) => card.userData.id === 'portal');
+    portalPreview.mesh.visible = portal?.userData.semanticLevel === 'full' || state.transition?.portalId === 'portal';
   }
   updateConnections();
   updatePortalVisual();
+  updateParentZoomVisual();
 
   if (portalHalo) {
     const transitionRaw = state.transition?.progress || 0;
@@ -1822,52 +1904,58 @@ function updateTransition(time) {
   const t = easeInOutQuint(raw);
   const destinationCamera = getViewCamera(transition.to);
   const destinationLook = getViewLook(transition.to);
+  const portalMesh = cardMeshes.find((card) => card.userData.id === transition.portalId);
+  const portal = portalMesh?.userData.basePosition || transition.fromLook;
+  const cameraBefore = portal.clone().add(new THREE.Vector3(0, 0, 4.5));
+  const cameraBeyond = portal.clone().add(new THREE.Vector3(0, 0, -0.9));
 
   if (transition.entering) {
-    const portalMesh = cardMeshes.find((card) => card.userData.id === transition.portalId);
-    const portal = portalMesh?.userData.basePosition || transition.fromLook;
-    const approachZ = portal.z + 5;
-    const focusT = clamp(raw / 0.42, 0, 1);
-    const diveT = clamp((raw - 0.32) / 0.68, 0, 1);
-    const focusEase = easeInOutQuint(focusT);
-    const diveEase = easeInOutQuint(diveT);
-    camera.position.x = raw < 0.32
-      ? lerp(transition.fromPosition.x, portal.x, focusEase)
-      : lerp(portal.x, destinationCamera.x, diveEase);
-    camera.position.y = raw < 0.32
-      ? lerp(transition.fromPosition.y, portal.y, focusEase)
-      : lerp(portal.y, destinationCamera.y, diveEase);
-    camera.position.z = raw < 0.32
-      ? lerp(transition.fromPosition.z, approachZ, focusEase)
-      : lerp(approachZ, destinationCamera.z, diveEase);
-    state.cameraLook.x = raw < 0.32
-      ? lerp(transition.fromLook.x, portal.x, focusEase)
-      : lerp(portal.x, destinationLook.x, diveEase);
-    state.cameraLook.y = raw < 0.32
-      ? lerp(transition.fromLook.y, portal.y, focusEase)
-      : lerp(portal.y, destinationLook.y, diveEase);
-    state.cameraLook.z = raw < 0.32
-      ? lerp(transition.fromLook.z, portal.z, focusEase)
-      : lerp(portal.z, destinationLook.z, diveEase);
+    const lookBeyond = portal.clone().lerp(destinationLook, 0.42);
+    cubicVector(camera.position, transition.fromPosition, cameraBefore, cameraBeyond, destinationCamera, t);
+    cubicVector(state.cameraLook, transition.fromLook, portal, lookBeyond, destinationLook, t);
   } else {
-    camera.position.lerpVectors(transition.fromPosition, destinationCamera, t);
-    state.cameraLook.lerpVectors(transition.fromLook, destinationLook, t);
+    const lookBefore = portal.clone().lerp(transition.fromLook, 0.42);
+    cubicVector(camera.position, transition.fromPosition, cameraBeyond, cameraBefore, destinationCamera, t);
+    cubicVector(state.cameraLook, transition.fromLook, lookBefore, portal, destinationLook, t);
   }
 
   const fromOpacity = transition.entering
-    ? 1 - clamp((raw - 0.32) / 0.28, 0, 1)
-    : 1 - clamp((raw - 0.12) / 0.34, 0, 1);
+    ? 1 - smoothstep(0.66, 0.94, raw)
+    : 1 - smoothstep(0.58, 0.92, raw);
   const toOpacity = transition.entering
-    ? clamp((raw - 0.52) / 0.36, 0, 1)
-    : clamp((raw - 0.55) / 0.35, 0, 1);
+    ? smoothstep(0.18, 0.62, raw)
+    : smoothstep(0.24, 0.72, raw);
   setSpaceOpacity(transition.from, fromOpacity);
   setSpaceOpacity(transition.to, toOpacity);
+
+  if (portalMesh) {
+    const portalSurface = transition.entering
+      ? 1 - smoothstep(0.32, 0.61, raw)
+      : smoothstep(0.22, 0.56, raw);
+    portalMesh.material.opacity = portalSurface * (transition.entering ? fromOpacity : toOpacity);
+    if (transition.portalId === 'portal' && portalPreview) {
+      const previewSurface = transition.entering
+        ? 1 - smoothstep(0.18, 0.48, raw)
+        : smoothstep(0.38, 0.72, raw);
+      portalPreview.mesh.material.opacity = previewSurface * (transition.entering ? fromOpacity : toOpacity);
+    }
+  }
+
   if (portalHalo) {
     const rootOpacity = transition.from === 'root' ? fromOpacity : transition.to === 'root' ? toOpacity : 0;
     portalHalo.material.opacity = 0.22 * rootOpacity;
   }
 
   if (raw >= 1) finishNavigation(transition.to);
+}
+
+function cubicVector(out, p0, p1, p2, p3, t) {
+  const inverse = 1 - t;
+  out.set(
+    inverse ** 3 * p0.x + 3 * inverse ** 2 * t * p1.x + 3 * inverse * t ** 2 * p2.x + t ** 3 * p3.x,
+    inverse ** 3 * p0.y + 3 * inverse ** 2 * t * p1.y + 3 * inverse * t ** 2 * p2.y + t ** 3 * p3.y,
+    inverse ** 3 * p0.z + 3 * inverse ** 2 * t * p1.z + 3 * inverse * t ** 2 * p2.z + t ** 3 * p3.z,
+  );
 }
 
 function setSpaceOpacity(spaceId, opacity) {

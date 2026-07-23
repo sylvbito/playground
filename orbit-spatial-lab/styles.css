@@ -141,7 +141,25 @@ body::before {
 }
 
 .quiet-button:active, .back-button:active { transform: translateY(1px); }
-.back-button { border-color: rgba(217, 255, 121, 0.28); color: #e9ffae; }
+.back-button {
+  --parent-progress: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  border-color: rgba(217, 255, 121, 0.28);
+  color: #e9ffae;
+}
+.back-progress {
+  width: .85rem;
+  height: .85rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: conic-gradient(var(--lime) calc(var(--parent-progress) * 1turn), rgba(217,255,121,.15) 0);
+  -webkit-mask: radial-gradient(circle, transparent 42%, #000 45%);
+  mask: radial-gradient(circle, transparent 42%, #000 45%);
+  transition: filter 160ms ease;
+}
+.back-button.has-exit-intent .back-progress { filter: drop-shadow(0 0 .35rem rgba(217,255,121,.45)); }
 .focus-button { color: #eaffb5; border-color: rgba(217,255,121,.25); }
 .focus-button kbd {
   margin-left: .32rem;
@@ -554,7 +572,13 @@ html.is-card-dragging, html.is-card-dragging * { cursor: grabbing !important; }
   cursor: grab;
   touch-action: none;
   user-select: none;
-  transition: background-color 160ms ease, border-color 160ms ease;
+  transition:
+    width 300ms cubic-bezier(.2,.8,.2,1),
+    height 300ms cubic-bezier(.2,.8,.2,1),
+    padding 300ms cubic-bezier(.2,.8,.2,1),
+    border-radius 300ms cubic-bezier(.2,.8,.2,1),
+    background-color 160ms ease,
+    border-color 160ms ease;
 }
 
 .spatial-card.is-dragging { cursor: grabbing; }
@@ -580,8 +604,6 @@ html.is-card-dragging, html.is-card-dragging * { cursor: grabbing !important; }
 }
 .spatial-card.semantic-mid .card-meta { margin-bottom: 10px; }
 .spatial-card.semantic-mid .card-title { max-width: 250px; margin-bottom: 0; font-size: 19px; }
-.spatial-card.semantic-mid .card-body,
-.spatial-card.semantic-mid .card-footer { display: none; }
 
 .spatial-card.semantic-far {
   width: 244px;
@@ -591,9 +613,6 @@ html.is-card-dragging, html.is-card-dragging * { cursor: grabbing !important; }
   background: rgba(230,236,225,.93);
 }
 .spatial-card.semantic-far .card-meta { margin-bottom: 7px; font-size: 8px; }
-.spatial-card.semantic-far .card-depth,
-.spatial-card.semantic-far .card-body,
-.spatial-card.semantic-far .card-footer { display: none; }
 .spatial-card.semantic-far .card-title {
   max-width: 216px;
   margin: 0;
@@ -613,6 +632,7 @@ html.is-card-dragging, html.is-card-dragging * { cursor: grabbing !important; }
   font: 500 9px/1 var(--mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  transition: margin 300ms cubic-bezier(.2,.8,.2,1), font-size 300ms cubic-bezier(.2,.8,.2,1);
 }
 .card-kind { color: #3c5944; }
 .card-depth { color: #a1a79b; }
@@ -623,15 +643,15 @@ html.is-card-dragging, html.is-card-dragging * { cursor: grabbing !important; }
   line-height: 1.07;
   font-weight: 650;
   letter-spacing: -0.035em;
+  transition: margin 300ms cubic-bezier(.2,.8,.2,1), font-size 300ms cubic-bezier(.2,.8,.2,1), max-width 300ms cubic-bezier(.2,.8,.2,1);
 }
+.card-detail { display: flex; flex: 1; min-height: 0; flex-direction: column; }
+.card-detail[hidden], .card-meta[hidden] { display: none; }
 .card-body { color: #666c61; font-size: 12px; line-height: 1.52; flex: 1; }
 .card-body p { margin: 0; }
 .card-footer { min-height: 24px; display: flex; align-items: end; gap: 7px; }
 
 .spatial-card[data-tone="green"] { background: #dff0d9; border-color: rgba(50, 91, 49, 0.22); }
-.spatial-card[data-id="portal"] {
-  transition: background-color 180ms ease, border-color 180ms ease;
-}
 .spatial-card[data-id="portal"]:hover {
   background: #e5f5de;
   border-color: rgba(68, 111, 55, 0.38);
