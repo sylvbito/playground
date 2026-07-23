@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0b09">
+  <meta name="description" content="Orbit spatial interface study using real interactive HTML cards inside WebGL.">
+  <title>Orbit — Spatial HTML study</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css?v=1">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/",
+        "three-html-render/polyfill": "https://cdn.jsdelivr.net/npm/three-html-render@0.1.2/dist/polyfill.mjs"
+      }
+    }
+  </script>
+</head>
+<body>
+  <main id="app" aria-label="Orbit spatial workspace">
+    <header class="topbar">
+      <a class="wordmark" href="../" aria-label="Back to Playground">
+        <span class="mark" aria-hidden="true"><i></i></span>
+        <span>Orbit</span>
+      </a>
+      <div class="trail" aria-live="polite">
+        <span>Studio</span><i>›</i><strong id="space-name">Loose thoughts</strong>
+      </div>
+      <div class="top-actions">
+        <button id="reset-view" class="quiet-button" type="button">Reset view</button>
+        <button id="back-space" class="back-button" type="button" hidden>
+          <span aria-hidden="true">←</span> Parent space
+        </button>
+      </div>
+    </header>
+
+    <section class="scene-shell" aria-label="Spatial canvas">
+      <div id="scene" class="scene"></div>
+      <div class="vignette" aria-hidden="true"></div>
+
+      <aside class="space-caption" aria-live="polite">
+        <span class="eyebrow" id="space-kicker">SPACE · 01</span>
+        <h1 id="space-title">Loose thoughts</h1>
+        <p id="space-description">Select a card, write directly into it, or enter the green space.</p>
+      </aside>
+
+      <div class="gesture-hint" aria-hidden="true">
+        <span class="mouse-glyph"><i></i></span>
+        <span>Move to feel depth</span>
+      </div>
+
+      <div class="api-state" id="api-state">
+        <span class="api-dot"></span>
+        <span id="api-label">Checking HTML-in-Canvas…</span>
+        <button id="api-help" type="button" aria-label="About browser support">?</button>
+      </div>
+
+      <div id="api-popover" class="api-popover" hidden>
+        <strong id="api-popover-title">HTML-in-Canvas</strong>
+        <p id="api-popover-copy"></p>
+        <code>chrome://flags/#canvas-draw-element</code>
+      </div>
+
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <template id="card-template">
+    <article class="spatial-card" tabindex="0">
+      <header class="card-meta">
+        <span class="card-kind"></span>
+        <span class="card-depth"></span>
+      </header>
+      <h2 class="card-title"></h2>
+      <div class="card-body"></div>
+      <footer class="card-footer"></footer>
+    </article>
+  </template>
+
+  <script type="module" src="./app.js?v=1"></script>
+</body>
+</html>
