@@ -1,3 +1,17 @@
+import { mix, readableForeground } from './color.js';
+
+function editorInk(colour, background) {
+  return readableForeground(colour, background, 4.5);
+}
+
+function editorDiffInk(colour, background) {
+  let repaired = editorInk(colour, background);
+  for (let index = 0; index < 3; index += 1) {
+    repaired = readableForeground(repaired, mix(background, repaired, 0.14), 4.5);
+  }
+  return repaired;
+}
+
 export function applyPlatformAppearance(root, tokens, theme, settings, variant) {
   root.dataset.variant = variant;
   root.classList.toggle('electron-dark', variant === 'dark');
@@ -34,11 +48,11 @@ export function applyPlatformAppearance(root, tokens, theme, settings, variant) 
 export function applyAppearance(root, tokens, theme, settings, variant, editorTheme) {
   applyPlatformAppearance(root, tokens, theme, settings, variant);
   root.style.setProperty('--editor-background', editorTheme.background);
-  root.style.setProperty('--editor-foreground', editorTheme.foreground);
-  root.style.setProperty('--editor-accent', editorTheme.accent);
-  root.style.setProperty('--editor-keyword', editorTheme.keyword);
-  root.style.setProperty('--editor-string', editorTheme.string);
-  root.style.setProperty('--editor-number', editorTheme.number);
-  root.style.setProperty('--editor-added', editorTheme.added);
-  root.style.setProperty('--editor-removed', editorTheme.removed);
+  root.style.setProperty('--editor-foreground', editorInk(editorTheme.foreground, editorTheme.background));
+  root.style.setProperty('--editor-accent', editorInk(editorTheme.accent, editorTheme.background));
+  root.style.setProperty('--editor-keyword', editorInk(editorTheme.keyword, editorTheme.background));
+  root.style.setProperty('--editor-string', editorInk(editorTheme.string, editorTheme.background));
+  root.style.setProperty('--editor-number', editorInk(editorTheme.number, editorTheme.background));
+  root.style.setProperty('--editor-added', editorDiffInk(editorTheme.added, editorTheme.background));
+  root.style.setProperty('--editor-removed', editorDiffInk(editorTheme.removed, editorTheme.background));
 }
