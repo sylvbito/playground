@@ -1,16 +1,18 @@
-import { DEFAULT_SETTINGS } from './theme/defaults.js';
-import { normaliseSettings, isHex } from './theme/schema.js';
-import { deriveSemanticTokens, TOKEN_GROUPS } from './theme/derive-tokens.js?v=compiler-2';
-import { applyAppearance, applyPlatformAppearance } from './theme/apply-css.js?v=compiler-3';
-import { EDITOR_THEMES, VALID_EDITOR_IDS, editorThemesFor, loadChromeThemeSeed, loadEditorTheme } from './theme/editor-themes.js?v=compiler-2';
+import { DEFAULT_SETTINGS } from './theme/defaults.js?v=compiler-2';
+import { normaliseSettings, isHex } from './theme/schema.js?v=compiler-2';
+import { deriveSemanticTokens, TOKEN_GROUPS } from './theme/derive-tokens.js?v=compiler-3';
+import { applyAppearance, applyPlatformAppearance } from './theme/apply-css.js?v=compiler-4';
+import { VALID_EDITOR_IDS, editorThemesFor, loadChromeThemeSeed, loadEditorTheme } from './theme/editor-themes.js?v=compiler-4';
 import { getSystemVariant, subscribeSystemVariant } from './theme/system-theme.js';
 import { createSettingsStore } from './theme/persistence.js';
-import { exportTheme, importTheme } from './theme/sharing.js';
-import { contrast } from './theme/color.js';
+import { exportTheme, importTheme } from './theme/sharing.js?v=compiler-3';
+import { contrast } from './theme/color.js?v=compiler-2';
 
 const clone = value => structuredClone(value);
 const store = createSettingsStore();
-let settings = normaliseSettings(store.read() || clone(DEFAULT_SETTINGS), DEFAULT_SETTINGS, VALID_EDITOR_IDS);
+const storedSettings = store.read();
+const needsPresetMigration = Boolean(storedSettings && !storedSettings.presetId);
+let settings = normaliseSettings(storedSettings || clone(DEFAULT_SETTINGS), DEFAULT_SETTINGS, VALID_EDITOR_IDS);
 let systemVariant = getSystemVariant();
 let editVariant = 'light';
 let persistTimer;
@@ -22,7 +24,6 @@ const importDialog = $('#importDialog');
 const colourPath = key => ['diffAdded', 'diffRemoved', 'skill'].includes(key) ? ['semanticColors', key] : [key];
 
 function themeKey(variant) { return variant === 'dark' ? 'darkChromeTheme' : 'lightChromeTheme'; }
-function codeKey(variant) { return variant === 'dark' ? 'darkCodeThemeId' : 'lightCodeThemeId'; }
 function currentTheme() { return settings[themeKey(editVariant)]; }
 function resolvedVariant() { return settings.mode === 'system' ? systemVariant : settings.mode; }
 
@@ -80,7 +81,7 @@ function renderControls() {
   const select = $('#editorTheme');
   const options = editorThemesFor(editVariant);
   select.innerHTML = options.map(themeOption => `<option value="${themeOption.id}">${themeOption.name}</option>`).join('');
-  select.value = settings[codeKey(editVariant)];
+  select.value = settings.presetId;
 }
 
 function renderInspector(tokens, theme) {
@@ -104,7 +105,7 @@ async function render() {
   const variant = resolvedVariant();
   const theme = settings[themeKey(variant)];
   const tokens = deriveSemanticTokens(theme, variant);
-  const editorTheme = await loadEditorTheme(settings[codeKey(variant)]);
+  const editorTheme = await loadEditorTheme(settings.presetId, variant);
   applyPlatformAppearance(document.documentElement, tokens, theme, settings, variant);
   applyAppearance($('#productFrame'), tokens, theme, settings, variant, editorTheme);
   renderControls();
@@ -129,6 +130,17 @@ function updateColour(key, value) {
   queuePersist();
   render();
   return true;
+}
+
+async function applyPreset(id) {
+  const variants = ['light', 'dark'];
+  const seeds = await Promise.all(variants.map(variant => loadChromeThemeSeed(id, variant)));
+  settings.presetId = id;
+  variants.forEach((variant, index) => {
+    const seed = seeds[index], theme = settings[themeKey(variant)];
+    Object.assign(theme, { accent: seed.accent, surface: seed.surface, ink: seed.ink });
+    Object.assign(theme.semanticColors, seed.semanticColors);
+  });
 }
 
 $$('[data-mode]').forEach(button => button.addEventListener('click', () => {
@@ -159,14 +171,9 @@ $('#contrastRange').addEventListener('input', event => {
 });
 
 $('#editorTheme').addEventListener('change', async event => {
-  const variant = editVariant;
   const themeId = event.currentTarget.value;
-  settings[codeKey(variant)] = themeId;
-  const seed = await loadChromeThemeSeed(themeId);
-  const theme = settings[themeKey(variant)];
-  Object.assign(theme, { accent: seed.accent, surface: seed.surface, ink: seed.ink });
-  Object.assign(theme.semanticColors, seed.semanticColors);
-  queuePersist(); await render(); notify(`${variant === 'dark' ? 'Dark' : 'Light'} preset applied`);
+  await applyPreset(themeId);
+  queuePersist(); await render(); notify('Preset interpreted for light + dark');
 });
 
 $('#uiFontSize').addEventListener('change', event => { settings.sansFontSize = Number(event.currentTarget.value); queuePersist(); render(); });
@@ -177,7 +184,7 @@ $('#fontSmoothing').addEventListener('change', event => { settings.useFontSmooth
 $('#pointerCursors').addEventListener('change', event => { settings.usePointerCursors = event.currentTarget.checked; queuePersist(); render(); });
 
 $('#shareTheme').addEventListener('click', async () => {
-  const value = exportTheme(editVariant, settings[codeKey(editVariant)], currentTheme());
+  const value = exportTheme(editVariant, settings.presetId, currentTheme());
   try { await navigator.clipboard.writeText(value); notify('Versioned theme copied'); }
   catch { notify('Copy blocked by browser'); }
 });
@@ -187,8 +194,8 @@ $('#confirmImport').addEventListener('click', async () => {
   try {
     const imported = importTheme($('#importValue').value.trim());
     editVariant = imported.variant;
+    await applyPreset(imported.codeThemeId);
     settings[themeKey(imported.variant)] = imported.theme;
-    settings[codeKey(imported.variant)] = imported.codeThemeId;
     queuePersist(); await render(); importDialog.close(); notify('Theme imported');
   } catch (error) { $('#importError').textContent = error.message; }
 });
@@ -215,4 +222,6 @@ subscribeSystemVariant(variant => {
   if (settings.mode === 'system') render();
 });
 
-render();
+if (needsPresetMigration) {
+  applyPreset(settings.presetId).then(() => { queuePersist(); return render(); });
+} else render();

@@ -1,22 +1,28 @@
+import { interpretPreset } from './editor-themes.js?v=compiler-4';
+
+function defaultTheme(variant, contrast) {
+  const preset = interpretPreset('codex', variant);
+  return Object.freeze({
+    accent: preset.accent,
+    surface: preset.background,
+    ink: preset.foreground,
+    contrast,
+    fonts: { ui: null, code: null },
+    opaqueWindows: false,
+    semanticColors: { diffAdded: preset.added, diffRemoved: preset.removed, skill: preset.skill },
+  });
+}
+
 export const DEFAULT_THEMES = Object.freeze({
-  light: Object.freeze({
-    accent: '#339CFF', surface: '#FFFFFF', ink: '#1A1C1F', contrast: 45,
-    fonts: { ui: null, code: null }, opaqueWindows: false,
-    semanticColors: { diffAdded: '#00A240', diffRemoved: '#BA2623', skill: '#924FF7' },
-  }),
-  dark: Object.freeze({
-    accent: '#339CFF', surface: '#181818', ink: '#FFFFFF', contrast: 60,
-    fonts: { ui: null, code: null }, opaqueWindows: false,
-    semanticColors: { diffAdded: '#40C977', diffRemoved: '#FA423E', skill: '#AD7BF9' },
-  }),
+  light: defaultTheme('light', 45),
+  dark: defaultTheme('dark', 60),
 });
 
 export const DEFAULT_SETTINGS = Object.freeze({
   mode: 'system',
+  presetId: 'codex',
   lightChromeTheme: DEFAULT_THEMES.light,
   darkChromeTheme: DEFAULT_THEMES.dark,
-  lightCodeThemeId: 'codex-light',
-  darkCodeThemeId: 'codex-dark',
   sansFontSize: 14,
   codeFontSize: 12,
   diffMarkerStyle: 'color',

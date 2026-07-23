@@ -1,6 +1,14 @@
 const HEX = /^#[0-9A-F]{6}$/i;
 const MODES = new Set(['system', 'light', 'dark']);
 const MARKERS = new Set(['color', 'symbols']);
+const LEGACY_PRESETS = new Map([
+  ['codex-light', 'codex'], ['codex-dark', 'codex'],
+  ['raycast-light', 'raycast'], ['github-light', 'github'],
+  ['rose-pine-dawn', 'rose-pine'], ['solarized-light', 'solarized'],
+  ['gruvbox-light', 'gruvbox'], ['gruvbox-dark', 'gruvbox'],
+  ['mint-light', 'mint'], ['high-contrast-light', 'monochrome'],
+  ['catppuccin-mocha', 'catppuccin'],
+]);
 
 export function normaliseHex(value, fallback) {
   return typeof value === 'string' && HEX.test(value) ? value.toUpperCase() : fallback;
@@ -38,13 +46,16 @@ export function normaliseTheme(source = {}, fallback) {
 }
 
 export function normaliseSettings(source = {}, defaults, validEditorIds) {
-  const editor = value => validEditorIds.has(value) ? value : null;
+  const preset = value => {
+    const migrated = LEGACY_PRESETS.get(value) || value;
+    return validEditorIds.has(migrated) ? migrated : null;
+  };
+  const legacyPreset = source.mode === 'dark' ? source.darkCodeThemeId : source.lightCodeThemeId;
   return {
     mode: MODES.has(source.mode) ? source.mode : defaults.mode,
+    presetId: preset(source.presetId) || preset(legacyPreset) || defaults.presetId,
     lightChromeTheme: normaliseTheme(source.lightChromeTheme, defaults.lightChromeTheme),
     darkChromeTheme: normaliseTheme(source.darkChromeTheme, defaults.darkChromeTheme),
-    lightCodeThemeId: editor(source.lightCodeThemeId) || defaults.lightCodeThemeId,
-    darkCodeThemeId: editor(source.darkCodeThemeId) || defaults.darkCodeThemeId,
     sansFontSize: integer(source.sansFontSize, defaults.sansFontSize, 11, 20),
     codeFontSize: integer(source.codeFontSize, defaults.codeFontSize, 10, 20),
     diffMarkerStyle: MARKERS.has(source.diffMarkerStyle) ? source.diffMarkerStyle : defaults.diffMarkerStyle,

@@ -1,4 +1,4 @@
-import { mix, readableForeground } from './color.js';
+import { mix, readableForeground } from './color.js?v=compiler-2';
 
 function editorInk(colour, background) {
   return readableForeground(colour, background, 4.5);

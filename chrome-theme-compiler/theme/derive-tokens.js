@@ -1,4 +1,4 @@
-import { bestInk, contrast, mix, readableForeground } from './color.js';
+import { bestInk, contrast, mix, readableForeground } from './color.js?v=compiler-2';
 
 const interpolate = (min, max, amount) => min + (max - min) * amount;
 
