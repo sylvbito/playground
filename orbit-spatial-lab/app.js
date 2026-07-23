@@ -5,6 +5,11 @@ import { installHtmlInCanvasPolyfill } from 'three-html-render/polyfill';
 const $ = (selector, root = document) => root.querySelector(selector);
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const lerp = (a, b, t) => a + (b - a) * t;
+const smoothstep = (edge0, edge1, value) => {
+  const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
+};
+const easeOutCubic = (t) => 1 - (1 - t) ** 3;
 const easeInOutQuint = (t) => t < 0.5 ? 16 * t ** 5 : 1 - ((-2 * t + 2) ** 5) / 2;
 
 const nativeHtmlCanvas = 'requestPaint' in HTMLCanvasElement.prototype &&
@@ -107,12 +112,19 @@ const state = {
   activeNavigation: 'overview',
   viewTween: null,
   portalZoomProgress: 0,
+  portalZoomVisual: 0,
+  portalEntryQueued: false,
   portalZoomHinted: false,
+  portalHover: false,
   drag: null,
   panGesture: null,
   transition: null,
   paintReady: false,
 };
+const restoredRootView = state.views.root;
+if (restoredRootView.pan.lengthSq() > 0.001 || Math.abs(restoredRootView.zoom) > 0.001 || Math.abs(restoredRootView.depth) > 0.001) {
+  state.activeNavigation = 'free';
+}
 
 let renderer;
 let camera;
@@ -123,6 +135,8 @@ let connections = [];
 let roots = {};
 let portalHalo;
 let portalProgressHalo;
+let portalProgressCap;
+let portalProgressStartCap;
 let portalPreview;
 let toastTimer;
 
@@ -211,6 +225,10 @@ function createCard(data) {
   const element = $('#card-template').content.firstElementChild.cloneNode(true);
   element.dataset.id = data.id;
   if (data.tone) element.dataset.tone = data.tone;
+  if (data.portal) {
+    element.addEventListener('pointerenter', () => { state.portalHover = true; });
+    element.addEventListener('pointerleave', () => { state.portalHover = false; });
+  }
   $('.card-kind', element).textContent = data.kind;
   $('.card-depth', element).textContent = `${data.layer} · z ${data.position[2].toFixed(1)}`;
   $('.card-title', element).textContent = data.title;
@@ -370,6 +388,7 @@ function navigateSpace(destination) {
   };
 
   clearSelection();
+  document.documentElement.classList.add('is-space-transitioning');
   $('.space-caption').classList.add('is-transitioning');
   $('#back-space').disabled = true;
   setGroupPointerEvents('root', false);
@@ -387,6 +406,7 @@ function finishNavigation(destination) {
   state.transitioning = false;
   state.transition = null;
   state.portalZoomProgress = 0;
+  state.portalEntryQueued = false;
   state.portalZoomHinted = false;
   updatePortalProgressHalo();
   const view = state.views[destination];
@@ -397,6 +417,7 @@ function finishNavigation(destination) {
   updateSpaceInteractivity();
   updateDepthNavigation();
   $('#back-space').disabled = false;
+  document.documentElement.classList.remove('is-space-transitioning');
   $('.space-caption').classList.remove('is-transitioning');
   showToast(destination === 'project' ? 'Entered Website redesign' : 'Returned to Loose thoughts');
 }
@@ -513,31 +534,76 @@ function addPortalHalo() {
   portalHalo.position.copy(portal?.userData.basePosition || new THREE.Vector3(0.05, 0.65, -6.2));
   portalHalo.position.z -= 0.12;
 
+  const progressSegments = 128;
+  const progressGeometry = new THREE.RingGeometry(2.08, 2.25, progressSegments, 1, Math.PI / 2, -Math.PI * 2);
+  const arcProgress = new Float32Array(progressGeometry.attributes.position.count);
+  for (let index = 0; index < arcProgress.length; index += 1) {
+    arcProgress[index] = (index % (progressSegments + 1)) / progressSegments;
+  }
+  progressGeometry.setAttribute('arcProgress', new THREE.BufferAttribute(arcProgress, 1));
+
   portalProgressHalo = new THREE.Mesh(
-    new THREE.RingGeometry(2.08, 2.25, 96, 1, -Math.PI / 2, 0.001),
-    new THREE.MeshBasicMaterial({
-      color: 0xd8ff7a, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false,
+    progressGeometry,
+    new THREE.ShaderMaterial({
+      uniforms: {
+        uProgress: { value: 0 },
+        uOpacity: { value: 0 },
+      },
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      vertexShader: `
+        attribute float arcProgress;
+        varying float vArc;
+        void main() {
+          vArc = arcProgress;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float uProgress;
+        uniform float uOpacity;
+        varying float vArc;
+        void main() {
+          if (vArc > uProgress) discard;
+          vec3 colour = vec3(0.84, 1.0, 0.48);
+          gl_FragColor = vec4(colour, uOpacity * 0.94);
+        }
+      `,
     }),
   );
   portalProgressHalo.name = 'portal-progress';
   portalProgressHalo.position.z = 0.018;
   portalProgressHalo.renderOrder = 8;
   portalHalo.add(portalProgressHalo);
+
+  const capGeometry = new THREE.CircleGeometry(0.085, 24);
+  const capMaterial = new THREE.MeshBasicMaterial({
+    color: 0xe2ff91, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false,
+  });
+  portalProgressCap = new THREE.Mesh(capGeometry, capMaterial);
+  portalProgressCap.name = 'portal-progress-cap';
+  portalProgressCap.position.z = 0.02;
+  portalProgressCap.renderOrder = 9;
+  portalProgressStartCap = new THREE.Mesh(capGeometry.clone(), capMaterial.clone());
+  portalProgressStartCap.name = 'portal-progress-start-cap';
+  portalProgressStartCap.position.set(0, 2.165, 0.02);
+  portalProgressStartCap.renderOrder = 9;
+  portalHalo.add(portalProgressStartCap, portalProgressCap);
   roots.root.add(portalHalo);
 }
 
 function updatePortalProgressHalo() {
   if (!portalProgressHalo) return;
-  portalProgressHalo.geometry.dispose();
-  portalProgressHalo.geometry = new THREE.RingGeometry(
-    2.08,
-    2.25,
-    96,
-    1,
-    -Math.PI / 2,
-    Math.max(0.001, state.portalZoomProgress * Math.PI * 2),
-  );
-  portalProgressHalo.material.opacity = state.portalZoomProgress > 0 ? 0.94 : 0;
+  const active = state.portalZoomProgress > 0;
+  $('.depth-nav').classList.toggle('has-portal-intent', active);
+  if (active && state.space === 'root') {
+    $('#depth-readout').textContent = state.portalEntryQueued
+      ? 'Entering…'
+      : `Portal ${Math.round(state.portalZoomProgress * 100)}%`;
+  } else {
+    updateDepthNavigation();
+  }
 }
 
 function addPortalPreview() {
@@ -633,6 +699,7 @@ function updateDepthNavigation(spaceId = state.space) {
 function focusLayer(layerId) {
   if (state.transitioning) return;
   state.portalZoomProgress = 0;
+  state.portalEntryQueued = false;
   state.portalZoomHinted = false;
   updatePortalProgressHalo();
   if (layerId === 'overview') {
@@ -699,6 +766,7 @@ function updateViewTween(time) {
 function markFreeNavigation() {
   state.viewTween = null;
   state.portalZoomProgress = 0;
+  state.portalEntryQueued = false;
   state.portalZoomHinted = false;
   updatePortalProgressHalo();
   if (state.activeNavigation !== 'free') {
@@ -731,10 +799,12 @@ function bindUi() {
     event.preventDefault();
     const delta = event.deltaY * (event.deltaMode === 1 ? 16 : 1);
     const hoveredCard = getCardAtScreenPoint(event.clientX, event.clientY);
-    const zoomingIntoPortal = state.space === 'root' && hoveredCard?.userData.portal && delta < 0;
+    const portalTarget = state.space === 'root' && delta < 0
+      ? getPortalIntentTarget(event.clientX, event.clientY, hoveredCard)
+      : null;
 
-    if (zoomingIntoPortal) {
-      zoomTowardPortal(hoveredCard, event, delta);
+    if (portalTarget) {
+      zoomTowardPortal(portalTarget, event, delta);
     } else {
       state.portalZoomProgress = clamp(state.portalZoomProgress - Math.abs(delta) / 520, 0, 1);
       markFreeNavigation();
@@ -817,6 +887,19 @@ function getCardAtScreenPoint(clientX, clientY) {
     }) || null;
 }
 
+function getPortalIntentTarget(clientX, clientY, hoveredCard) {
+  if (hoveredCard?.userData.portal) return hoveredCard;
+  if (state.portalZoomProgress <= 0) return null;
+  const portal = cardMeshes.find((card) => card.userData.id === 'portal');
+  if (!portal) return null;
+  const rect = portal.userData.element.getBoundingClientRect();
+  const marginX = rect.width * 0.28;
+  const marginY = rect.height * 0.38;
+  const withinIntentField = clientX >= rect.left - marginX && clientX <= rect.right + marginX &&
+    clientY >= rect.top - marginY && clientY <= rect.bottom + marginY;
+  return withinIntentField ? portal : null;
+}
+
 function zoomAtCursor(clientX, clientY, delta) {
   const view = state.views[state.space];
   const nextZoom = clamp(view.zoom + delta * 0.006, -6.2, 8);
@@ -839,11 +922,13 @@ function zoomAtCursor(clientX, clientY, delta) {
 }
 
 function zoomTowardPortal(portal, event, delta) {
+  if (state.portalEntryQueued) return;
   const view = state.views.root;
   const lookBase = spaces.root.look;
-  const strength = clamp(-delta / 430, 0.035, 0.26);
+  const guidedDelta = -clamp(-delta, 1, 120);
+  const strength = clamp(-guidedDelta / 430, 0.025, 0.22);
   view.depth = lerp(view.depth, portal.userData.basePosition.z - lookBase.z, strength * 0.72);
-  zoomAtCursor(event.clientX, event.clientY, delta);
+  zoomAtCursor(event.clientX, event.clientY, guidedDelta);
 
   if (state.activeNavigation !== 'portal') {
     state.viewTween = null;
@@ -852,13 +937,18 @@ function zoomTowardPortal(portal, event, delta) {
   }
 
   const wasIdle = state.portalZoomProgress < 0.06;
-  state.portalZoomProgress = clamp(state.portalZoomProgress + (-delta / 420), 0, 1);
+  const intentStep = clamp(-guidedDelta / 420, 0.018, 0.28);
+  state.portalZoomProgress = clamp(state.portalZoomProgress + intentStep, 0, 1);
+  if (state.portalZoomProgress >= 1) {
+    state.portalZoomProgress = 1;
+    state.portalEntryQueued = true;
+  }
   updatePortalProgressHalo();
   if (wasIdle && !state.portalZoomHinted) {
     state.portalZoomHinted = true;
     showToast('Keep zooming to enter Website redesign');
   }
-  if (state.portalZoomProgress >= 1) navigateSpace('project');
+  if (state.portalEntryQueued) showToast('Entering Website redesign');
 }
 
 function handlePointerMove(event) {
@@ -1014,6 +1104,34 @@ function updateNavigationVisibility() {
   }
 }
 
+function updatePortalVisual() {
+  if (!portalProgressHalo) return;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const smoothing = state.portalZoomProgress > state.portalZoomVisual ? 0.18 : 0.11;
+  state.portalZoomVisual = reducedMotion
+    ? state.portalZoomProgress
+    : lerp(state.portalZoomVisual, state.portalZoomProgress, smoothing);
+  if (Math.abs(state.portalZoomVisual - state.portalZoomProgress) < 0.001) {
+    state.portalZoomVisual = state.portalZoomProgress;
+  }
+
+  const transitionRaw = state.transition?.progress || 0;
+  const transitionFade = state.transition?.entering ? 1 - smoothstep(0.58, 0.88, transitionRaw) : 1;
+  const spaceFactor = state.space === 'root' || state.transition?.entering ? 1 : 0;
+  const progress = clamp(state.portalZoomVisual, 0, 1);
+  const opacity = smoothstep(0.01, 0.12, state.portalZoomVisual) * 0.96 * transitionFade * spaceFactor;
+  portalProgressHalo.material.uniforms.uProgress.value = progress;
+  portalProgressHalo.material.uniforms.uOpacity.value = opacity;
+  const capAngle = Math.PI / 2 - progress * Math.PI * 2;
+  portalProgressCap.position.set(Math.cos(capAngle) * 2.165, Math.sin(capAngle) * 2.165, 0.02);
+  portalProgressCap.material.opacity = opacity;
+  portalProgressStartCap.material.opacity = opacity;
+
+  if (state.portalEntryQueued && !state.transition && state.portalZoomVisual >= 0.965) {
+    navigateSpace('project');
+  }
+}
+
 function render(time) {
   try {
     renderFrame(time);
@@ -1044,13 +1162,20 @@ function renderFrame(time) {
     card.scale.y = lerp(card.scale.y, targetScaleY, 0.09);
   }
   updateConnections();
+  updatePortalVisual();
 
   if (portalHalo) {
-    portalHalo.rotation.z = time * 0.000035 + state.portalZoomProgress * 0.08;
-    const pulse = 1 + Math.sin(time * 0.0012) * 0.015;
-    portalHalo.scale.setScalar(pulse * (1 + state.portalZoomProgress * 0.16));
+    const transitionRaw = state.transition?.progress || 0;
+    const transitionExpand = state.transition?.entering
+      ? 1 + easeOutCubic(clamp((transitionRaw - 0.08) / 0.68, 0, 1)) * 0.18
+      : 1;
+    const hoverLift = state.portalHover && !state.transition ? 0.035 : 0;
+    portalHalo.rotation.z = time * 0.000035 + state.portalZoomVisual * 0.08;
+    const pulse = 1 + Math.sin(time * 0.0012) * (0.015 + hoverLift * 0.3);
+    portalHalo.scale.setScalar(pulse * (1 + state.portalZoomVisual * 0.16 + hoverLift) * transitionExpand);
     if (!state.transition && state.space === 'root') {
-      portalHalo.material.opacity = Math.max(portalHalo.material.opacity, 0.22 + state.portalZoomProgress * 0.56);
+      const hoverOpacity = state.portalHover ? 0.34 : 0.22;
+      portalHalo.material.opacity = Math.max(portalHalo.material.opacity, hoverOpacity + state.portalZoomVisual * 0.56);
     }
   }
 
@@ -1088,6 +1213,7 @@ function getViewLook(spaceId) {
 function updateTransition(time) {
   const transition = state.transition;
   const raw = clamp((time - transition.start) / transition.duration, 0, 1);
+  transition.progress = raw;
   const t = easeInOutQuint(raw);
   const destinationCamera = getViewCamera(transition.to);
   const destinationLook = getViewLook(transition.to);
@@ -1108,9 +1234,15 @@ function updateTransition(time) {
     camera.position.z = raw < 0.32
       ? lerp(transition.fromPosition.z, approachZ, focusEase)
       : lerp(approachZ, destinationCamera.z, diveEase);
-    state.cameraLook.x = lerp(transition.fromLook.x, destinationLook.x, t);
-    state.cameraLook.y = lerp(transition.fromLook.y, destinationLook.y, t);
-    state.cameraLook.z = lerp(transition.fromLook.z, destinationLook.z, diveEase);
+    state.cameraLook.x = raw < 0.32
+      ? lerp(transition.fromLook.x, portal.x, focusEase)
+      : lerp(portal.x, destinationLook.x, diveEase);
+    state.cameraLook.y = raw < 0.32
+      ? lerp(transition.fromLook.y, portal.y, focusEase)
+      : lerp(portal.y, destinationLook.y, diveEase);
+    state.cameraLook.z = raw < 0.32
+      ? lerp(transition.fromLook.z, portal.z, focusEase)
+      : lerp(portal.z, destinationLook.z, diveEase);
   } else {
     camera.position.lerpVectors(transition.fromPosition, destinationCamera, t);
     state.cameraLook.lerpVectors(transition.fromLook, destinationLook, t);

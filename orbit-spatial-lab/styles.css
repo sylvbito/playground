@@ -209,6 +209,12 @@ html.is-card-dragging, html.is-card-dragging * { cursor: grabbing !important; }
   box-shadow: 0 1rem 3rem rgba(0,0,0,.2);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  transition: opacity 220ms ease, filter 320ms ease, border-color 220ms ease, box-shadow 320ms ease;
+}
+
+.depth-nav.has-portal-intent {
+  border-color: rgba(217,255,121,.24);
+  box-shadow: 0 1rem 3rem rgba(0,0,0,.2), 0 0 0 1px rgba(217,255,121,.045), 0 0 2.4rem rgba(174,224,115,.08);
 }
 
 .depth-nav header {
@@ -283,6 +289,8 @@ html.is-card-dragging, html.is-card-dragging * { cursor: grabbing !important; }
   letter-spacing: 0.08em;
   text-transform: uppercase;
   pointer-events: none;
+  white-space: nowrap;
+  transition: opacity 180ms ease, filter 280ms ease;
 }
 
 .mouse-glyph {
@@ -312,6 +320,15 @@ html.is-card-dragging, html.is-card-dragging * { cursor: grabbing !important; }
   backdrop-filter: blur(14px);
   color: rgba(238, 241, 233, 0.5);
   font: 400 0.59rem/1 var(--mono);
+  transition: opacity 180ms ease, filter 280ms ease, border-color 160ms ease;
+}
+
+.is-space-transitioning .depth-nav,
+.is-space-transitioning .gesture-hint,
+.is-space-transitioning .api-state {
+  opacity: 0;
+  filter: blur(4px);
+  pointer-events: none;
 }
 
 .api-state.native { color: rgba(217, 255, 121, 0.72); border-color: rgba(217, 255, 121, 0.17); }
@@ -452,6 +469,13 @@ html.is-card-dragging, html.is-card-dragging * { cursor: grabbing !important; }
 .card-footer { min-height: 24px; display: flex; align-items: end; gap: 7px; }
 
 .spatial-card[data-tone="green"] { background: #dff0d9; border-color: rgba(50, 91, 49, 0.22); }
+.spatial-card[data-id="portal"] {
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+.spatial-card[data-id="portal"]:hover {
+  background: #e5f5de;
+  border-color: rgba(68, 111, 55, 0.38);
+}
 .spatial-card[data-tone="blue"] { background: #dcebf0; border-color: rgba(42, 73, 84, 0.18); }
 .spatial-card[data-tone="warm"] { background: #efe6d8; border-color: rgba(94, 68, 41, 0.16); }
 .spatial-card[data-tone="dark"] { background: #222820; border-color: rgba(217,255,121,.2); color: #eff4e9; }
@@ -484,7 +508,8 @@ html.is-card-dragging, html.is-card-dragging * { cursor: grabbing !important; }
   cursor: pointer;
 }
 .space-action { background: #1e291a; border-color: #1e291a; color: #e7ffad; }
-.space-action:hover, .space-action:focus-visible { background: #314329; }
+.space-action { transition: background 160ms ease, transform 180ms cubic-bezier(.2,.8,.2,1); }
+.space-action:hover, .space-action:focus-visible { background: #314329; transform: translateX(2px); }
 .edit-action:hover, .edit-action:focus-visible { background: rgba(255,255,255,.72); }
 
 .card-editor {
