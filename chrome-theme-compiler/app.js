@@ -158,17 +158,15 @@ $('#contrastRange').addEventListener('input', event => {
   queuePersist(); render();
 });
 
-$('#editorTheme').addEventListener('change', event => {
-  settings[codeKey(editVariant)] = event.currentTarget.value;
-  queuePersist(); render();
-});
-
-$('#seedChrome').addEventListener('click', async () => {
-  const seed = await loadChromeThemeSeed(settings[codeKey(editVariant)]);
-  const theme = currentTheme();
+$('#editorTheme').addEventListener('change', async event => {
+  const variant = editVariant;
+  const themeId = event.currentTarget.value;
+  settings[codeKey(variant)] = themeId;
+  const seed = await loadChromeThemeSeed(themeId);
+  const theme = settings[themeKey(variant)];
   Object.assign(theme, { accent: seed.accent, surface: seed.surface, ink: seed.ink });
   Object.assign(theme.semanticColors, seed.semanticColors);
-  queuePersist(); await render(); notify('Chrome seeded from editor');
+  queuePersist(); await render(); notify(`${variant === 'dark' ? 'Dark' : 'Light'} preset applied`);
 });
 
 $('#uiFontSize').addEventListener('change', event => { settings.sansFontSize = Number(event.currentTarget.value); queuePersist(); render(); });
