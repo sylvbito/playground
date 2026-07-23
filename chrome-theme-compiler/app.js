@@ -1,11 +1,11 @@
-import { DEFAULT_SETTINGS } from './theme/defaults.js?v=compiler-5';
+import { DEFAULT_SETTINGS } from './theme/defaults.js?v=compiler-6';
 import { normaliseSettings, isHex } from './theme/schema.js?v=compiler-5';
-import { deriveSemanticTokens, TOKEN_GROUPS } from './theme/derive-tokens.js?v=compiler-4';
+import { deriveSemanticTokens, TOKEN_GROUPS } from './theme/derive-tokens.js?v=compiler-5';
 import { applyAppearance, applyPlatformAppearance } from './theme/apply-css.js?v=compiler-4';
-import { PRESET_FAMILIES, VALID_PRESET_IDS, compileEditorPalette, compilePalette, paletteForPreset, presetOptions } from './theme/editor-themes.js?v=compiler-6';
+import { PRESET_FAMILIES, VALID_PRESET_IDS, compileEditorPalette, compilePalette, paletteForPreset, presetOptions } from './theme/editor-themes.js?v=compiler-7';
 import { getSystemVariant, subscribeSystemVariant } from './theme/system-theme.js';
 import { createSettingsStore } from './theme/persistence.js';
-import { exportTheme, importTheme } from './theme/sharing.js?v=compiler-5';
+import { exportTheme, importTheme } from './theme/sharing.js?v=compiler-6';
 
 const clone = value => structuredClone(value);
 const store = createSettingsStore();

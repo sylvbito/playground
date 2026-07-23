@@ -29,22 +29,26 @@ export function compilePalette(palette, variant, contrast = 55, colourUsage = 65
   if (!['light', 'dark'].includes(variant)) return null;
   const dark = variant === 'dark';
   const usage = clamp(colourUsage, 0, 100) / 100;
+  const injection = usage ** 1.55;
   const strength = clamp(contrast, 0, 100) / 100;
   const atmosphere = rgbToOklch(palette.atmosphere);
   const accent = rgbToOklch(palette.accent);
   const gravity = clamp((atmosphere.l - 0.5) * 2, -1, 1) * (atmosphere.c < 0.018 ? 1 : 0.28);
   const surfaceLightness = dark
     ? 0.145 + usage * 0.075 + gravity * 0.05
-    : 0.99 - usage * 0.03 + gravity * 0.012;
-  const surfaceChroma = dark ? 0.03 + usage * 0.58 : 0.01 + usage * 0.24;
+    : 0.99 - injection * 0.078 + gravity * (0.012 + injection * 0.02);
+  const surfaceChroma = dark ? 0.03 + usage * 0.58 : 0.01 + injection * 0.72;
   const inkLightness = dark ? 0.84 + strength * 0.12 : 0.26 - strength * 0.18;
   const accentLightness = dark
     ? clamp(accent.l, 0.68, 0.9)
     : clamp(accent.l, 0.52, 0.82);
   const derivedAccent = tone(palette.accent, accentLightness, 0.62 + usage * 0.5);
+  const atmosphereSurface = tone(palette.atmosphere, surfaceLightness, surfaceChroma);
+  const accentWash = tone(palette.accent, 0.92 - injection * 0.055, 0.25 + injection * 0.58);
+  const surface = dark ? atmosphereSurface : mix(atmosphereSurface, accentWash, injection * 0.11);
   return {
     accent: derivedAccent,
-    surface: tone(palette.atmosphere, surfaceLightness, surfaceChroma),
+    surface,
     ink: tone(palette.atmosphere, inkLightness, 0.08 + usage * 0.16),
     contrast: clamp(Math.round(contrast), 0, 100),
     colourUsage: clamp(Math.round(colourUsage), 0, 100),

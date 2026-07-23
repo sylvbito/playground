@@ -6,6 +6,7 @@ export function deriveSemanticTokens(theme, variant) {
   const dark = variant === 'dark';
   const strength = theme.contrast / 100;
   const colourUsage = (theme.colourUsage ?? 50) / 100;
+  const injection = colourUsage ** 1.55;
   const { surface, ink, accent, semanticColors } = theme;
   const primaryTextTarget = interpolate(4.5, 7, strength);
   const primary = readableForeground(ink, surface, primaryTextTarget);
@@ -15,17 +16,22 @@ export function deriveSemanticTokens(theme, variant) {
   const onAccent = bestInk(accent);
   const elevatedMix = dark ? interpolate(0.055, 0.11, strength) : interpolate(0.012, 0.038, strength);
   const controlMix = interpolate(0.045, 0.12, strength);
+  const elevated = mix(mix(surface, ink, elevatedMix), accent, dark ? 0 : injection * 0.055);
+  const elevatedSecondary = mix(mix(surface, ink, elevatedMix * 1.65), accent, dark ? 0 : injection * 0.075);
+  const control = mix(mix(surface, ink, controlMix), accent, dark ? 0 : injection * 0.085);
+  const controlHover = mix(mix(surface, ink, controlMix + interpolate(0.025, 0.055, strength)), accent, dark ? 0 : injection * 0.11);
+  const controlActive = mix(mix(surface, ink, controlMix + interpolate(0.06, 0.11, strength)), accent, dark ? 0 : injection * 0.135);
 
   return {
     '--color-background-surface': surface,
     '--color-background-surface-under': mix(surface, dark ? '#000000' : ink, interpolate(0.035, 0.075, strength)),
-    '--color-background-elevated-primary': mix(surface, ink, elevatedMix),
-    '--color-background-elevated-secondary': mix(surface, ink, elevatedMix * 1.65),
-    '--color-background-control': mix(surface, ink, controlMix),
-    '--color-background-control-hover': mix(surface, ink, controlMix + interpolate(0.025, 0.055, strength)),
-    '--color-background-control-active': mix(surface, ink, controlMix + interpolate(0.06, 0.11, strength)),
+    '--color-background-elevated-primary': elevated,
+    '--color-background-elevated-secondary': elevatedSecondary,
+    '--color-background-control': control,
+    '--color-background-control-hover': controlHover,
+    '--color-background-control-active': controlActive,
     '--color-background-accent': accent,
-    '--color-background-accent-soft': mix(accent, surface, dark ? interpolate(0.92, 0.7, colourUsage) : interpolate(0.96, 0.82, colourUsage)),
+    '--color-background-accent-soft': mix(accent, surface, dark ? interpolate(0.92, 0.7, colourUsage) : interpolate(0.97, 0.64, injection)),
     '--color-border-light': mix(surface, ink, interpolate(0.08, 0.15, strength)),
     '--color-border-normal': mix(surface, ink, interpolate(0.14, 0.27, strength)),
     '--color-border-heavy': mix(surface, ink, interpolate(0.25, 0.43, strength)),
