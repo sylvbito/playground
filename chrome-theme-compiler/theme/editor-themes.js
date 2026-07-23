@@ -29,23 +29,25 @@ export function compilePalette(palette, variant, contrast = 55, colourUsage = 65
   if (!['light', 'dark'].includes(variant)) return null;
   const dark = variant === 'dark';
   const usage = clamp(colourUsage, 0, 100) / 100;
-  const injection = usage ** 1.55;
+  // Near-white OKLCH has very little usable gamut. Keep the restrained end pale,
+  // then lower Light's tonal ceiling sharply enough for chroma to survive at Full.
+  const injection = usage ** 2.2;
   const strength = clamp(contrast, 0, 100) / 100;
   const atmosphere = rgbToOklch(palette.atmosphere);
   const accent = rgbToOklch(palette.accent);
   const gravity = clamp((atmosphere.l - 0.5) * 2, -1, 1) * (atmosphere.c < 0.018 ? 1 : 0.28);
   const surfaceLightness = dark
     ? 0.145 + usage * 0.075 + gravity * 0.05
-    : 0.99 - injection * 0.078 + gravity * (0.012 + injection * 0.02);
-  const surfaceChroma = dark ? 0.03 + usage * 0.58 : 0.01 + injection * 0.72;
+    : 0.99 - injection * 0.15 + gravity * (0.012 + injection * 0.026);
+  const surfaceChroma = dark ? 0.03 + usage * 0.58 : 0.01 + injection * 1.22;
   const inkLightness = dark ? 0.84 + strength * 0.12 : 0.26 - strength * 0.18;
   const accentLightness = dark
     ? clamp(accent.l, 0.68, 0.9)
     : clamp(accent.l, 0.52, 0.82);
   const derivedAccent = tone(palette.accent, accentLightness, 0.62 + usage * 0.5);
   const atmosphereSurface = tone(palette.atmosphere, surfaceLightness, surfaceChroma);
-  const accentWash = tone(palette.accent, 0.92 - injection * 0.055, 0.25 + injection * 0.58);
-  const surface = dark ? atmosphereSurface : mix(atmosphereSurface, accentWash, injection * 0.11);
+  const accentWash = tone(palette.accent, 0.93 - injection * 0.13, 0.3 + injection);
+  const surface = dark ? atmosphereSurface : mix(atmosphereSurface, accentWash, injection * 0.14);
   return {
     accent: derivedAccent,
     surface,

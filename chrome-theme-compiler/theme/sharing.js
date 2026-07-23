@@ -1,6 +1,6 @@
-import { DEFAULT_SETTINGS } from './defaults.js?v=compiler-6';
+import { DEFAULT_SETTINGS } from './defaults.js?v=compiler-7';
 import { normalisePalette, normaliseSettings } from './schema.js?v=compiler-5';
-import { VALID_PRESET_IDS, paletteForPreset } from './editor-themes.js?v=compiler-7';
+import { VALID_PRESET_IDS, paletteForPreset } from './editor-themes.js?v=compiler-8';
 
 const PREFIX = 'orbit-theme-v2:';
 const LEGACY_PREFIX = 'orbit-theme-v1:';

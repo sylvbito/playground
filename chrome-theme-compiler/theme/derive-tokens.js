@@ -6,18 +6,23 @@ export function deriveSemanticTokens(theme, variant) {
   const dark = variant === 'dark';
   const strength = theme.contrast / 100;
   const colourUsage = (theme.colourUsage ?? 50) / 100;
-  const injection = colourUsage ** 1.55;
+  const injection = colourUsage ** 2.2;
   const { surface, ink, accent, semanticColors } = theme;
   const primaryTextTarget = interpolate(4.5, 7, strength);
   const primary = readableForeground(ink, surface, primaryTextTarget);
   const secondary = readableForeground(mix(primary, surface, interpolate(0.31, 0.20, strength)), surface, interpolate(4.5, 5.5, strength));
   const tertiary = readableForeground(mix(primary, surface, interpolate(0.48, 0.34, strength)), surface, 4.5);
   const accentText = readableForeground(accent, surface, 4.5);
+  const focusAccent = readableForeground(accent, surface, 3);
   const onAccent = bestInk(accent);
   const elevatedMix = dark ? interpolate(0.055, 0.11, strength) : interpolate(0.012, 0.038, strength);
   const controlMix = interpolate(0.045, 0.12, strength);
-  const elevated = mix(mix(surface, ink, elevatedMix), accent, dark ? 0 : injection * 0.055);
-  const elevatedSecondary = mix(mix(surface, ink, elevatedMix * 1.65), accent, dark ? 0 : injection * 0.075);
+  const elevated = dark
+    ? mix(surface, ink, elevatedMix)
+    : mix(surface, '#FFFFFF', 0.04 + injection * 0.14);
+  const elevatedSecondary = dark
+    ? mix(surface, ink, elevatedMix * 1.65)
+    : mix(surface, '#FFFFFF', 0.02 + injection * 0.08);
   const control = mix(mix(surface, ink, controlMix), accent, dark ? 0 : injection * 0.085);
   const controlHover = mix(mix(surface, ink, controlMix + interpolate(0.025, 0.055, strength)), accent, dark ? 0 : injection * 0.11);
   const controlActive = mix(mix(surface, ink, controlMix + interpolate(0.06, 0.11, strength)), accent, dark ? 0 : injection * 0.135);
@@ -35,7 +40,7 @@ export function deriveSemanticTokens(theme, variant) {
     '--color-border-light': mix(surface, ink, interpolate(0.08, 0.15, strength)),
     '--color-border-normal': mix(surface, ink, interpolate(0.14, 0.27, strength)),
     '--color-border-heavy': mix(surface, ink, interpolate(0.25, 0.43, strength)),
-    '--color-border-focus': accent,
+    '--color-border-focus': focusAccent,
     '--color-text-primary': primary,
     '--color-text-secondary': secondary,
     '--color-text-tertiary': tertiary,
