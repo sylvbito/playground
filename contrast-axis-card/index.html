@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A one-colour weather card using CSS relative colour and contrast-color().">
+  <meta name="description" content="A one-colour weather card with ratio-driven text colours calculated by a CSS custom function.">
   <title>Contrast Axis Card</title>
   <style>
     @property --color-base {
@@ -12,20 +12,52 @@
       initial-value: #ededea;
     }
 
+    @function --contrast-ink(--base <color>, --ratio <number>) returns <color> {
+      /* Relative luminance of the base in linear sRGB. */
+      --y: calc(0.2126 * r + 0.7152 * g + 0.0722 * b);
+
+      /* Black wins above the WCAG black/white crossover; white wins below it. */
+      --toward-black: clamp(0, sign(var(--y) - 0.179128784748), 1);
+
+      /* Solve the WCAG contrast equation in either direction, clamped to gamut. */
+      --target-dark: clamp(0, (var(--y) + 0.05) / var(--ratio) - 0.05, 1);
+      --target-light: clamp(0, var(--ratio) * (var(--y) + 0.05) - 0.05, 1);
+      --target: calc(
+        var(--toward-black) * var(--target-dark) +
+        (1 - var(--toward-black)) * var(--target-light)
+      );
+
+      /* Move the original linear RGB channels only as far as the target requires. */
+      --pole: calc(1 - var(--toward-black));
+      --mix: calc((var(--target) - var(--y)) / (var(--pole) - var(--y)));
+
+      result: color(
+        from var(--base) srgb-linear
+        calc(r + var(--mix) * (var(--pole) - r))
+        calc(g + var(--mix) * (var(--pole) - g))
+        calc(b + var(--mix) * (var(--pole) - b))
+      );
+    }
+
+    @function --css-functions-supported() {
+      result: supported;
+    }
+
     :root {
       --color-base: #ededea;
-      --contrast-low: 38%;
-      --contrast-high: 78%;
+      --contrast-low: 3;
+      --contrast-high: 7;
+      --css-functions: --css-functions-supported();
 
       /* Fallback first; modern browsers replace it with the correct pole. */
       --color-contrast-pole: #111111;
       --color-contrast-pole: contrast-color(var(--color-base));
 
-      /* Every visible colour is a position between base and contrast pole. */
+      /* Unsupported @function browsers retain these normal contrast-color() fallbacks. */
       --color-page: color-mix(in oklch, var(--color-contrast-pole) 94%, var(--color-base));
       --color-card: var(--color-base);
-      --color-text-low: color-mix(in oklch, var(--color-contrast-pole) var(--contrast-low), var(--color-base));
-      --color-text-high: color-mix(in oklch, var(--color-contrast-pole) var(--contrast-high), var(--color-base));
+      --color-text-low: contrast-color(var(--color-base));
+      --color-text-high: contrast-color(var(--color-base));
       --color-control: color-mix(in oklch, var(--color-contrast-pole) 8%, var(--color-base));
       --color-control-line: color-mix(in oklch, var(--color-contrast-pole) 18%, var(--color-base));
       --color-accent: oklch(
@@ -217,6 +249,34 @@
       outline-offset: 3px;
     }
 
+    /*
+     * Unsupported browsers compute --css-functions as empty, so this style query
+     * does not match and the contrast-color() declarations above remain active.
+     */
+    @container style(--css-functions: supported) {
+      .location {
+        color: --contrast-ink(var(--color-base), var(--contrast-low));
+      }
+
+      .temperature,
+      .controls {
+        color: --contrast-ink(var(--color-base), var(--contrast-high));
+      }
+
+      .base-control output,
+      .range-head output {
+        color: --contrast-ink(var(--color-base), var(--contrast-low));
+      }
+
+      input[type="range"] {
+        accent-color: --contrast-ink(var(--color-base), var(--contrast-high));
+      }
+
+      input:focus-visible {
+        outline-color: --contrast-ink(var(--color-base), var(--contrast-high));
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         transition-duration: 0.01ms !important;
@@ -245,17 +305,17 @@
         <div class="range-control">
           <div class="range-head">
             <label for="lowContrast">Low</label>
-            <output id="lowValue" for="lowContrast">38%</output>
+            <output id="lowValue" for="lowContrast">3.0:1</output>
           </div>
-          <input id="lowContrast" type="range" min="0" max="100" value="38" aria-label="Low text contrast">
+          <input id="lowContrast" type="range" min="1" max="21" step="0.1" value="3" aria-label="Low text contrast ratio">
         </div>
 
         <div class="range-control">
           <div class="range-head">
             <label for="highContrast">High</label>
-            <output id="highValue" for="highContrast">78%</output>
+            <output id="highValue" for="highContrast">7.0:1</output>
           </div>
-          <input id="highContrast" type="range" min="0" max="100" value="78" aria-label="High text contrast">
+          <input id="highContrast" type="range" min="1" max="21" step="0.1" value="7" aria-label="High text contrast ratio">
         </div>
       </div>
     </div>
@@ -279,8 +339,8 @@
       const output = document.querySelector(outputSelector);
 
       input.addEventListener('input', () => {
-        document.documentElement.style.setProperty(property, `${input.value}%`);
-        output.textContent = `${input.value}%`;
+        document.documentElement.style.setProperty(property, input.value);
+        output.textContent = `${Number(input.value).toFixed(1)}:1`;
       });
     });
   </script>
