@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A one-colour weather card using CSS relative colour and contrast-color().">
+  <title>Contrast Axis Card</title>
+  <style>
+    @property --color-base {
+      syntax: "<color>";
+      inherits: true;
+      initial-value: #ededea;
+    }
+
+    :root {
+      --color-base: #ededea;
+
+      /* Fallback first; modern browsers replace it with the correct pole. */
+      --color-contrast-pole: #111111;
+      --color-contrast-pole: contrast-color(var(--color-base));
+
+      /* Every visible colour is a position between base and contrast pole. */
+      --color-page: color-mix(in oklch, var(--color-contrast-pole) 94%, var(--color-base));
+      --color-card: var(--color-base);
+      --color-text-low: color-mix(in oklch, var(--color-contrast-pole) 38%, var(--color-base));
+      --color-text-high: color-mix(in oklch, var(--color-contrast-pole) 78%, var(--color-base));
+      --color-control: color-mix(in oklch, var(--color-contrast-pole) 8%, var(--color-base));
+      --color-control-line: color-mix(in oklch, var(--color-contrast-pole) 18%, var(--color-base));
+
+      color-scheme: light dark;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      background: var(--color-page);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100svh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: var(--color-page);
+      transition: background-color 180ms ease;
+    }
+
+    main {
+      display: grid;
+      justify-items: center;
+      gap: 18px;
+    }
+
+    .weather-card {
+      width: min(354px, calc(100vw - 48px));
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 31px 30px 27px;
+      overflow: hidden;
+      border-radius: 44px;
+      background: var(--color-card);
+      box-shadow: 0 16px 50px color-mix(in oklch, var(--color-contrast-pole) 13%, transparent);
+      transition: background-color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .location,
+    .temperature {
+      margin: 0;
+      color: inherit;
+      letter-spacing: -0.035em;
+      transition: color 180ms ease;
+    }
+
+    .location {
+      color: var(--color-text-low);
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .temperature {
+      color: var(--color-text-high);
+      font-size: clamp(62px, 20vw, 76px);
+      font-weight: 500;
+      line-height: 0.88;
+      letter-spacing: -0.065em;
+    }
+
+    .temperature sup {
+      position: relative;
+      top: -0.08em;
+      font-size: 0.48em;
+      letter-spacing: -0.04em;
+      vertical-align: top;
+    }
+
+    .colour-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 44px;
+      padding: 6px 13px 6px 7px;
+      border: 1px solid var(--color-control-line);
+      border-radius: 14px;
+      color: var(--color-text-high);
+      background: var(--color-control);
+      box-shadow: 0 8px 26px color-mix(in oklch, var(--color-contrast-pole) 10%, transparent);
+      transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease;
+    }
+
+    .colour-control label {
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .colour-control output {
+      min-width: 62px;
+      color: var(--color-text-low);
+      font: 500 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      text-transform: uppercase;
+    }
+
+    input[type="color"] {
+      width: 32px;
+      height: 32px;
+      margin: 0;
+      padding: 3px;
+      border: 1px solid var(--color-control-line);
+      border-radius: 10px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    input[type="color"]::-webkit-color-swatch {
+      border: 0;
+      border-radius: 6px;
+    }
+
+    input[type="color"]::-moz-color-swatch {
+      border: 0;
+      border-radius: 6px;
+    }
+
+    input[type="color"]:focus-visible {
+      outline: 2px solid var(--color-text-high);
+      outline-offset: 3px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <article class="weather-card" aria-label="Melbourne weather, 32 degrees Celsius">
+      <p class="location">Melbourne</p>
+      <p class="temperature">32<sup>°C</sup></p>
+    </article>
+
+    <div class="colour-control">
+      <input id="baseColour" type="color" value="#ededea" aria-label="Base colour">
+      <label for="baseColour">Base</label>
+      <output id="baseValue" for="baseColour">#EDEDEA</output>
+    </div>
+  </main>
+
+  <script>
+    const picker = document.querySelector('#baseColour');
+    const value = document.querySelector('#baseValue');
+
+    picker.addEventListener('input', () => {
+      document.documentElement.style.setProperty('--color-base', picker.value);
+      value.textContent = picker.value.toUpperCase();
+    });
+  </script>
+</body>
+</html>
