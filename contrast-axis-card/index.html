@@ -28,6 +28,12 @@
       --color-text-high: color-mix(in oklch, var(--color-contrast-pole) var(--contrast-high), var(--color-base));
       --color-control: color-mix(in oklch, var(--color-contrast-pole) 8%, var(--color-base));
       --color-control-line: color-mix(in oklch, var(--color-contrast-pole) 18%, var(--color-base));
+      --color-accent: oklch(
+        from var(--color-base)
+        clamp(0.58, calc(1 - l), 0.74)
+        clamp(0.14, calc(c * 1.35), 0.22)
+        calc(h + 180)
+      );
 
       color-scheme: light dark;
       font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
@@ -74,6 +80,23 @@
       color: inherit;
       letter-spacing: -0.035em;
       transition: color 180ms ease;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: var(--color-accent);
+      box-shadow: 0 0 0 5px color-mix(in oklch, var(--color-accent) 16%, transparent);
+      transition: background-color 180ms ease, box-shadow 180ms ease;
     }
 
     .location {
@@ -204,7 +227,10 @@
 <body>
   <main>
     <article class="weather-card" aria-label="Melbourne weather, 32 degrees Celsius">
-      <p class="location">Melbourne</p>
+      <div class="card-top">
+        <p class="location">Melbourne</p>
+        <span class="status-dot" role="img" aria-label="Status accent"></span>
+      </div>
       <p class="temperature">32<sup>°C</sup></p>
     </article>
 
