@@ -12,7 +12,11 @@
       initial-value: #ededea;
     }
 
-    @function --contrast-ink(--base <color>, --ratio <number>) returns <color> {
+    @function --contrast-ink(
+      --base <color>,
+      --ratio <number>,
+      --saturation <number>
+    ) returns <color> {
       /* Relative luminance of the base in linear sRGB. */
       --y: calc(0.2126 * r + 0.7152 * g + 0.0722 * b);
 
@@ -31,11 +35,17 @@
       --pole: calc(1 - var(--toward-black));
       --mix: calc((var(--target) - var(--y)) / (var(--pole) - var(--y)));
 
+      /* Saturate around the solved luminance, so contrast does not change. */
+      --solved-r: calc(r + var(--mix) * (var(--pole) - r));
+      --solved-g: calc(g + var(--mix) * (var(--pole) - g));
+      --solved-b: calc(b + var(--mix) * (var(--pole) - b));
+      --sat: clamp(0, var(--saturation), 1);
+
       result: color(
         from var(--base) srgb-linear
-        calc(r + var(--mix) * (var(--pole) - r))
-        calc(g + var(--mix) * (var(--pole) - g))
-        calc(b + var(--mix) * (var(--pole) - b))
+        calc(var(--target) + var(--sat) * (var(--solved-r) - var(--target)))
+        calc(var(--target) + var(--sat) * (var(--solved-g) - var(--target)))
+        calc(var(--target) + var(--sat) * (var(--solved-b) - var(--target)))
       );
     }
 
@@ -47,29 +57,42 @@
       --color-base: #ededea;
       --contrast-low: 3;
       --contrast-high: 7;
+      --surface-distance: 6%;
+      --accent-strength: 35;
+      --text-saturation: 65;
       --css-functions: --css-functions-supported();
 
       /* Fallback first; modern browsers replace it with the correct pole. */
       --color-contrast-pole: #111111;
       --color-contrast-pole: contrast-color(var(--color-base));
 
-      /* Unsupported @function browsers retain these normal contrast-color() fallbacks. */
-      --color-page: color-mix(in oklch, var(--color-contrast-pole) 94%, var(--color-base));
-      --color-card: var(--color-base);
+      /* Three surfaces around the selected base, independent of theme polarity. */
+      --color-surface-sunken:
+        color-mix(in oklch, black var(--surface-distance), var(--color-base));
+      --color-surface-base: var(--color-base);
+      --color-surface-raised:
+        color-mix(in oklch, white var(--surface-distance), var(--color-base));
+
+      /* Unsupported @function browsers retain normal contrast-color() text. */
       --color-text-low: contrast-color(var(--color-base));
       --color-text-high: contrast-color(var(--color-base));
-      --color-control: color-mix(in oklch, var(--color-contrast-pole) 8%, var(--color-base));
       --color-control-line: color-mix(in oklch, var(--color-contrast-pole) 18%, var(--color-base));
       --color-accent: oklch(
         from var(--color-base)
         clamp(0.58, calc(1 - l), 0.74)
-        clamp(0.14, calc(c * 1.35), 0.22)
+        clamp(0.02, calc(var(--accent-strength) * 0.004), 0.3)
         calc(h + 180)
       );
+      --color-accent-soft:
+        color-mix(in oklch, var(--color-accent) 18%, var(--color-surface-raised));
+      --color-control-hover:
+        color-mix(in oklch, var(--color-contrast-pole) 5%, var(--color-surface-raised));
+      --color-control-active:
+        color-mix(in oklch, var(--color-contrast-pole) 10%, var(--color-surface-raised));
 
       color-scheme: light dark;
       font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
-      background: var(--color-page);
+      background: var(--color-surface-sunken);
     }
 
     * {
@@ -82,7 +105,7 @@
       display: grid;
       place-items: center;
       padding: 24px;
-      background: var(--color-page);
+      background: var(--color-surface-sunken);
       transition: background-color 180ms ease;
     }
 
@@ -101,7 +124,7 @@
       padding: 31px 30px 27px;
       overflow: hidden;
       border-radius: 44px;
-      background: var(--color-card);
+      background: var(--color-surface-base);
       box-shadow: 0 16px 50px color-mix(in oklch, var(--color-contrast-pole) 13%, transparent);
       transition: background-color 180ms ease, box-shadow 180ms ease;
     }
@@ -161,8 +184,8 @@
       padding: 9px 12px 12px 9px;
       border: 1px solid var(--color-control-line);
       border-radius: 14px;
-      color: var(--color-text-high);
-      background: var(--color-control);
+      color: contrast-color(var(--color-surface-raised));
+      background: var(--color-surface-raised);
       box-shadow: 0 8px 26px color-mix(in oklch, var(--color-contrast-pole) 10%, transparent);
       transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease;
     }
@@ -182,16 +205,21 @@
 
     .base-control output {
       min-width: 62px;
-      color: var(--color-text-low);
+      color: contrast-color(var(--color-surface-raised));
       font: 500 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
       text-transform: uppercase;
     }
 
-    .contrast-controls {
+    .contrast-controls,
+    .character-controls {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 14px;
       padding-left: 3px;
+    }
+
+    .range-control--wide {
+      grid-column: 1 / -1;
     }
 
     .range-control {
@@ -207,7 +235,7 @@
     }
 
     .range-head output {
-      color: var(--color-text-low);
+      color: contrast-color(var(--color-surface-raised));
       font: 500 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
     }
 
@@ -215,7 +243,7 @@
       width: 100%;
       height: 14px;
       margin: 0;
-      accent-color: var(--color-text-high);
+      accent-color: contrast-color(var(--color-surface-raised));
       cursor: ew-resize;
     }
 
@@ -245,8 +273,43 @@
     }
 
     input:focus-visible {
-      outline: 2px solid var(--color-text-high);
+      outline: 2px solid contrast-color(var(--color-surface-raised));
       outline-offset: 3px;
+    }
+
+    .presets {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      padding-left: 3px;
+    }
+
+    .preset {
+      min-height: 30px;
+      padding: 0 8px;
+      border: 1px solid var(--color-control-line);
+      border-radius: 8px;
+      color: inherit;
+      background: transparent;
+      font: inherit;
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+      transition: background-color 120ms ease, border-color 120ms ease;
+    }
+
+    .preset:hover {
+      background: var(--color-control-hover);
+    }
+
+    .preset:active {
+      background: var(--color-control-active);
+    }
+
+    .preset[aria-pressed="true"] {
+      border-color: color-mix(in oklch, var(--color-accent) 48%, var(--color-control-line));
+      background: var(--color-accent-soft);
     }
 
     /*
@@ -255,25 +318,52 @@
      */
     @container style(--css-functions: supported) {
       .location {
-        color: --contrast-ink(var(--color-base), var(--contrast-low));
+        color: --contrast-ink(
+          var(--color-surface-base),
+          var(--contrast-low),
+          calc(var(--text-saturation) / 100)
+        );
       }
 
-      .temperature,
+      .temperature {
+        color: --contrast-ink(
+          var(--color-surface-base),
+          var(--contrast-high),
+          calc(var(--text-saturation) / 100)
+        );
+      }
+
       .controls {
-        color: --contrast-ink(var(--color-base), var(--contrast-high));
+        color: --contrast-ink(
+          var(--color-surface-raised),
+          var(--contrast-high),
+          calc(var(--text-saturation) / 100)
+        );
       }
 
       .base-control output,
       .range-head output {
-        color: --contrast-ink(var(--color-base), var(--contrast-low));
+        color: --contrast-ink(
+          var(--color-surface-raised),
+          var(--contrast-low),
+          calc(var(--text-saturation) / 100)
+        );
       }
 
       input[type="range"] {
-        accent-color: --contrast-ink(var(--color-base), var(--contrast-high));
+        accent-color: --contrast-ink(
+          var(--color-surface-raised),
+          var(--contrast-high),
+          calc(var(--text-saturation) / 100)
+        );
       }
 
       input:focus-visible {
-        outline-color: --contrast-ink(var(--color-base), var(--contrast-high));
+        outline-color: --contrast-ink(
+          var(--color-surface-raised),
+          var(--contrast-high),
+          calc(var(--text-saturation) / 100)
+        );
       }
     }
 
@@ -318,31 +408,203 @@
           <input id="highContrast" type="range" min="1" max="21" step="0.1" value="7" aria-label="High text contrast ratio">
         </div>
       </div>
+
+      <div class="character-controls">
+        <div class="range-control">
+          <div class="range-head">
+            <label for="surfaceDistance">Surfaces</label>
+            <output id="surfaceValue" for="surfaceDistance">6%</output>
+          </div>
+          <input id="surfaceDistance" type="range" min="0" max="18" step="1" value="6" aria-label="Surface distance">
+        </div>
+
+        <div class="range-control">
+          <div class="range-head">
+            <label for="accentStrength">Accent</label>
+            <output id="accentValue" for="accentStrength">35%</output>
+          </div>
+          <input id="accentStrength" type="range" min="5" max="75" step="1" value="35" aria-label="Accent chroma">
+        </div>
+
+        <div class="range-control range-control--wide">
+          <div class="range-head">
+            <label for="textSaturation">Text colour</label>
+            <output id="textValue" for="textSaturation">65%</output>
+          </div>
+          <input id="textSaturation" type="range" min="0" max="100" step="1" value="65" aria-label="Text colour saturation">
+        </div>
+      </div>
+
+      <div class="presets" role="group" aria-label="Theme character presets">
+        <button class="preset" type="button" data-preset="quiet" aria-pressed="false">Quiet</button>
+        <button class="preset" type="button" data-preset="balanced" aria-pressed="true">Balanced</button>
+        <button class="preset" type="button" data-preset="vivid" aria-pressed="false">Vivid</button>
+      </div>
     </div>
   </main>
 
   <script>
+    const root = document.documentElement;
+    const storageKey = 'contrast-axis-card-theme-v2';
     const picker = document.querySelector('#baseColour');
-    const value = document.querySelector('#baseValue');
-    const contrastControls = [
-      ['#lowContrast', '#lowValue', '--contrast-low'],
-      ['#highContrast', '#highValue', '--contrast-high'],
+    const baseValue = document.querySelector('#baseValue');
+
+    const controls = [
+      {
+        key: 'lowContrast',
+        input: document.querySelector('#lowContrast'),
+        output: document.querySelector('#lowValue'),
+        property: '--contrast-low',
+        css: value => value,
+        format: value => `${Number(value).toFixed(1)}:1`,
+      },
+      {
+        key: 'highContrast',
+        input: document.querySelector('#highContrast'),
+        output: document.querySelector('#highValue'),
+        property: '--contrast-high',
+        css: value => value,
+        format: value => `${Number(value).toFixed(1)}:1`,
+      },
+      {
+        key: 'surfaceDistance',
+        input: document.querySelector('#surfaceDistance'),
+        output: document.querySelector('#surfaceValue'),
+        property: '--surface-distance',
+        css: value => `${value}%`,
+        format: value => `${value}%`,
+      },
+      {
+        key: 'accentStrength',
+        input: document.querySelector('#accentStrength'),
+        output: document.querySelector('#accentValue'),
+        property: '--accent-strength',
+        css: value => value,
+        format: value => `${value}%`,
+      },
+      {
+        key: 'textSaturation',
+        input: document.querySelector('#textSaturation'),
+        output: document.querySelector('#textValue'),
+        property: '--text-saturation',
+        css: value => value,
+        format: value => `${value}%`,
+      },
     ];
 
+    const presets = {
+      quiet: {
+        surfaceDistance: '3',
+        accentStrength: '18',
+        textSaturation: '20',
+      },
+      balanced: {
+        surfaceDistance: '6',
+        accentStrength: '35',
+        textSaturation: '65',
+      },
+      vivid: {
+        surfaceDistance: '10',
+        accentStrength: '60',
+        textSaturation: '100',
+      },
+    };
+
+    const presetButtons = [...document.querySelectorAll('[data-preset]')];
+
+    function applyControl(control, nextValue = control.input.value) {
+      const candidate = Number(nextValue);
+      const minimum = Number(control.input.min);
+      const maximum = Number(control.input.max);
+      const fallback = Number(control.input.defaultValue);
+      const number = Number.isFinite(candidate) ? candidate : fallback;
+      const value = String(Math.min(maximum, Math.max(minimum, number)));
+
+      control.input.value = value;
+      control.output.textContent = control.format(value);
+      root.style.setProperty(control.property, control.css(value));
+    }
+
+    function matchingPreset() {
+      return Object.entries(presets).find(([, values]) =>
+        Object.entries(values).every(([key, value]) =>
+          controls.find(control => control.key === key)?.input.value === value
+        )
+      )?.[0] ?? null;
+    }
+
+    function syncPresetButtons() {
+      const active = matchingPreset();
+      presetButtons.forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.preset === active));
+      });
+    }
+
+    function currentState() {
+      return {
+        base: picker.value,
+        controls: Object.fromEntries(
+          controls.map(control => [control.key, control.input.value])
+        ),
+      };
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(currentState()));
+      } catch {
+        /* The demo still works when storage is unavailable. */
+      }
+    }
+
+    function applyPreset(name) {
+      const values = presets[name];
+      if (!values) return;
+
+      Object.entries(values).forEach(([key, nextValue]) => {
+        const control = controls.find(item => item.key === key);
+        if (control) applyControl(control, nextValue);
+      });
+
+      syncPresetButtons();
+      saveState();
+    }
+
     picker.addEventListener('input', () => {
-      document.documentElement.style.setProperty('--color-base', picker.value);
-      value.textContent = picker.value.toUpperCase();
+      root.style.setProperty('--color-base', picker.value);
+      baseValue.textContent = picker.value.toUpperCase();
+      saveState();
     });
 
-    contrastControls.forEach(([inputSelector, outputSelector, property]) => {
-      const input = document.querySelector(inputSelector);
-      const output = document.querySelector(outputSelector);
-
-      input.addEventListener('input', () => {
-        document.documentElement.style.setProperty(property, input.value);
-        output.textContent = `${Number(input.value).toFixed(1)}:1`;
+    controls.forEach(control => {
+      control.input.addEventListener('input', () => {
+        applyControl(control);
+        syncPresetButtons();
+        saveState();
       });
     });
+
+    presetButtons.forEach(button => {
+      button.addEventListener('click', () => applyPreset(button.dataset.preset));
+    });
+
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey));
+
+      if (/^#[0-9a-f]{6}$/i.test(saved?.base ?? '')) {
+        picker.value = saved.base;
+        root.style.setProperty('--color-base', picker.value);
+        baseValue.textContent = picker.value.toUpperCase();
+      }
+
+      controls.forEach(control => {
+        applyControl(control, saved?.controls?.[control.key] ?? control.input.value);
+      });
+    } catch {
+      controls.forEach(control => applyControl(control));
+    }
+
+    syncPresetButtons();
   </script>
 </body>
 </html>
