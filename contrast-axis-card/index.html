@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A one-colour weather card with ratio-driven text colours calculated by a CSS custom function.">
+  <meta name="description" content="An OKLCH-driven weather card with ratio-safe surfaces, text and accent colours.">
   <title>Contrast Axis Card</title>
   <style>
     @property --color-base {
       syntax: "<color>";
       inherits: true;
-      initial-value: #ededea;
+      initial-value: oklch(0.94 0.025 90);
     }
 
     @function --contrast-ink(
@@ -39,7 +39,41 @@
       --solved-r: calc(r + var(--mix) * (var(--pole) - r));
       --solved-g: calc(g + var(--mix) * (var(--pole) - g));
       --solved-b: calc(b + var(--mix) * (var(--pole) - b));
-      --sat: clamp(0, var(--saturation), 1);
+
+      /*
+       * Find the largest luminance-preserving saturation that stays in gamut.
+       * At 100%, one linear RGB channel reaches its safe 0/1 boundary.
+       */
+      --delta-r: calc(var(--solved-r) - var(--target));
+      --delta-g: calc(var(--solved-g) - var(--target));
+      --delta-b: calc(var(--solved-b) - var(--target));
+      --epsilon: 0.000001;
+
+      --up-r: max(0, sign(var(--delta-r)));
+      --up-g: max(0, sign(var(--delta-g)));
+      --up-b: max(0, sign(var(--delta-b)));
+      --down-r: max(0, sign(calc(-1 * var(--delta-r))));
+      --down-g: max(0, sign(calc(-1 * var(--delta-g))));
+      --down-b: max(0, sign(calc(-1 * var(--delta-b))));
+
+      --limit-r: calc(
+        var(--up-r) * (1 - var(--target)) / max(var(--delta-r), var(--epsilon)) +
+        var(--down-r) * var(--target) / max(calc(-1 * var(--delta-r)), var(--epsilon)) +
+        (1 - var(--up-r) - var(--down-r)) * 999
+      );
+      --limit-g: calc(
+        var(--up-g) * (1 - var(--target)) / max(var(--delta-g), var(--epsilon)) +
+        var(--down-g) * var(--target) / max(calc(-1 * var(--delta-g)), var(--epsilon)) +
+        (1 - var(--up-g) - var(--down-g)) * 999
+      );
+      --limit-b: calc(
+        var(--up-b) * (1 - var(--target)) / max(var(--delta-b), var(--epsilon)) +
+        var(--down-b) * var(--target) / max(calc(-1 * var(--delta-b)), var(--epsilon)) +
+        (1 - var(--up-b) - var(--down-b)) * 999
+      );
+
+      --max-sat: min(var(--limit-r), var(--limit-g), var(--limit-b));
+      --sat: calc(clamp(0, var(--saturation), 1) * var(--max-sat));
 
       result: color(
         from var(--base) srgb-linear
@@ -54,7 +88,14 @@
     }
 
     :root {
-      --color-base: #ededea;
+      --theme-hue: 90;
+      --theme-lightness: 94;
+      --theme-chroma: 25;
+      --color-base: oklch(
+        calc(var(--theme-lightness) / 100)
+        calc(var(--theme-chroma) / 1000)
+        var(--theme-hue)
+      );
       --contrast-low: 3;
       --contrast-high: 7;
       --surface-distance: 6%;
@@ -190,26 +231,36 @@
       transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease;
     }
 
-    .base-control {
+    .theme-summary {
       display: flex;
       align-items: center;
       gap: 10px;
     }
 
-    .base-control label,
+    .theme-swatch {
+      width: 32px;
+      height: 32px;
+      flex: 0 0 auto;
+      border: 1px solid var(--color-control-line);
+      border-radius: 10px;
+      background: var(--color-base);
+      box-shadow: inset 0 0 0 3px color-mix(in oklch, var(--color-surface-raised) 76%, transparent);
+    }
+
+    .theme-summary label,
     .range-head label {
       font-size: 12px;
       font-weight: 600;
       line-height: 1;
     }
 
-    .base-control output {
-      min-width: 62px;
+    .theme-summary output {
+      min-width: 0;
       color: contrast-color(var(--color-surface-raised));
       font: 500 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
-      text-transform: uppercase;
     }
 
+    .theme-controls,
     .contrast-controls,
     .character-controls {
       display: grid;
@@ -247,29 +298,73 @@
       cursor: ew-resize;
     }
 
-    input[type="color"] {
-      width: 32px;
-      height: 32px;
-      margin: 0;
-      padding: 3px;
+    input[type="range"].colour-range {
+      appearance: none;
+      height: 14px;
       border: 1px solid var(--color-control-line);
-      border-radius: 10px;
+      border-radius: 999px;
+      background: var(--range-gradient);
+    }
+
+    .hue-range {
+      --range-gradient: linear-gradient(
+        90deg,
+        oklch(0.72 0.16 0),
+        oklch(0.72 0.16 60),
+        oklch(0.72 0.16 120),
+        oklch(0.72 0.16 180),
+        oklch(0.72 0.16 240),
+        oklch(0.72 0.16 300),
+        oklch(0.72 0.16 360)
+      );
+    }
+
+    .lightness-range {
+      --range-gradient: linear-gradient(
+        90deg,
+        oklch(0.08 calc(var(--theme-chroma) / 1000) var(--theme-hue)),
+        oklch(0.98 calc(var(--theme-chroma) / 1000) var(--theme-hue))
+      );
+    }
+
+    .chroma-range {
+      --range-gradient: linear-gradient(
+        90deg,
+        oklch(0.72 0 var(--theme-hue)),
+        oklch(0.72 0.14 var(--theme-hue))
+      );
+    }
+
+    input[type="range"].colour-range::-webkit-slider-runnable-track {
+      height: 12px;
+      border-radius: 999px;
       background: transparent;
-      cursor: pointer;
     }
 
-    input[type="color"]::-webkit-color-swatch-wrapper {
-      padding: 0;
+    input[type="range"].colour-range::-webkit-slider-thumb {
+      width: 16px;
+      height: 16px;
+      margin-top: -2px;
+      appearance: none;
+      border: 2px solid var(--color-surface-raised);
+      border-radius: 50%;
+      background: var(--color-contrast-pole);
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--color-contrast-pole) 42%, transparent);
     }
 
-    input[type="color"]::-webkit-color-swatch {
-      border: 0;
-      border-radius: 6px;
+    input[type="range"].colour-range::-moz-range-track {
+      height: 12px;
+      border-radius: 999px;
+      background: transparent;
     }
 
-    input[type="color"]::-moz-color-swatch {
-      border: 0;
-      border-radius: 6px;
+    input[type="range"].colour-range::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--color-surface-raised);
+      border-radius: 50%;
+      background: var(--color-contrast-pole);
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--color-contrast-pole) 42%, transparent);
     }
 
     input:focus-visible {
@@ -341,7 +436,7 @@
         );
       }
 
-      .base-control output,
+      .theme-summary output,
       .range-head output {
         color: --contrast-ink(
           var(--color-surface-raised),
@@ -385,10 +480,36 @@
     </article>
 
     <div class="controls" aria-label="Colour controls">
-      <div class="base-control">
-        <input id="baseColour" type="color" value="#ededea" aria-label="Base colour">
-        <label for="baseColour">Base</label>
-        <output id="baseValue" for="baseColour">#EDEDEA</output>
+      <div class="theme-summary">
+        <span class="theme-swatch" aria-hidden="true"></span>
+        <span id="themeLabel">Theme</span>
+        <output id="themeValue" aria-labelledby="themeLabel">oklch(94% 0.025 90)</output>
+      </div>
+
+      <div class="theme-controls">
+        <div class="range-control range-control--wide">
+          <div class="range-head">
+            <label for="themeHue">Hue</label>
+            <output id="hueValue" for="themeHue">90°</output>
+          </div>
+          <input class="colour-range hue-range" id="themeHue" type="range" min="0" max="360" step="1" value="90" aria-label="Theme hue">
+        </div>
+
+        <div class="range-control">
+          <div class="range-head">
+            <label for="themeLightness">Lightness</label>
+            <output id="lightnessValue" for="themeLightness">94%</output>
+          </div>
+          <input class="colour-range lightness-range" id="themeLightness" type="range" min="8" max="98" step="1" value="94" aria-label="Theme lightness">
+        </div>
+
+        <div class="range-control">
+          <div class="range-head">
+            <label for="themeChroma">Chroma</label>
+            <output id="chromaValue" for="themeChroma">0.025</output>
+          </div>
+          <input class="colour-range chroma-range" id="themeChroma" type="range" min="0" max="140" step="1" value="25" aria-label="Theme chroma">
+        </div>
       </div>
 
       <div class="contrast-controls">
@@ -428,10 +549,10 @@
 
         <div class="range-control range-control--wide">
           <div class="range-head">
-            <label for="textSaturation">Text colour</label>
+            <label for="textSaturation">Text tint</label>
             <output id="textValue" for="textSaturation">65%</output>
           </div>
-          <input id="textSaturation" type="range" min="0" max="100" step="1" value="65" aria-label="Text colour saturation">
+          <input id="textSaturation" type="range" min="0" max="100" step="1" value="65" aria-label="Text tint strength">
         </div>
       </div>
 
@@ -445,11 +566,37 @@
 
   <script>
     const root = document.documentElement;
-    const storageKey = 'contrast-axis-card-theme-v2';
-    const picker = document.querySelector('#baseColour');
-    const baseValue = document.querySelector('#baseValue');
+    const storageKey = 'contrast-axis-card-theme-v3';
+    const themeValue = document.querySelector('#themeValue');
 
     const controls = [
+      {
+        key: 'themeHue',
+        input: document.querySelector('#themeHue'),
+        output: document.querySelector('#hueValue'),
+        property: '--theme-hue',
+        css: value => value,
+        format: value => `${value}°`,
+        theme: true,
+      },
+      {
+        key: 'themeLightness',
+        input: document.querySelector('#themeLightness'),
+        output: document.querySelector('#lightnessValue'),
+        property: '--theme-lightness',
+        css: value => value,
+        format: value => `${value}%`,
+        theme: true,
+      },
+      {
+        key: 'themeChroma',
+        input: document.querySelector('#themeChroma'),
+        output: document.querySelector('#chromaValue'),
+        property: '--theme-chroma',
+        css: value => value,
+        format: value => (Number(value) / 1000).toFixed(3),
+        theme: true,
+      },
       {
         key: 'lowContrast',
         input: document.querySelector('#lowContrast'),
@@ -494,16 +641,19 @@
 
     const presets = {
       quiet: {
+        themeChroma: '10',
         surfaceDistance: '3',
         accentStrength: '18',
         textSaturation: '20',
       },
       balanced: {
+        themeChroma: '25',
         surfaceDistance: '6',
         accentStrength: '35',
         textSaturation: '65',
       },
       vivid: {
+        themeChroma: '70',
         surfaceDistance: '10',
         accentStrength: '60',
         textSaturation: '100',
@@ -511,6 +661,13 @@
     };
 
     const presetButtons = [...document.querySelectorAll('[data-preset]')];
+
+    function updateThemeValue() {
+      const hue = controls.find(control => control.key === 'themeHue').input.value;
+      const lightness = controls.find(control => control.key === 'themeLightness').input.value;
+      const chroma = controls.find(control => control.key === 'themeChroma').input.value;
+      themeValue.textContent = `oklch(${lightness}% ${(Number(chroma) / 1000).toFixed(3)} ${hue})`;
+    }
 
     function applyControl(control, nextValue = control.input.value) {
       const candidate = Number(nextValue);
@@ -523,6 +680,7 @@
       control.input.value = value;
       control.output.textContent = control.format(value);
       root.style.setProperty(control.property, control.css(value));
+      if (control.theme) updateThemeValue();
     }
 
     function matchingPreset() {
@@ -542,7 +700,6 @@
 
     function currentState() {
       return {
-        base: picker.value,
         controls: Object.fromEntries(
           controls.map(control => [control.key, control.input.value])
         ),
@@ -570,12 +727,6 @@
       saveState();
     }
 
-    picker.addEventListener('input', () => {
-      root.style.setProperty('--color-base', picker.value);
-      baseValue.textContent = picker.value.toUpperCase();
-      saveState();
-    });
-
     controls.forEach(control => {
       control.input.addEventListener('input', () => {
         applyControl(control);
@@ -590,12 +741,6 @@
 
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey));
-
-      if (/^#[0-9a-f]{6}$/i.test(saved?.base ?? '')) {
-        picker.value = saved.base;
-        root.style.setProperty('--color-base', picker.value);
-        baseValue.textContent = picker.value.toUpperCase();
-      }
 
       controls.forEach(control => {
         applyControl(control, saved?.controls?.[control.key] ?? control.input.value);
