@@ -12,81 +12,6 @@
       initial-value: oklch(0.94 0.025 90);
     }
 
-    @function --contrast-ink(
-      --base <color>,
-      --ratio <number>,
-      --saturation <number>
-    ) returns <color> {
-      /* Relative luminance of the base in linear sRGB. */
-      --y: calc(0.2126 * r + 0.7152 * g + 0.0722 * b);
-
-      /* Black wins above the WCAG black/white crossover; white wins below it. */
-      --toward-black: clamp(0, sign(var(--y) - 0.179128784748), 1);
-
-      /* Solve the WCAG contrast equation in either direction, clamped to gamut. */
-      --target-dark: clamp(0, (var(--y) + 0.05) / var(--ratio) - 0.05, 1);
-      --target-light: clamp(0, var(--ratio) * (var(--y) + 0.05) - 0.05, 1);
-      --target: calc(
-        var(--toward-black) * var(--target-dark) +
-        (1 - var(--toward-black)) * var(--target-light)
-      );
-
-      /* Move the original linear RGB channels only as far as the target requires. */
-      --pole: calc(1 - var(--toward-black));
-      --mix: calc((var(--target) - var(--y)) / (var(--pole) - var(--y)));
-
-      /* Saturate around the solved luminance, so contrast does not change. */
-      --solved-r: calc(r + var(--mix) * (var(--pole) - r));
-      --solved-g: calc(g + var(--mix) * (var(--pole) - g));
-      --solved-b: calc(b + var(--mix) * (var(--pole) - b));
-
-      /*
-       * Find the largest luminance-preserving saturation that stays in gamut.
-       * At 100%, one linear RGB channel reaches its safe 0/1 boundary.
-       */
-      --delta-r: calc(var(--solved-r) - var(--target));
-      --delta-g: calc(var(--solved-g) - var(--target));
-      --delta-b: calc(var(--solved-b) - var(--target));
-      --epsilon: 0.000001;
-
-      --up-r: max(0, sign(var(--delta-r)));
-      --up-g: max(0, sign(var(--delta-g)));
-      --up-b: max(0, sign(var(--delta-b)));
-      --down-r: max(0, sign(calc(-1 * var(--delta-r))));
-      --down-g: max(0, sign(calc(-1 * var(--delta-g))));
-      --down-b: max(0, sign(calc(-1 * var(--delta-b))));
-
-      --limit-r: calc(
-        var(--up-r) * (1 - var(--target)) / max(var(--delta-r), var(--epsilon)) +
-        var(--down-r) * var(--target) / max(calc(-1 * var(--delta-r)), var(--epsilon)) +
-        (1 - var(--up-r) - var(--down-r)) * 999
-      );
-      --limit-g: calc(
-        var(--up-g) * (1 - var(--target)) / max(var(--delta-g), var(--epsilon)) +
-        var(--down-g) * var(--target) / max(calc(-1 * var(--delta-g)), var(--epsilon)) +
-        (1 - var(--up-g) - var(--down-g)) * 999
-      );
-      --limit-b: calc(
-        var(--up-b) * (1 - var(--target)) / max(var(--delta-b), var(--epsilon)) +
-        var(--down-b) * var(--target) / max(calc(-1 * var(--delta-b)), var(--epsilon)) +
-        (1 - var(--up-b) - var(--down-b)) * 999
-      );
-
-      --max-sat: min(var(--limit-r), var(--limit-g), var(--limit-b));
-      --sat: calc(clamp(0, var(--saturation), 1) * var(--max-sat));
-
-      result: color(
-        from var(--base) srgb-linear
-        calc(var(--target) + var(--sat) * (var(--solved-r) - var(--target)))
-        calc(var(--target) + var(--sat) * (var(--solved-g) - var(--target)))
-        calc(var(--target) + var(--sat) * (var(--solved-b) - var(--target)))
-      );
-    }
-
-    @function --css-functions-supported() {
-      result: supported;
-    }
-
     :root {
       --theme-hue: 90;
       --theme-lightness: 94;
@@ -101,9 +26,12 @@
       --surface-distance: 6%;
       --accent-strength: 35;
       --text-saturation: 65;
-      --css-functions: --css-functions-supported();
+      /* JS writes exact cross-browser text colours into these semantic roles. */
+      --color-card-low: contrast-color(var(--color-base));
+      --color-card-high: contrast-color(var(--color-base));
+      --color-controls-low: contrast-color(var(--color-surface-raised));
+      --color-controls-high: contrast-color(var(--color-surface-raised));
 
-      /* Fallback first; modern browsers replace it with the correct pole. */
       --color-contrast-pole: #111111;
       --color-contrast-pole: contrast-color(var(--color-base));
 
@@ -114,9 +42,6 @@
       --color-surface-raised:
         color-mix(in oklch, white var(--surface-distance), var(--color-base));
 
-      /* Unsupported @function browsers retain normal contrast-color() text. */
-      --color-text-low: contrast-color(var(--color-base));
-      --color-text-high: contrast-color(var(--color-base));
       --color-control-line: color-mix(in oklch, var(--color-contrast-pole) 18%, var(--color-base));
       --color-accent: oklch(
         from var(--color-base)
@@ -196,14 +121,14 @@
     }
 
     .location {
-      color: var(--color-text-low);
+      color: var(--color-card-low);
       font-size: 16px;
       font-weight: 500;
       line-height: 1;
     }
 
     .temperature {
-      color: var(--color-text-high);
+      color: var(--color-card-high);
       font-size: clamp(62px, 20vw, 76px);
       font-weight: 500;
       line-height: 0.88;
@@ -225,10 +150,50 @@
       padding: 9px 12px 12px 9px;
       border: 1px solid var(--color-control-line);
       border-radius: 14px;
-      color: contrast-color(var(--color-surface-raised));
+      color: var(--color-controls-high);
       background: var(--color-surface-raised);
       box-shadow: 0 8px 26px color-mix(in oklch, var(--color-contrast-pole) 10%, transparent);
       transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease;
+    }
+
+    .method-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      padding: 3px;
+      border-radius: 10px;
+      background: color-mix(in oklch, var(--color-contrast-pole) 5%, transparent);
+    }
+
+    .method-tab {
+      min-height: 29px;
+      padding: 0 8px;
+      border: 0;
+      border-radius: 7px;
+      color: inherit;
+      background: transparent;
+      font: inherit;
+      font-size: 10px;
+      font-weight: 650;
+      cursor: pointer;
+      transition: color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    .method-tab:hover {
+      background: var(--color-control-hover);
+    }
+
+    .method-tab[aria-selected="true"] {
+      background: var(--color-surface-raised);
+      box-shadow: 0 1px 5px color-mix(in oklch, var(--color-contrast-pole) 12%, transparent);
+    }
+
+    .method-note {
+      min-height: 12px;
+      margin: -4px 3px 0;
+      color: var(--color-controls-low);
+      font-size: 10px;
+      line-height: 1.2;
     }
 
     .theme-summary {
@@ -256,7 +221,7 @@
 
     .theme-summary output {
       min-width: 0;
-      color: contrast-color(var(--color-surface-raised));
+      color: var(--color-controls-low);
       font: 500 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
     }
 
@@ -286,7 +251,7 @@
     }
 
     .range-head output {
-      color: contrast-color(var(--color-surface-raised));
+      color: var(--color-controls-low);
       font: 500 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
     }
 
@@ -294,7 +259,7 @@
       width: 100%;
       height: 14px;
       margin: 0;
-      accent-color: contrast-color(var(--color-surface-raised));
+      accent-color: var(--color-controls-high);
       cursor: ew-resize;
     }
 
@@ -368,7 +333,7 @@
     }
 
     input:focus-visible {
-      outline: 2px solid contrast-color(var(--color-surface-raised));
+      outline: 2px solid var(--color-controls-high);
       outline-offset: 3px;
     }
 
@@ -407,60 +372,6 @@
       background: var(--color-accent-soft);
     }
 
-    /*
-     * Unsupported browsers compute --css-functions as empty, so this style query
-     * does not match and the contrast-color() declarations above remain active.
-     */
-    @container style(--css-functions: supported) {
-      .location {
-        color: --contrast-ink(
-          var(--color-surface-base),
-          var(--contrast-low),
-          calc(var(--text-saturation) / 100)
-        );
-      }
-
-      .temperature {
-        color: --contrast-ink(
-          var(--color-surface-base),
-          var(--contrast-high),
-          calc(var(--text-saturation) / 100)
-        );
-      }
-
-      .controls {
-        color: --contrast-ink(
-          var(--color-surface-raised),
-          var(--contrast-high),
-          calc(var(--text-saturation) / 100)
-        );
-      }
-
-      .theme-summary output,
-      .range-head output {
-        color: --contrast-ink(
-          var(--color-surface-raised),
-          var(--contrast-low),
-          calc(var(--text-saturation) / 100)
-        );
-      }
-
-      input[type="range"] {
-        accent-color: --contrast-ink(
-          var(--color-surface-raised),
-          var(--contrast-high),
-          calc(var(--text-saturation) / 100)
-        );
-      }
-
-      input:focus-visible {
-        outline-color: --contrast-ink(
-          var(--color-surface-raised),
-          var(--contrast-high),
-          calc(var(--text-saturation) / 100)
-        );
-      }
-    }
 
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -480,6 +391,13 @@
     </article>
 
     <div class="controls" aria-label="Colour controls">
+      <div class="method-tabs" role="tablist" aria-label="Text colour method">
+        <button class="method-tab" type="button" role="tab" data-method="burn" aria-selected="true" tabindex="0">Burn</button>
+        <button class="method-tab" type="button" role="tab" data-method="tonal" aria-selected="false" tabindex="-1">Tonal</button>
+        <button class="method-tab" type="button" role="tab" data-method="linear" aria-selected="false" tabindex="-1">Linear</button>
+      </div>
+      <p class="method-note" id="methodNote">Exact contrast · same OKLCH hue · stronger chroma</p>
+
       <div class="theme-summary">
         <span class="theme-swatch" aria-hidden="true"></span>
         <span id="themeLabel">Theme</span>
@@ -566,8 +484,11 @@
 
   <script>
     const root = document.documentElement;
-    const storageKey = 'contrast-axis-card-theme-v3';
+    const storageKey = 'contrast-axis-card-theme-v4';
     const themeValue = document.querySelector('#themeValue');
+    const methodNote = document.querySelector('#methodNote');
+    const methodButtons = [...document.querySelectorAll('[data-method]')];
+    let activeMethod = 'burn';
 
     const controls = [
       {
@@ -662,6 +583,199 @@
 
     const presetButtons = [...document.querySelectorAll('[data-preset]')];
 
+    const methods = {
+      burn: {
+        note: 'Exact contrast · same OKLCH hue · stronger chroma',
+      },
+      tonal: {
+        note: 'Exact contrast · same OKLCH hue · softer chroma',
+      },
+      linear: {
+        note: 'Exact contrast · linear RGB · maximum available tint',
+      },
+    };
+
+    const clamp = (value, minimum = 0, maximum = 1) =>
+      Math.min(maximum, Math.max(minimum, value));
+
+    function controlNumber(key) {
+      return Number(controls.find(control => control.key === key).input.value);
+    }
+
+    function oklchToLinearRgb(lightness, chroma, hue) {
+      const radians = hue * Math.PI / 180;
+      const a = chroma * Math.cos(radians);
+      const b = chroma * Math.sin(radians);
+
+      const lPrime = lightness + 0.3963377774 * a + 0.2158037573 * b;
+      const mPrime = lightness - 0.1055613458 * a - 0.0638541728 * b;
+      const sPrime = lightness - 0.0894841775 * a - 1.291485548 * b;
+      const l = lPrime ** 3;
+      const m = mPrime ** 3;
+      const s = sPrime ** 3;
+
+      return [
+        4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+        -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+        -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+      ];
+    }
+
+    function isInGamut(channels) {
+      return channels.every(channel => channel >= -0.000001 && channel <= 1.000001);
+    }
+
+    function gamutMap(lightness, chroma, hue) {
+      let channels = oklchToLinearRgb(lightness, chroma, hue);
+      if (isInGamut(channels)) {
+        return { rgb: channels.map(channel => clamp(channel)), chroma };
+      }
+
+      let minimum = 0;
+      let maximum = chroma;
+
+      for (let iteration = 0; iteration < 18; iteration += 1) {
+        const candidate = (minimum + maximum) / 2;
+        channels = oklchToLinearRgb(lightness, candidate, hue);
+        if (isInGamut(channels)) minimum = candidate;
+        else maximum = candidate;
+      }
+
+      return {
+        rgb: oklchToLinearRgb(lightness, minimum, hue).map(channel => clamp(channel)),
+        chroma: minimum,
+      };
+    }
+
+    function luminance(channels) {
+      return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+    }
+
+    function targetLuminance(baseLuminance, ratio) {
+      const blackContrast = (baseLuminance + 0.05) / 0.05;
+      const whiteContrast = 1.05 / (baseLuminance + 0.05);
+
+      return blackContrast >= whiteContrast
+        ? clamp((baseLuminance + 0.05) / ratio - 0.05)
+        : clamp(ratio * (baseLuminance + 0.05) - 0.05);
+    }
+
+    function solveOklchText(surface, ratio, chroma) {
+      const target = targetLuminance(luminance(surface.rgb), ratio);
+      let minimum = 0;
+      let maximum = 1;
+      let candidate = gamutMap(surface.lightness, chroma, surface.hue);
+
+      for (let iteration = 0; iteration < 24; iteration += 1) {
+        const lightness = (minimum + maximum) / 2;
+        candidate = gamutMap(lightness, chroma, surface.hue);
+        if (luminance(candidate.rgb) < target) minimum = lightness;
+        else maximum = lightness;
+      }
+
+      return gamutMap((minimum + maximum) / 2, chroma, surface.hue).rgb;
+    }
+
+    function solveLinearText(surface, ratio, tint) {
+      const baseY = luminance(surface.rgb);
+      const target = targetLuminance(baseY, ratio);
+      const towardBlack = (baseY + 0.05) / 0.05 >= 1.05 / (baseY + 0.05);
+      const pole = towardBlack ? 0 : 1;
+      const denominator = pole - baseY;
+      const mix = Math.abs(denominator) < 0.000001 ? 0 : (target - baseY) / denominator;
+      const solved = surface.rgb.map(channel => channel + mix * (pole - channel));
+      const deltas = solved.map(channel => channel - target);
+      const limits = deltas.map(delta => {
+        if (delta > 0.000001) return (1 - target) / delta;
+        if (delta < -0.000001) return target / -delta;
+        return Infinity;
+      });
+      const saturation = Math.min(...limits) * tint;
+
+      return deltas.map(delta => clamp(target + saturation * delta));
+    }
+
+    function currentSurfaces() {
+      const lightness = controlNumber('themeLightness') / 100;
+      const chroma = controlNumber('themeChroma') / 1000;
+      const hue = controlNumber('themeHue');
+      const distance = controlNumber('surfaceDistance') / 100;
+
+      return {
+        card: {
+          lightness,
+          chroma,
+          hue,
+          rgb: gamutMap(lightness, chroma, hue).rgb,
+        },
+        controls: {
+          lightness: lightness * (1 - distance) + distance,
+          chroma: chroma * (1 - distance),
+          hue,
+          rgb: gamutMap(
+            lightness * (1 - distance) + distance,
+            chroma * (1 - distance),
+            hue
+          ).rgb,
+        },
+      };
+    }
+
+    function textColour(surface, ratio) {
+      const tint = controlNumber('textSaturation') / 100;
+      if (activeMethod === 'linear') {
+        return solveLinearText(surface, ratio, tint);
+      }
+
+      const sourceChroma = controlNumber('themeChroma') / 1000;
+      if (sourceChroma < 0.0005) {
+        return solveOklchText(surface, ratio, 0);
+      }
+
+      const maximumChroma = activeMethod === 'burn'
+        ? Math.min(0.28, Math.max(0.16, sourceChroma * 3.5))
+        : Math.min(0.12, sourceChroma * 1.5);
+      const desiredChroma = activeMethod === 'burn'
+        ? sourceChroma + tint * (maximumChroma - sourceChroma)
+        : tint * maximumChroma;
+
+      return solveOklchText(surface, ratio, desiredChroma);
+    }
+
+    function linearChannelToSrgb(channel) {
+      return channel <= 0.0031308
+        ? 12.92 * channel
+        : 1.055 * channel ** (1 / 2.4) - 0.055;
+    }
+
+    function rgbCss(channels) {
+      const values = channels.map(channel => Math.round(clamp(linearChannelToSrgb(channel)) * 255));
+      return `rgb(${values.join(' ')})`;
+    }
+
+    function updateDerivedColours() {
+      const surfaces = currentSurfaces();
+      const lowRatio = controlNumber('lowContrast');
+      const highRatio = controlNumber('highContrast');
+
+      root.style.setProperty('--color-card-low', rgbCss(textColour(surfaces.card, lowRatio)));
+      root.style.setProperty('--color-card-high', rgbCss(textColour(surfaces.card, highRatio)));
+      root.style.setProperty('--color-controls-low', rgbCss(textColour(surfaces.controls, lowRatio)));
+      root.style.setProperty('--color-controls-high', rgbCss(textColour(surfaces.controls, highRatio)));
+    }
+
+    function selectMethod(name, persist = true) {
+      activeMethod = methods[name] ? name : 'burn';
+      methodButtons.forEach(button => {
+        const selected = button.dataset.method === activeMethod;
+        button.setAttribute('aria-selected', String(selected));
+        button.tabIndex = selected ? 0 : -1;
+      });
+      methodNote.textContent = methods[activeMethod].note;
+      updateDerivedColours();
+      if (persist) saveState();
+    }
+
     function updateThemeValue() {
       const hue = controls.find(control => control.key === 'themeHue').input.value;
       const lightness = controls.find(control => control.key === 'themeLightness').input.value;
@@ -700,6 +814,7 @@
 
     function currentState() {
       return {
+        method: activeMethod,
         controls: Object.fromEntries(
           controls.map(control => [control.key, control.input.value])
         ),
@@ -724,6 +839,7 @@
       });
 
       syncPresetButtons();
+      updateDerivedColours();
       saveState();
     }
 
@@ -731,7 +847,20 @@
       control.input.addEventListener('input', () => {
         applyControl(control);
         syncPresetButtons();
+        updateDerivedColours();
         saveState();
+      });
+    });
+
+    methodButtons.forEach((button, index) => {
+      button.addEventListener('click', () => selectMethod(button.dataset.method));
+      button.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        event.preventDefault();
+        const direction = event.key === 'ArrowRight' ? 1 : -1;
+        const next = methodButtons[(index + direction + methodButtons.length) % methodButtons.length];
+        next.focus();
+        selectMethod(next.dataset.method);
       });
     });
 
@@ -745,11 +874,14 @@
       controls.forEach(control => {
         applyControl(control, saved?.controls?.[control.key] ?? control.input.value);
       });
+      selectMethod(saved?.method ?? 'burn', false);
     } catch {
       controls.forEach(control => applyControl(control));
+      selectMethod('burn', false);
     }
 
     syncPresetButtons();
+    updateDerivedColours();
   </script>
 </body>
 </html>
