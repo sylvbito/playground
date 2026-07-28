@@ -25,14 +25,12 @@
       --contrast-high: 7;
       --surface-distance: 10%;
       --accent-strength: 60;
-      /* JS writes exact cross-browser text colours into these semantic roles. */
-      --color-card-low: contrast-color(var(--color-base));
-      --color-card-high: contrast-color(var(--color-base));
-      --color-controls-low: contrast-color(var(--color-surface-raised));
-      --color-controls-high: contrast-color(var(--color-surface-raised));
-
+      /* Safe first-paint defaults; JS replaces them with exact generated colours. */
+      --color-card-low: rgb(166 131 0);
+      --color-card-high: rgb(97 75 0);
+      --color-controls-low: rgb(166 131 0);
+      --color-controls-high: rgb(97 75 0);
       --color-contrast-pole: #111111;
-      --color-contrast-pole: contrast-color(var(--color-base));
 
       /* Three surfaces around the selected base, independent of theme polarity. */
       --color-surface-sunken:
@@ -587,11 +585,15 @@
       const surfaces = currentSurfaces();
       const lowRatio = controlNumber('lowContrast');
       const highRatio = controlNumber('highContrast');
+      const contrastPole = luminance(surfaces.card.rgb) >= 0.179128784748
+        ? [0, 0, 0]
+        : [1, 1, 1];
 
       root.style.setProperty('--color-card-low', rgbCss(textColour(surfaces.card, lowRatio)));
       root.style.setProperty('--color-card-high', rgbCss(textColour(surfaces.card, highRatio)));
       root.style.setProperty('--color-controls-low', rgbCss(textColour(surfaces.controls, lowRatio)));
       root.style.setProperty('--color-controls-high', rgbCss(textColour(surfaces.controls, highRatio)));
+      root.style.setProperty('--color-contrast-pole', rgbCss(contrastPole));
     }
 
 
