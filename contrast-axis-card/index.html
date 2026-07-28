@@ -14,6 +14,8 @@
 
     :root {
       --color-base: #ededea;
+      --contrast-low: 38%;
+      --contrast-high: 78%;
 
       /* Fallback first; modern browsers replace it with the correct pole. */
       --color-contrast-pole: #111111;
@@ -22,8 +24,8 @@
       /* Every visible colour is a position between base and contrast pole. */
       --color-page: color-mix(in oklch, var(--color-contrast-pole) 94%, var(--color-base));
       --color-card: var(--color-base);
-      --color-text-low: color-mix(in oklch, var(--color-contrast-pole) 38%, var(--color-base));
-      --color-text-high: color-mix(in oklch, var(--color-contrast-pole) 78%, var(--color-base));
+      --color-text-low: color-mix(in oklch, var(--color-contrast-pole) var(--contrast-low), var(--color-base));
+      --color-text-high: color-mix(in oklch, var(--color-contrast-pole) var(--contrast-high), var(--color-base));
       --color-control: color-mix(in oklch, var(--color-contrast-pole) 8%, var(--color-base));
       --color-control-line: color-mix(in oklch, var(--color-contrast-pole) 18%, var(--color-base));
 
@@ -97,12 +99,11 @@
       vertical-align: top;
     }
 
-    .colour-control {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-height: 44px;
-      padding: 6px 13px 6px 7px;
+    .controls {
+      width: min(354px, calc(100vw - 48px));
+      display: grid;
+      gap: 12px;
+      padding: 9px 12px 12px 9px;
       border: 1px solid var(--color-control-line);
       border-radius: 14px;
       color: var(--color-text-high);
@@ -111,17 +112,56 @@
       transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease;
     }
 
-    .colour-control label {
+    .base-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .base-control label,
+    .range-head label {
       font-size: 12px;
       font-weight: 600;
       line-height: 1;
     }
 
-    .colour-control output {
+    .base-control output {
       min-width: 62px;
       color: var(--color-text-low);
       font: 500 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
       text-transform: uppercase;
+    }
+
+    .contrast-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      padding-left: 3px;
+    }
+
+    .range-control {
+      display: grid;
+      gap: 7px;
+    }
+
+    .range-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .range-head output {
+      color: var(--color-text-low);
+      font: 500 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 14px;
+      margin: 0;
+      accent-color: var(--color-text-high);
+      cursor: ew-resize;
     }
 
     input[type="color"] {
@@ -149,7 +189,7 @@
       border-radius: 6px;
     }
 
-    input[type="color"]:focus-visible {
+    input:focus-visible {
       outline: 2px solid var(--color-text-high);
       outline-offset: 3px;
     }
@@ -168,20 +208,54 @@
       <p class="temperature">32<sup>°C</sup></p>
     </article>
 
-    <div class="colour-control">
-      <input id="baseColour" type="color" value="#ededea" aria-label="Base colour">
-      <label for="baseColour">Base</label>
-      <output id="baseValue" for="baseColour">#EDEDEA</output>
+    <div class="controls" aria-label="Colour controls">
+      <div class="base-control">
+        <input id="baseColour" type="color" value="#ededea" aria-label="Base colour">
+        <label for="baseColour">Base</label>
+        <output id="baseValue" for="baseColour">#EDEDEA</output>
+      </div>
+
+      <div class="contrast-controls">
+        <div class="range-control">
+          <div class="range-head">
+            <label for="lowContrast">Low</label>
+            <output id="lowValue" for="lowContrast">38%</output>
+          </div>
+          <input id="lowContrast" type="range" min="0" max="100" value="38" aria-label="Low text contrast">
+        </div>
+
+        <div class="range-control">
+          <div class="range-head">
+            <label for="highContrast">High</label>
+            <output id="highValue" for="highContrast">78%</output>
+          </div>
+          <input id="highContrast" type="range" min="0" max="100" value="78" aria-label="High text contrast">
+        </div>
+      </div>
     </div>
   </main>
 
   <script>
     const picker = document.querySelector('#baseColour');
     const value = document.querySelector('#baseValue');
+    const contrastControls = [
+      ['#lowContrast', '#lowValue', '--contrast-low'],
+      ['#highContrast', '#highValue', '--contrast-high'],
+    ];
 
     picker.addEventListener('input', () => {
       document.documentElement.style.setProperty('--color-base', picker.value);
       value.textContent = picker.value.toUpperCase();
+    });
+
+    contrastControls.forEach(([inputSelector, outputSelector, property]) => {
+      const input = document.querySelector(inputSelector);
+      const output = document.querySelector(outputSelector);
+
+      input.addEventListener('input', () => {
+        document.documentElement.style.setProperty(property, `${input.value}%`);
+        output.textContent = `${input.value}%`;
+      });
     });
   </script>
 </body>
