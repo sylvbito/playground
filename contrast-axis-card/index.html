@@ -15,7 +15,7 @@
     :root {
       --theme-hue: 90;
       --theme-lightness: 94;
-      --theme-chroma: 25;
+      --theme-chroma: 70;
       --color-base: oklch(
         calc(var(--theme-lightness) / 100)
         calc(var(--theme-chroma) / 1000)
@@ -23,9 +23,8 @@
       );
       --contrast-low: 3;
       --contrast-high: 7;
-      --surface-distance: 6%;
-      --accent-strength: 35;
-      --text-saturation: 65;
+      --surface-distance: 10%;
+      --accent-strength: 60;
       /* JS writes exact cross-browser text colours into these semantic roles. */
       --color-card-low: contrast-color(var(--color-base));
       --color-card-high: contrast-color(var(--color-base));
@@ -156,45 +155,6 @@
       transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease;
     }
 
-    .method-tabs {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 4px;
-      padding: 3px;
-      border-radius: 10px;
-      background: color-mix(in oklch, var(--color-contrast-pole) 5%, transparent);
-    }
-
-    .method-tab {
-      min-height: 29px;
-      padding: 0 8px;
-      border: 0;
-      border-radius: 7px;
-      color: inherit;
-      background: transparent;
-      font: inherit;
-      font-size: 10px;
-      font-weight: 650;
-      cursor: pointer;
-      transition: color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
-    }
-
-    .method-tab:hover {
-      background: var(--color-control-hover);
-    }
-
-    .method-tab[aria-selected="true"] {
-      background: var(--color-surface-raised);
-      box-shadow: 0 1px 5px color-mix(in oklch, var(--color-contrast-pole) 12%, transparent);
-    }
-
-    .method-note {
-      min-height: 12px;
-      margin: -4px 3px 0;
-      color: var(--color-controls-low);
-      font-size: 10px;
-      line-height: 1.2;
-    }
 
     .theme-summary {
       display: flex;
@@ -337,40 +297,6 @@
       outline-offset: 3px;
     }
 
-    .presets {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 5px;
-      padding-left: 3px;
-    }
-
-    .preset {
-      min-height: 30px;
-      padding: 0 8px;
-      border: 1px solid var(--color-control-line);
-      border-radius: 8px;
-      color: inherit;
-      background: transparent;
-      font: inherit;
-      font-size: 10px;
-      font-weight: 600;
-      line-height: 1;
-      cursor: pointer;
-      transition: background-color 120ms ease, border-color 120ms ease;
-    }
-
-    .preset:hover {
-      background: var(--color-control-hover);
-    }
-
-    .preset:active {
-      background: var(--color-control-active);
-    }
-
-    .preset[aria-pressed="true"] {
-      border-color: color-mix(in oklch, var(--color-accent) 48%, var(--color-control-line));
-      background: var(--color-accent-soft);
-    }
 
 
     @media (prefers-reduced-motion: reduce) {
@@ -391,17 +317,10 @@
     </article>
 
     <div class="controls" aria-label="Colour controls">
-      <div class="method-tabs" role="tablist" aria-label="Text colour method">
-        <button class="method-tab" type="button" role="tab" data-method="burn" aria-selected="true" tabindex="0">Burn</button>
-        <button class="method-tab" type="button" role="tab" data-method="tonal" aria-selected="false" tabindex="-1">Tonal</button>
-        <button class="method-tab" type="button" role="tab" data-method="linear" aria-selected="false" tabindex="-1">Linear</button>
-      </div>
-      <p class="method-note" id="methodNote">Exact contrast · same OKLCH hue · stronger chroma</p>
-
       <div class="theme-summary">
         <span class="theme-swatch" aria-hidden="true"></span>
         <span id="themeLabel">Theme</span>
-        <output id="themeValue" aria-labelledby="themeLabel">oklch(94% 0.025 90)</output>
+        <output id="themeValue" aria-labelledby="themeLabel">oklch(94% 0.070 90)</output>
       </div>
 
       <div class="theme-controls">
@@ -424,9 +343,9 @@
         <div class="range-control">
           <div class="range-head">
             <label for="themeChroma">Chroma</label>
-            <output id="chromaValue" for="themeChroma">0.025</output>
+            <output id="chromaValue" for="themeChroma">0.070</output>
           </div>
-          <input class="colour-range chroma-range" id="themeChroma" type="range" min="0" max="140" step="1" value="25" aria-label="Theme chroma">
+          <input class="colour-range chroma-range" id="themeChroma" type="range" min="0" max="140" step="1" value="70" aria-label="Theme chroma">
         </div>
       </div>
 
@@ -452,43 +371,26 @@
         <div class="range-control">
           <div class="range-head">
             <label for="surfaceDistance">Surfaces</label>
-            <output id="surfaceValue" for="surfaceDistance">6%</output>
+            <output id="surfaceValue" for="surfaceDistance">10%</output>
           </div>
-          <input id="surfaceDistance" type="range" min="0" max="18" step="1" value="6" aria-label="Surface distance">
+          <input id="surfaceDistance" type="range" min="0" max="18" step="1" value="10" aria-label="Surface distance">
         </div>
 
         <div class="range-control">
           <div class="range-head">
             <label for="accentStrength">Accent</label>
-            <output id="accentValue" for="accentStrength">35%</output>
+            <output id="accentValue" for="accentStrength">60%</output>
           </div>
-          <input id="accentStrength" type="range" min="5" max="75" step="1" value="35" aria-label="Accent chroma">
+          <input id="accentStrength" type="range" min="5" max="75" step="1" value="60" aria-label="Accent chroma">
         </div>
-
-        <div class="range-control range-control--wide">
-          <div class="range-head">
-            <label for="textSaturation">Text tint</label>
-            <output id="textValue" for="textSaturation">65%</output>
-          </div>
-          <input id="textSaturation" type="range" min="0" max="100" step="1" value="65" aria-label="Text tint strength">
-        </div>
-      </div>
-
-      <div class="presets" role="group" aria-label="Theme character presets">
-        <button class="preset" type="button" data-preset="quiet" aria-pressed="false">Quiet</button>
-        <button class="preset" type="button" data-preset="balanced" aria-pressed="true">Balanced</button>
-        <button class="preset" type="button" data-preset="vivid" aria-pressed="false">Vivid</button>
       </div>
     </div>
   </main>
 
   <script>
     const root = document.documentElement;
-    const storageKey = 'contrast-axis-card-theme-v4';
+    const storageKey = 'contrast-axis-card-theme-v5';
     const themeValue = document.querySelector('#themeValue');
-    const methodNote = document.querySelector('#methodNote');
-    const methodButtons = [...document.querySelectorAll('[data-method]')];
-    let activeMethod = 'burn';
 
     const controls = [
       {
@@ -550,50 +452,7 @@
         css: value => value,
         format: value => `${value}%`,
       },
-      {
-        key: 'textSaturation',
-        input: document.querySelector('#textSaturation'),
-        output: document.querySelector('#textValue'),
-        property: '--text-saturation',
-        css: value => value,
-        format: value => `${value}%`,
-      },
     ];
-
-    const presets = {
-      quiet: {
-        themeChroma: '10',
-        surfaceDistance: '3',
-        accentStrength: '18',
-        textSaturation: '20',
-      },
-      balanced: {
-        themeChroma: '25',
-        surfaceDistance: '6',
-        accentStrength: '35',
-        textSaturation: '65',
-      },
-      vivid: {
-        themeChroma: '70',
-        surfaceDistance: '10',
-        accentStrength: '60',
-        textSaturation: '100',
-      },
-    };
-
-    const presetButtons = [...document.querySelectorAll('[data-preset]')];
-
-    const methods = {
-      burn: {
-        note: 'Exact contrast · same OKLCH hue · stronger chroma',
-      },
-      tonal: {
-        note: 'Exact contrast · same OKLCH hue · softer chroma',
-      },
-      linear: {
-        note: 'Exact contrast · linear RGB · maximum available tint',
-      },
-    };
 
     const clamp = (value, minimum = 0, maximum = 1) =>
       Math.min(maximum, Math.max(minimum, value));
@@ -676,24 +535,6 @@
       return gamutMap((minimum + maximum) / 2, chroma, surface.hue).rgb;
     }
 
-    function solveLinearText(surface, ratio, tint) {
-      const baseY = luminance(surface.rgb);
-      const target = targetLuminance(baseY, ratio);
-      const towardBlack = (baseY + 0.05) / 0.05 >= 1.05 / (baseY + 0.05);
-      const pole = towardBlack ? 0 : 1;
-      const denominator = pole - baseY;
-      const mix = Math.abs(denominator) < 0.000001 ? 0 : (target - baseY) / denominator;
-      const solved = surface.rgb.map(channel => channel + mix * (pole - channel));
-      const deltas = solved.map(channel => channel - target);
-      const limits = deltas.map(delta => {
-        if (delta > 0.000001) return (1 - target) / delta;
-        if (delta < -0.000001) return target / -delta;
-        return Infinity;
-      });
-      const saturation = Math.min(...limits) * tint;
-
-      return deltas.map(delta => clamp(target + saturation * delta));
-    }
 
     function currentSurfaces() {
       const lightness = controlNumber('themeLightness') / 100;
@@ -722,24 +563,13 @@
     }
 
     function textColour(surface, ratio) {
-      const tint = controlNumber('textSaturation') / 100;
-      if (activeMethod === 'linear') {
-        return solveLinearText(surface, ratio, tint);
-      }
-
       const sourceChroma = controlNumber('themeChroma') / 1000;
       if (sourceChroma < 0.0005) {
         return solveOklchText(surface, ratio, 0);
       }
 
-      const maximumChroma = activeMethod === 'burn'
-        ? Math.min(0.28, Math.max(0.16, sourceChroma * 3.5))
-        : Math.min(0.12, sourceChroma * 1.5);
-      const desiredChroma = activeMethod === 'burn'
-        ? sourceChroma + tint * (maximumChroma - sourceChroma)
-        : tint * maximumChroma;
-
-      return solveOklchText(surface, ratio, desiredChroma);
+      const maximumChroma = Math.min(0.28, Math.max(0.16, sourceChroma * 3.5));
+      return solveOklchText(surface, ratio, maximumChroma);
     }
 
     function linearChannelToSrgb(channel) {
@@ -764,17 +594,6 @@
       root.style.setProperty('--color-controls-high', rgbCss(textColour(surfaces.controls, highRatio)));
     }
 
-    function selectMethod(name, persist = true) {
-      activeMethod = methods[name] ? name : 'burn';
-      methodButtons.forEach(button => {
-        const selected = button.dataset.method === activeMethod;
-        button.setAttribute('aria-selected', String(selected));
-        button.tabIndex = selected ? 0 : -1;
-      });
-      methodNote.textContent = methods[activeMethod].note;
-      updateDerivedColours();
-      if (persist) saveState();
-    }
 
     function updateThemeValue() {
       const hue = controls.find(control => control.key === 'themeHue').input.value;
@@ -797,24 +616,8 @@
       if (control.theme) updateThemeValue();
     }
 
-    function matchingPreset() {
-      return Object.entries(presets).find(([, values]) =>
-        Object.entries(values).every(([key, value]) =>
-          controls.find(control => control.key === key)?.input.value === value
-        )
-      )?.[0] ?? null;
-    }
-
-    function syncPresetButtons() {
-      const active = matchingPreset();
-      presetButtons.forEach(button => {
-        button.setAttribute('aria-pressed', String(button.dataset.preset === active));
-      });
-    }
-
     function currentState() {
       return {
-        method: activeMethod,
         controls: Object.fromEntries(
           controls.map(control => [control.key, control.input.value])
         ),
@@ -829,43 +632,12 @@
       }
     }
 
-    function applyPreset(name) {
-      const values = presets[name];
-      if (!values) return;
-
-      Object.entries(values).forEach(([key, nextValue]) => {
-        const control = controls.find(item => item.key === key);
-        if (control) applyControl(control, nextValue);
-      });
-
-      syncPresetButtons();
-      updateDerivedColours();
-      saveState();
-    }
-
     controls.forEach(control => {
       control.input.addEventListener('input', () => {
         applyControl(control);
-        syncPresetButtons();
         updateDerivedColours();
         saveState();
       });
-    });
-
-    methodButtons.forEach((button, index) => {
-      button.addEventListener('click', () => selectMethod(button.dataset.method));
-      button.addEventListener('keydown', event => {
-        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
-        event.preventDefault();
-        const direction = event.key === 'ArrowRight' ? 1 : -1;
-        const next = methodButtons[(index + direction + methodButtons.length) % methodButtons.length];
-        next.focus();
-        selectMethod(next.dataset.method);
-      });
-    });
-
-    presetButtons.forEach(button => {
-      button.addEventListener('click', () => applyPreset(button.dataset.preset));
     });
 
     try {
@@ -874,13 +646,10 @@
       controls.forEach(control => {
         applyControl(control, saved?.controls?.[control.key] ?? control.input.value);
       });
-      selectMethod(saved?.method ?? 'burn', false);
     } catch {
       controls.forEach(control => applyControl(control));
-      selectMethod('burn', false);
     }
 
-    syncPresetButtons();
     updateDerivedColours();
   </script>
 </body>
