@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Four progressive demos for CSS if(), progress(), random(), and scroll-state queries.">
+  <title>CSS Progressive Primitives Card</title>
+  <style>
+    @property --progress-value {
+      syntax: "<number>";
+      inherits: true;
+      initial-value: 52;
+    }
+
+    :root {
+      color-scheme: light;
+      --canvas: #ededec;
+      --card: #1c1c1a;
+      --ink: #f8f8f5;
+      --muted: #97978f;
+      --line: rgb(255 255 255 / 11%);
+      --accent: #b7eb52;
+      --accent-ink: #18200d;
+      --progress-value: 52;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: #181817;
+      background: var(--canvas);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button,
+    input { font: inherit; }
+
+    .demo {
+      width: min(390px, calc(100vw - 48px));
+      display: grid;
+      gap: 14px;
+    }
+
+    .stage {
+      position: relative;
+      aspect-ratio: 1;
+      overflow: hidden;
+      border: 1px solid rgb(255 255 255 / 7%);
+      border-radius: 34px;
+      color: var(--ink);
+      background: var(--card);
+      box-shadow: 0 26px 70px rgb(25 25 22 / 13%);
+    }
+
+    .stage-head,
+    .stage-foot {
+      position: absolute;
+      z-index: 20;
+      left: 25px;
+      right: 25px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .stage-head { top: 23px; }
+    .stage-foot { bottom: 23px; align-items: flex-end; }
+
+    .kicker,
+    .hint,
+    .property-readout,
+    .source-badge { margin: 0; }
+
+    .kicker,
+    .source-badge {
+      color: var(--ink);
+      font: 650 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hint {
+      max-width: 150px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 560;
+      line-height: 1.2;
+      text-align: right;
+    }
+
+    .property-readout {
+      max-width: 260px;
+      color: #a3a39b;
+      font: 500 9px/1.45 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      white-space: normal;
+    }
+
+    .source-badge {
+      flex: none;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+
+    .scene {
+      position: absolute;
+      inset: 65px 20px 60px;
+    }
+
+    .scene-group {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 170ms ease, visibility 170ms step-end;
+    }
+
+    body[data-mode="conditions"] .conditions-scene,
+    body[data-mode="progress"] .progress-scene,
+    body[data-mode="random"] .random-scene,
+    body[data-mode="scroll"] .scroll-scene {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition: opacity 180ms ease, visibility 180ms step-start;
+    }
+
+    /* 01 — if() */
+    .if-specimen {
+      --status: pending;
+      position: absolute;
+      inset: 0;
+      width: 190px;
+      aspect-ratio: 1;
+      margin: auto;
+      display: grid;
+      place-items: center;
+      border-radius: 28px;
+      color: var(--accent-ink);
+      background: #f8f8f5;
+      transition:
+        border-radius 360ms cubic-bezier(.2, .75, .2, 1),
+        rotate 360ms cubic-bezier(.2, .75, .2, 1),
+        background-color 240ms ease,
+        color 240ms ease;
+    }
+
+    @supports (background: if(style(--status: ready): lime; else: white)) {
+      .if-specimen {
+        color: if(
+          style(--status: blocked): var(--ink);
+          else: var(--accent-ink)
+        );
+        background: if(
+          style(--status: ready): var(--accent);
+          style(--status: blocked): #ff715b;
+          else: #f8f8f5
+        );
+        border-radius: if(
+          style(--status: ready): 50%;
+          style(--status: blocked): 10px;
+          else: 28px
+        );
+        rotate: if(
+          style(--status: blocked): 5deg;
+          style(--status: pending): -4deg;
+          else: 0deg
+        );
+      }
+    }
+
+    .polyfill-if .if-specimen[data-status="pending"] {
+      color: var(--accent-ink);
+      background: #f8f8f5;
+      border-radius: 28px;
+      rotate: -4deg;
+    }
+
+    .polyfill-if .if-specimen[data-status="ready"] {
+      color: var(--accent-ink);
+      background: var(--accent);
+      border-radius: 50%;
+      rotate: 0deg;
+    }
+
+    .polyfill-if .if-specimen[data-status="blocked"] {
+      color: var(--ink);
+      background: #ff715b;
+      border-radius: 10px;
+      rotate: 5deg;
+    }
+
+    .if-value {
+      display: grid;
+      justify-items: center;
+      gap: 7px;
+    }
+
+    .if-value strong {
+      font-size: 32px;
+      font-weight: 560;
+      line-height: 0.95;
+      letter-spacing: -0.055em;
+      text-transform: uppercase;
+    }
+
+    .if-value small {
+      font: 650 9px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      opacity: 0.62;
+    }
+
+    /* 02 — progress() */
+    .progress-specimen {
+      --p: calc(var(--progress-value) / 100);
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+    }
+
+    @supports (opacity: progress(50, 0, 100)) {
+      .progress-specimen { --p: progress(var(--progress-value), 0, 100); }
+    }
+
+    .polyfill-progress .progress-specimen { --p: calc(var(--progress-value) / 100); }
+
+    .progress-rail {
+      position: relative;
+      width: 260px;
+      height: 2px;
+      border-radius: 99px;
+      background: #555550;
+    }
+
+    .progress-rail::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: calc(var(--p) * 100%);
+      border-radius: inherit;
+      background: var(--accent);
+      transition: width 120ms linear;
+    }
+
+    .progress-orb {
+      position: absolute;
+      left: -22px;
+      top: 50%;
+      width: calc(44px + var(--p) * 38px);
+      aspect-ratio: 1;
+      translate: calc(var(--p) * 222px) -50%;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--accent-ink);
+      background: color-mix(in oklch, #f8f8f5 calc((1 - var(--p)) * 100%), var(--accent));
+      box-shadow: 0 12px 30px rgb(0 0 0 / 18%);
+      transition: width 120ms linear, translate 120ms linear, background-color 120ms linear;
+    }
+
+    .progress-orb strong {
+      font: 650 11px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    /* 03 — random() */
+    .random-field {
+      position: absolute;
+      inset: 0;
+    }
+
+    .random-token {
+      --random-size: 38px;
+      --random-x: 0px;
+      --random-y: 0px;
+      --random-angle: 0deg;
+      --random-radius: 14px;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: var(--random-size);
+      aspect-ratio: 1;
+      translate: calc(-50% + var(--random-x)) calc(-50% + var(--random-y));
+      rotate: var(--random-angle);
+      border-radius: var(--random-radius);
+      background: var(--accent);
+      box-shadow: 0 10px 24px rgb(0 0 0 / 16%);
+      transition: width 360ms cubic-bezier(.2,.75,.2,1), translate 360ms cubic-bezier(.2,.75,.2,1), rotate 360ms cubic-bezier(.2,.75,.2,1), border-radius 360ms ease;
+    }
+
+    .random-token:nth-child(3n) { background: #f8f8f5; }
+    .random-token:nth-child(4n) { background: #65655f; }
+
+    @supports (width: random(element-scoped, 20px, 40px)) {
+      .random-token {
+        --random-size: random(--size element-scoped, 24px, 58px);
+        --random-x: random(--x element-scoped, -112px, 112px);
+        --random-y: random(--y element-scoped, -84px, 84px);
+        --random-angle: random(--angle element-scoped, -38deg, 38deg);
+        --random-radius: random(--radius element-scoped, 8px, 28px);
+      }
+    }
+
+    /* 04 — scroll-state() */
+    .snap-scroller {
+      position: absolute;
+      inset: 20px 0 17px;
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding: 18px 56px;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      scrollbar-width: none;
+      overscroll-behavior-inline: contain;
+    }
+
+    .snap-scroller::-webkit-scrollbar { display: none; }
+
+    .snap-item {
+      flex: 0 0 210px;
+      min-width: 0;
+      container-type: scroll-state;
+      scroll-snap-align: center;
+    }
+
+    .snap-card {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      color: var(--ink);
+      background: #292927;
+      opacity: 0.45;
+      scale: 0.92;
+      transition: opacity 260ms ease, scale 260ms ease, color 260ms ease, background-color 260ms ease;
+    }
+
+    .snap-card span {
+      font: 600 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      opacity: 0.62;
+    }
+
+    .snap-card strong {
+      font-size: 46px;
+      font-weight: 520;
+      line-height: 0.9;
+      letter-spacing: -0.07em;
+    }
+
+    @container scroll-state(snapped: x) {
+      .snap-card {
+        color: var(--accent-ink);
+        background: var(--accent);
+        opacity: 1;
+        scale: 1;
+      }
+    }
+
+    .polyfill-scroll .snap-item.is-snapped .snap-card {
+      color: var(--accent-ink);
+      background: var(--accent);
+      opacity: 1;
+      scale: 1;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+      padding: 10px;
+      border: 1px solid #d4d4d0;
+      border-radius: 16px;
+      background: #f8f8f6;
+      box-shadow: 0 8px 28px rgb(22 22 20 / 7%);
+    }
+
+    .mode-switcher {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 3px;
+      padding: 3px;
+      border-radius: 11px;
+      background: #e8e8e4;
+    }
+
+    .mode-button,
+    .action-button {
+      min-height: 32px;
+      border: 0;
+      border-radius: 8px;
+      color: #6f6f69;
+      background: transparent;
+      font-size: 10px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .mode-button[aria-pressed="true"] {
+      color: #191918;
+      background: #fff;
+      box-shadow: 0 1px 4px rgb(22 22 20 / 10%);
+    }
+
+    .mode-button:focus-visible,
+    .action-button:focus-visible,
+    input[type="range"]:focus-visible {
+      outline: 2px solid #6d941f;
+      outline-offset: 2px;
+    }
+
+    .control-grid {
+      display: grid;
+      padding: 2px 4px 3px;
+    }
+
+    .range-control {
+      display: grid;
+      gap: 7px;
+    }
+
+    .range-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .range-head label {
+      color: #2b2b29;
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .range-head output {
+      color: #777771;
+      font: 500 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 14px;
+      margin: 0;
+      accent-color: #222220;
+      cursor: ew-resize;
+    }
+
+    .action-button {
+      min-height: 34px;
+      border: 1px solid #d8d8d4;
+      color: #292927;
+      background: #f1f1ee;
+    }
+
+    .range-control[hidden],
+    .action-button[hidden] { display: none; }
+
+    @media (max-width: 430px) {
+      body { padding: 18px; }
+      .demo { width: min(390px, calc(100vw - 36px)); }
+      .stage { border-radius: 30px; }
+      .scene { inset-inline: 14px; }
+      .stage-head,
+      .stage-foot { left: 22px; right: 22px; }
+      .property-readout { max-width: 238px; }
+      .mode-button { font-size: 9px; }
+      .snap-scroller { padding-inline: 42px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 1ms !important;
+      }
+    }
+  </style>
+</head>
+<body data-mode="conditions">
+  <main class="demo">
+    <section class="stage" id="stage" aria-label="Progressive CSS primitive specimen">
+      <header class="stage-head">
+        <p class="kicker" id="modeTitle">CSS if()</p>
+        <p class="hint" id="hint">Click to branch state</p>
+      </header>
+
+      <div class="scene">
+        <div class="scene-group conditions-scene" aria-hidden="false">
+          <div class="if-specimen" id="ifSpecimen" data-status="pending">
+            <span class="if-value"><strong id="ifValue">Pending</strong><small>--status</small></span>
+          </div>
+        </div>
+
+        <div class="scene-group progress-scene" aria-hidden="true">
+          <div class="progress-specimen">
+            <div class="progress-rail">
+              <span class="progress-orb"><strong id="progressValue">52%</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="scene-group random-scene" aria-hidden="true">
+          <div class="random-field" id="randomField" aria-label="Randomly generated composition">
+            <span class="random-token"></span><span class="random-token"></span><span class="random-token"></span>
+            <span class="random-token"></span><span class="random-token"></span><span class="random-token"></span>
+            <span class="random-token"></span><span class="random-token"></span><span class="random-token"></span>
+          </div>
+        </div>
+
+        <div class="scene-group scroll-scene" aria-hidden="true">
+          <div class="snap-scroller" id="snapScroller" aria-label="Scroll-state snap demo">
+            <article class="snap-item"><div class="snap-card"><span>Snapped state</span><strong>01</strong></div></article>
+            <article class="snap-item"><div class="snap-card"><span>Container query</span><strong>02</strong></div></article>
+            <article class="snap-item"><div class="snap-card"><span>No observer</span><strong>03</strong></div></article>
+          </div>
+        </div>
+      </div>
+
+      <footer class="stage-foot">
+        <code class="property-readout" id="readout">background: if(style(--status: ready): lime; else: white);</code>
+        <span class="source-badge" id="sourceBadge">Native</span>
+      </footer>
+    </section>
+
+    <section class="controls" aria-label="Primitive controls">
+      <div class="mode-switcher" aria-label="Demo mode">
+        <button class="mode-button" type="button" data-mode-button="conditions" aria-pressed="true">If</button>
+        <button class="mode-button" type="button" data-mode-button="progress" aria-pressed="false">Progress</button>
+        <button class="mode-button" type="button" data-mode-button="random" aria-pressed="false">Random</button>
+        <button class="mode-button" type="button" data-mode-button="scroll" aria-pressed="false">Scroll</button>
+      </div>
+      <div class="control-grid">
+        <div class="range-control" id="rangeControl" hidden>
+          <span class="range-head">
+            <label for="valueRange">Source value</label>
+            <output id="rangeOutput" for="valueRange">52</output>
+          </span>
+          <input id="valueRange" type="range" min="0" max="100" value="52" step="1">
+        </div>
+        <button class="action-button" id="actionButton" type="button">Next state</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const root = document.documentElement;
+    const body = document.body;
+    const stage = document.querySelector('#stage');
+    const modeTitle = document.querySelector('#modeTitle');
+    const hint = document.querySelector('#hint');
+    const readout = document.querySelector('#readout');
+    const sourceBadge = document.querySelector('#sourceBadge');
+    const rangeControl = document.querySelector('#rangeControl');
+    const valueRange = document.querySelector('#valueRange');
+    const rangeOutput = document.querySelector('#rangeOutput');
+    const actionButton = document.querySelector('#actionButton');
+    const ifSpecimen = document.querySelector('#ifSpecimen');
+    const ifValue = document.querySelector('#ifValue');
+    const progressValue = document.querySelector('#progressValue');
+    const randomField = document.querySelector('#randomField');
+    const snapScroller = document.querySelector('#snapScroller');
+    const snapItems = [...document.querySelectorAll('.snap-item')];
+    const modeButtons = [...document.querySelectorAll('[data-mode-button]')];
+    const scenes = [...document.querySelectorAll('.scene-group')];
+
+    const forceFallback = new URLSearchParams(location.search).has('force-fallback');
+    const support = {
+      conditions: !forceFallback && CSS.supports('background', 'if(style(--status: ready): lime; else: white)'),
+      progress: !forceFallback && CSS.supports('opacity', 'progress(50, 0, 100)'),
+      random: !forceFallback && CSS.supports('width', 'random(element-scoped, 20px, 40px)'),
+      scroll: !forceFallback && CSS.supports('container-type', 'scroll-state')
+    };
+
+    root.classList.toggle('polyfill-if', !support.conditions);
+    root.classList.toggle('polyfill-progress', !support.progress);
+    root.classList.toggle('polyfill-random', !support.random);
+    root.classList.toggle('polyfill-scroll', !support.scroll);
+
+    const state = {
+      mode: 'conditions',
+      conditionIndex: 0,
+      conditions: ['pending', 'ready', 'blocked'],
+      progress: 52,
+      randomSeed: 1,
+      snapIndex: 0
+    };
+
+    function setSceneA11y(mode) {
+      const map = {
+        conditions: '.conditions-scene',
+        progress: '.progress-scene',
+        random: '.random-scene',
+        scroll: '.scroll-scene'
+      };
+      scenes.forEach(scene => scene.setAttribute('aria-hidden', String(!scene.matches(map[mode]))));
+    }
+
+    function setBadge() {
+      sourceBadge.textContent = support[state.mode] ? 'Native' : 'Fallback';
+    }
+
+    function setMode(mode) {
+      state.mode = mode;
+      body.dataset.mode = mode;
+      setSceneA11y(mode);
+      modeButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.modeButton === mode)));
+      rangeControl.hidden = mode !== 'progress';
+      actionButton.hidden = mode === 'progress';
+
+      if (mode === 'conditions') {
+        modeTitle.textContent = 'CSS if()';
+        hint.textContent = 'Click to branch state';
+        actionButton.textContent = 'Next state';
+        readout.textContent = 'background: if(style(--status: ready): lime; else: white);';
+      } else if (mode === 'progress') {
+        modeTitle.textContent = 'CSS progress()';
+        hint.textContent = 'One value, normalised';
+        readout.textContent = '--p: progress(var(--value), 0, 100);';
+      } else if (mode === 'random') {
+        modeTitle.textContent = 'CSS random()';
+        hint.textContent = 'Click to re-roll';
+        actionButton.textContent = 'Re-roll composition';
+        readout.textContent = 'random(--x element-scoped, -112px, 112px);';
+      } else {
+        modeTitle.textContent = 'Scroll state';
+        hint.textContent = 'Snap to query state';
+        actionButton.textContent = 'Next snap';
+        readout.textContent = '@container scroll-state(snapped: x) { … }';
+      }
+      setBadge();
+    }
+
+    function advanceCondition() {
+      state.conditionIndex = (state.conditionIndex + 1) % state.conditions.length;
+      const status = state.conditions[state.conditionIndex];
+      ifSpecimen.dataset.status = status;
+      ifSpecimen.style.setProperty('--status', status);
+      ifValue.textContent = status;
+    }
+
+    function seeded(seed) {
+      let value = seed >>> 0;
+      return () => {
+        value = (value * 1664525 + 1013904223) >>> 0;
+        return value / 4294967296;
+      };
+    }
+
+    function applyRandomFallback() {
+      if (support.random) return;
+      const next = seeded(state.randomSeed * 7919);
+      [...randomField.children].forEach(token => {
+        token.style.setProperty('--random-size', `${24 + next() * 34}px`);
+        token.style.setProperty('--random-x', `${-112 + next() * 224}px`);
+        token.style.setProperty('--random-y', `${-84 + next() * 168}px`);
+        token.style.setProperty('--random-angle', `${-38 + next() * 76}deg`);
+        token.style.setProperty('--random-radius', `${8 + next() * 20}px`);
+      });
+    }
+
+    function rerollRandom() {
+      state.randomSeed += 1;
+      if (support.random) {
+        [...randomField.children].forEach(token => token.replaceWith(token.cloneNode(true)));
+      } else {
+        applyRandomFallback();
+      }
+    }
+
+    function syncFallbackSnap(index) {
+      state.snapIndex = Math.max(0, Math.min(snapItems.length - 1, index));
+      snapItems.forEach((item, itemIndex) => item.classList.toggle('is-snapped', itemIndex === state.snapIndex));
+    }
+
+    function scrollToSnap(index, behaviour = 'smooth') {
+      syncFallbackSnap(index);
+      const item = snapItems[state.snapIndex];
+      const left = item.offsetLeft - (snapScroller.clientWidth - item.offsetWidth) / 2;
+      snapScroller.scrollTo({ left, behavior: behaviour });
+    }
+
+    if (!support.scroll) {
+      snapScroller.addEventListener('scrollend', () => {
+        const centre = snapScroller.scrollLeft + snapScroller.clientWidth / 2;
+        const closest = snapItems.reduce((best, item, index) => {
+          const distance = Math.abs(item.offsetLeft + item.offsetWidth / 2 - centre);
+          return distance < best.distance ? { index, distance } : best;
+        }, { index: 0, distance: Infinity });
+        syncFallbackSnap(closest.index);
+      });
+    }
+
+    valueRange.addEventListener('input', () => {
+      state.progress = Number(valueRange.value);
+      root.style.setProperty('--progress-value', state.progress);
+      progressValue.textContent = `${state.progress}%`;
+      rangeOutput.textContent = state.progress;
+    });
+
+    actionButton.addEventListener('click', event => {
+      event.stopPropagation();
+      if (state.mode === 'conditions') advanceCondition();
+      else if (state.mode === 'random') rerollRandom();
+      else if (state.mode === 'scroll') scrollToSnap((state.snapIndex + 1) % snapItems.length);
+    });
+
+    stage.addEventListener('click', event => {
+      if (event.target.closest('.snap-scroller')) return;
+      if (state.mode === 'conditions') advanceCondition();
+      else if (state.mode === 'random') rerollRandom();
+      else if (state.mode === 'scroll') scrollToSnap((state.snapIndex + 1) % snapItems.length);
+    });
+
+    modeButtons.forEach(button => button.addEventListener('click', () => setMode(button.dataset.modeButton)));
+
+    ifSpecimen.style.setProperty('--status', state.conditions[state.conditionIndex]);
+    applyRandomFallback();
+    scrollToSnap(0, 'auto');
+    setMode('conditions');
+  </script>
+</body>
+</html>

@@ -157,7 +157,14 @@
       background: var(--accent);
       transition:
         border-radius 380ms cubic-bezier(.2, .75, .2, 1),
-        corner-shape 380ms cubic-bezier(.2, .75, .2, 1);
+        corner-shape 380ms cubic-bezier(.2, .75, .2, 1),
+        clip-path 380ms cubic-bezier(.2, .75, .2, 1);
+    }
+
+    .polyfill-corner .corner-specimen {
+      border-radius: 0;
+      corner-shape: round;
+      clip-path: var(--corner-fallback-clip);
     }
 
     .corner-value {
@@ -190,8 +197,8 @@
     }
 
     .sibling-bar {
-      --index: sibling-index();
-      --count: sibling-count();
+      --index: var(--fallback-index, sibling-index());
+      --count: var(--fallback-count, sibling-count());
       --angle: calc(((var(--index) - 1) / var(--count)) * 360deg + var(--wave-phase));
       width: 9px;
       height: calc(22px + ((sin(var(--angle)) + 1) / 2) * var(--wave-amplitude));
@@ -215,14 +222,14 @@
       position: absolute;
       left: 50%;
       top: 50%;
-      width: attr(data-size type(<length>), 48px);
+      width: var(--fallback-size, attr(data-size type(<length>), 48px));
       aspect-ratio: 1;
       translate:
-        calc(-50% + attr(data-x type(<length>), 0px))
-        calc(-50% + attr(data-y type(<length>), 0px));
-      rotate: attr(data-angle type(<angle>), 0deg);
-      border-radius: attr(data-radius type(<length>), 14px);
-      background: attr(data-colour type(<color>), var(--accent));
+        calc(-50% + var(--fallback-x, attr(data-x type(<length>), 0px)))
+        calc(-50% + var(--fallback-y, attr(data-y type(<length>), 0px)));
+      rotate: var(--fallback-angle, attr(data-angle type(<angle>), 0deg));
+      border-radius: var(--fallback-radius, attr(data-radius type(<length>), 14px));
+      background: var(--fallback-colour, attr(data-colour type(<color>), var(--accent)));
       box-shadow: 0 14px 30px rgb(0 0 0 / 16%);
       transition:
         width 420ms cubic-bezier(.2, .75, .2, 1),
@@ -351,6 +358,70 @@
     }
 
     .carousel-panel::scroll-marker:target-current {
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+
+    .carousel-fallback-controls { display: none; }
+
+    .polyfill-carousel .native-carousel { scroll-marker-group: none; }
+
+    .polyfill-carousel .native-carousel::scroll-button(left),
+    .polyfill-carousel .native-carousel::scroll-button(right) { content: none; }
+
+    .polyfill-carousel .carousel-fallback-controls {
+      position: absolute;
+      z-index: 9;
+      inset: 0;
+      display: block;
+      pointer-events: none;
+    }
+
+    .carousel-fallback-arrow {
+      position: absolute;
+      top: 50%;
+      width: 34px;
+      height: 34px;
+      translate: 0 -65%;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      color: var(--ink);
+      background: #242422;
+      font-size: 19px;
+      line-height: 1;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    .carousel-fallback-arrow[data-direction="-1"] { left: 2px; }
+    .carousel-fallback-arrow[data-direction="1"] { right: 2px; }
+
+    .carousel-fallback-arrow:disabled {
+      opacity: 0.28;
+      cursor: default;
+    }
+
+    .carousel-fallback-markers {
+      position: absolute;
+      left: 50%;
+      bottom: 14px;
+      display: flex;
+      gap: 7px;
+      translate: -50% 0;
+      pointer-events: auto;
+    }
+
+    .carousel-fallback-marker {
+      width: 8px;
+      height: 8px;
+      padding: 0;
+      border: 1px solid #70706b;
+      border-radius: 50%;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .carousel-fallback-marker[aria-selected="true"] {
       border-color: var(--accent);
       background: var(--accent);
     }
@@ -566,6 +637,15 @@
             <article class="carousel-panel"><span>No carousel JS</span><strong>02</strong></article>
             <article class="carousel-panel"><span>Native state</span><strong>03</strong></article>
           </div>
+          <div class="carousel-fallback-controls" aria-label="Carousel controls fallback">
+            <button class="carousel-fallback-arrow" type="button" data-direction="-1" aria-label="Previous slide">‹</button>
+            <button class="carousel-fallback-arrow" type="button" data-direction="1" aria-label="Next slide">›</button>
+            <div class="carousel-fallback-markers" role="tablist" aria-label="Choose slide">
+              <button class="carousel-fallback-marker" type="button" role="tab" data-slide="0" aria-label="Slide 1" aria-selected="true"></button>
+              <button class="carousel-fallback-marker" type="button" role="tab" data-slide="1" aria-label="Slide 2" aria-selected="false"></button>
+              <button class="carousel-fallback-marker" type="button" role="tab" data-slide="2" aria-label="Slide 3" aria-selected="false"></button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -603,7 +683,7 @@
         <button class="action-button" id="actionButton" type="button" hidden>Shuffle data attributes</button>
       </div>
 
-      <p class="support-note">This browser does not support every CSS primitive used by this specimen.</p>
+      <p class="support-note">Compatibility fallbacks are active for unavailable primitives.</p>
     </section>
   </main>
 
@@ -629,6 +709,11 @@
     const modeButtons = [...document.querySelectorAll('[data-mode-button]')];
     const scenes = [...document.querySelectorAll('.scene-group')];
     const tokens = [...document.querySelectorAll('.attribute-token')];
+    const siblingBars = [...document.querySelectorAll('.sibling-bar')];
+    const carousel = document.querySelector('.native-carousel');
+    const carouselPanels = [...document.querySelectorAll('.carousel-panel')];
+    const fallbackArrows = [...document.querySelectorAll('.carousel-fallback-arrow')];
+    const fallbackMarkers = [...document.querySelectorAll('.carousel-fallback-marker')];
 
     const state = {
       mode: 'corners',
@@ -637,14 +722,61 @@
       shuffle: 0
     };
 
-    const allSupported = [
-      CSS.supports('corner-shape', 'superellipse(2)'),
-      CSS.supports('height', 'calc(sibling-index() * 1px)'),
-      CSS.supports('rotate', 'attr(data-angle type(<angle>))'),
-      CSS.supports('scroll-marker-group', 'after')
-    ].every(Boolean);
+    const forceFallback = new URLSearchParams(location.search).has('force-fallback');
+    const support = {
+      corner: !forceFallback && CSS.supports('corner-shape', 'superellipse(2)'),
+      siblings: !forceFallback && CSS.supports('height', 'calc(sibling-index() * 1px)'),
+      attributes: !forceFallback && CSS.supports('rotate', 'attr(data-angle type(<angle>))'),
+      carousel: !forceFallback && CSS.supports('scroll-marker-group', 'after')
+    };
 
-    if (!allSupported) root.classList.add('no-new-css');
+    root.classList.toggle('polyfill-corner', !support.corner);
+    root.classList.toggle('polyfill-carousel', !support.carousel);
+    root.classList.toggle('no-new-css', Object.values(support).some(value => !value));
+
+    siblingBars.forEach((bar, index) => {
+      if (!support.siblings) {
+        bar.style.setProperty('--fallback-index', index + 1);
+        bar.style.setProperty('--fallback-count', siblingBars.length);
+      }
+    });
+
+    function syncTokenFallback(token) {
+      if (support.attributes) return;
+      for (const name of ['size', 'x', 'y', 'angle', 'radius', 'colour']) {
+        token.style.setProperty(`--fallback-${name}`, token.dataset[name]);
+      }
+    }
+
+    tokens.forEach(syncTokenFallback);
+
+    function roundedSuperellipse(exponent, radius) {
+      const power = 2 / Math.pow(2, exponent);
+      const corners = [
+        [100 - radius, radius, -Math.PI / 2, 0],
+        [100 - radius, 100 - radius, 0, Math.PI / 2],
+        [radius, 100 - radius, Math.PI / 2, Math.PI],
+        [radius, radius, Math.PI, Math.PI * 1.5]
+      ];
+      const points = [];
+      for (const [cx, cy, start, end] of corners) {
+        for (let step = 0; step <= 24; step += 1) {
+          const angle = start + (end - start) * (step / 24);
+          const cosine = Math.cos(angle);
+          const sine = Math.sin(angle);
+          const x = cx + radius * Math.sign(cosine) * Math.pow(Math.abs(cosine), power);
+          const y = cy + radius * Math.sign(sine) * Math.pow(Math.abs(sine), power);
+          points.push(`${x.toFixed(2)}% ${y.toFixed(2)}%`);
+        }
+      }
+      return `polygon(${points.join(',')})`;
+    }
+
+    function syncCornerFallback() {
+      if (!support.corner) {
+        root.style.setProperty('--corner-fallback-clip', roundedSuperellipse(state.corners.exponent, state.corners.radius));
+      }
+    }
 
     function configureRange(input, { min, max, value, step = 1 }) {
       input.min = min;
@@ -737,8 +869,50 @@
         token.dataset.y = `${y}px`;
         token.dataset.radius = `${radius}px`;
         token.dataset.colour = palette[(seed + index) % palette.length];
+        syncTokenFallback(token);
       });
       updateReadout();
+    }
+
+    let fallbackSlide = 0;
+
+    function scrollToFallbackSlide(index, behaviour = 'smooth') {
+      fallbackSlide = Math.max(0, Math.min(carouselPanels.length - 1, index));
+      const panel = carouselPanels[fallbackSlide];
+      const left = panel.offsetLeft - (carousel.clientWidth - panel.offsetWidth) / 2;
+      carousel.scrollTo({ left, behavior: behaviour });
+      fallbackMarkers.forEach((marker, markerIndex) => {
+        marker.setAttribute('aria-selected', String(markerIndex === fallbackSlide));
+      });
+      fallbackArrows[0].disabled = fallbackSlide === 0;
+      fallbackArrows[1].disabled = fallbackSlide === carouselPanels.length - 1;
+    }
+
+    if (!support.carousel) {
+      fallbackArrows.forEach(button => {
+        button.addEventListener('click', event => {
+          event.stopPropagation();
+          scrollToFallbackSlide(fallbackSlide + Number(button.dataset.direction));
+        });
+      });
+      fallbackMarkers.forEach(button => {
+        button.addEventListener('click', event => {
+          event.stopPropagation();
+          scrollToFallbackSlide(Number(button.dataset.slide));
+        });
+      });
+      carousel.addEventListener('scrollend', () => {
+        const centre = carousel.scrollLeft + carousel.clientWidth / 2;
+        const closest = carouselPanels.reduce((best, panel, index) => {
+          const distance = Math.abs(panel.offsetLeft + panel.offsetWidth / 2 - centre);
+          return distance < best.distance ? { index, distance } : best;
+        }, { index: 0, distance: Infinity });
+        fallbackSlide = closest.index;
+        fallbackMarkers.forEach((marker, index) => marker.setAttribute('aria-selected', String(index === fallbackSlide)));
+        fallbackArrows[0].disabled = fallbackSlide === 0;
+        fallbackArrows[1].disabled = fallbackSlide === carouselPanels.length - 1;
+      });
+      scrollToFallbackSlide(0, 'auto');
     }
 
     modeButtons.forEach(button => {
@@ -750,6 +924,7 @@
       if (state.mode === 'corners') {
         state.corners.exponent = value;
         root.style.setProperty('--corner-k', value);
+        syncCornerFallback();
         cornerValue.textContent = value;
         primaryOutput.textContent = value;
       } else if (state.mode === 'siblings') {
@@ -765,6 +940,7 @@
       if (state.mode === 'corners') {
         state.corners.radius = value;
         root.style.setProperty('--corner-radius', `${value}%`);
+        syncCornerFallback();
         secondaryOutput.textContent = `${value}%`;
       } else if (state.mode === 'siblings') {
         state.siblings.phase = value;
@@ -788,6 +964,7 @@
       }
     });
 
+    syncCornerFallback();
     setMode('corners');
   </script>
 </body>
