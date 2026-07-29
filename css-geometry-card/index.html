@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Three minimal CSS geometry demos using motion paths, trigonometry, atan2() and hypot().">
+  <title>CSS Geometry Card</title>
+  <style>
+    :root {
+      --canvas: #ececea;
+      --card: #191918;
+      --ink: #f8f8f5;
+      --muted: #999992;
+      --line: #393937;
+      --accent: #b7eb52;
+      --accent-ink: #171b10;
+      --ray-distance: 76;
+      --ray-anchor: 50;
+      --ray-rotation: auto 90deg;
+      --orbit-radius: 106px;
+      --orbit-phase: 0deg;
+      --point-reach: 1;
+      --dx: 82px;
+      --dy: -54px;
+      color-scheme: dark;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      background: var(--canvas);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100svh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: var(--canvas);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .demo {
+      width: min(390px, calc(100vw - 48px));
+      display: grid;
+      gap: 14px;
+    }
+
+    .stage {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      overflow: hidden;
+      border: 0;
+      border-radius: 36px;
+      padding: 0;
+      color: var(--ink);
+      background: var(--card);
+      box-shadow: 0 22px 55px rgb(22 22 20 / 18%);
+      text-align: left;
+      cursor: pointer;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .stage:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--accent) 72%, white);
+      outline-offset: 4px;
+    }
+
+    .stage-head,
+    .stage-foot {
+      position: absolute;
+      z-index: 10;
+      left: 26px;
+      right: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .stage-head {
+      top: 24px;
+    }
+
+    .stage-foot {
+      bottom: 24px;
+      align-items: flex-end;
+    }
+
+    .kicker,
+    .hint {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 650;
+      line-height: 1;
+      letter-spacing: 0.04em;
+    }
+
+    .kicker {
+      color: var(--ink);
+      text-transform: uppercase;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-weight: 500;
+      letter-spacing: 0;
+    }
+
+    .property-readout {
+      max-width: 250px;
+      color: var(--muted);
+      font: 500 10px/1.45 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      text-wrap: balance;
+    }
+
+    .mode-index {
+      color: var(--accent);
+      font: 600 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    .scene {
+      position: absolute;
+      inset: 58px 18px 58px;
+      overflow: hidden;
+      border-radius: 24px;
+    }
+
+    .scene-group {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 180ms ease, visibility 180ms step-end;
+    }
+
+    [data-mode="ray"] .ray-scene,
+    [data-mode="orbit"] .orbit-scene,
+    [data-mode="point"] .point-scene {
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 180ms ease, visibility 180ms step-start;
+    }
+
+    .origin,
+    .orbit-core {
+      position: absolute;
+      inset: 0;
+      width: 54px;
+      aspect-ratio: 1;
+      margin: auto;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 10px rgb(183 235 82 / 8%);
+    }
+
+    .origin::after,
+    .orbit-core::after {
+      content: "";
+      position: absolute;
+      inset: 21px;
+      border-radius: inherit;
+      background: var(--accent-ink);
+    }
+
+    .ray-particle {
+      --angle: calc(var(--i) * 30deg + 8deg);
+      position: absolute;
+      inset: 0;
+      width: 5px;
+      height: calc(12px + mod(var(--i), 3) * 4px);
+      margin: auto;
+      border-radius: 99px;
+      background: var(--accent);
+      offset-position: center;
+      offset-path: ray(var(--angle) farthest-side);
+      offset-distance: calc(var(--ray-distance) * 1%);
+      offset-anchor: calc(var(--ray-anchor) * 1%) 50%;
+      offset-rotate: var(--ray-rotation);
+      opacity: calc(0.55 + mod(var(--i), 4) * 0.12);
+    }
+
+    .stage.is-playing .ray-particle {
+      animation: launch 820ms cubic-bezier(.2, .82, .2, 1) both;
+      animation-delay: calc(var(--i) * 13ms);
+    }
+
+    @keyframes launch {
+      0% {
+        offset-distance: 0%;
+        opacity: 0;
+        scale: 0.25;
+      }
+      32% {
+        opacity: 1;
+      }
+      100% {
+        offset-distance: calc(var(--ray-distance) * 1%);
+        scale: 1;
+      }
+    }
+
+    .orbit-guide {
+      position: absolute;
+      inset: 0;
+      width: calc(var(--orbit-radius) * 2);
+      aspect-ratio: 1;
+      margin: auto;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      transition: width 350ms cubic-bezier(.2, .75, .2, 1);
+    }
+
+    .orbit-node {
+      --angle: calc(var(--i) * 30deg + var(--orbit-phase));
+      position: absolute;
+      inset: 0;
+      width: calc(8px + mod(var(--i), 3) * 2px);
+      aspect-ratio: 1;
+      margin: auto;
+      border-radius: 50%;
+      background: var(--accent);
+      translate:
+        calc(cos(var(--angle)) * var(--orbit-radius))
+        calc(sin(var(--angle)) * var(--orbit-radius));
+      scale: calc(0.72 + (sin(var(--angle)) + 1) * 0.14);
+      opacity: calc(0.56 + (sin(var(--angle)) + 1) * 0.18);
+      transition:
+        translate 460ms cubic-bezier(.2, .75, .2, 1),
+        scale 460ms cubic-bezier(.2, .75, .2, 1),
+        opacity 460ms ease;
+    }
+
+    .point-origin {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 12px;
+      aspect-ratio: 1;
+      translate: -50% -50%;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      background: var(--card);
+      z-index: 2;
+    }
+
+    .point-arrow {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: clamp(44px, calc(hypot(var(--dx), var(--dy)) * var(--point-reach)), 220px);
+      height: 2px;
+      transform-origin: left center;
+      translate: 0 -50%;
+      rotate: atan2(var(--dy), var(--dx));
+      border-radius: 99px;
+      background: var(--accent);
+    }
+
+    .point-arrow::after {
+      content: "";
+      position: absolute;
+      right: -1px;
+      top: 50%;
+      width: 9px;
+      height: 9px;
+      border-top: 2px solid var(--accent);
+      border-right: 2px solid var(--accent);
+      translate: 0 -50%;
+      rotate: 45deg;
+    }
+
+    .point-target {
+      position: absolute;
+      left: calc(50% + var(--dx));
+      top: calc(50% + var(--dy));
+      width: 24px;
+      aspect-ratio: 1;
+      translate: -50% -50%;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      transition: width 120ms ease;
+    }
+
+    .point-target::before,
+    .point-target::after {
+      content: "";
+      position: absolute;
+      inset: 50% 4px auto;
+      height: 1px;
+      background: var(--line);
+    }
+
+    .point-target::after {
+      rotate: 90deg;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+      padding: 10px;
+      border: 1px solid #d4d4d0;
+      border-radius: 16px;
+      background: #f8f8f6;
+      box-shadow: 0 8px 28px rgb(22 22 20 / 7%);
+    }
+
+    .mode-switcher {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      padding: 3px;
+      border-radius: 11px;
+      background: #e8e8e4;
+    }
+
+    .mode-button,
+    .option-button {
+      min-height: 32px;
+      border: 0;
+      border-radius: 8px;
+      color: #6f6f69;
+      background: transparent;
+      font-size: 11px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .mode-button[aria-pressed="true"] {
+      color: #191918;
+      background: #ffffff;
+      box-shadow: 0 1px 4px rgb(22 22 20 / 10%);
+    }
+
+    .mode-button:focus-visible,
+    .option-button:focus-visible,
+    input[type="range"]:focus-visible {
+      outline: 2px solid #6d941f;
+      outline-offset: 2px;
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 2px 4px 3px;
+    }
+
+    .range-control {
+      min-width: 0;
+      display: grid;
+      gap: 7px;
+    }
+
+    .range-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .range-head label {
+      color: #2b2b29;
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .range-head output {
+      color: #777771;
+      font: 500 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 14px;
+      margin: 0;
+      accent-color: #222220;
+      cursor: ew-resize;
+    }
+
+    .option-button {
+      grid-column: 1 / -1;
+      min-height: 30px;
+      border: 1px solid #d8d8d4;
+      color: #41413e;
+      background: #f1f1ee;
+    }
+
+    .option-button[hidden],
+    .range-control[hidden] {
+      display: none;
+    }
+
+    body[data-mode="point"] .control-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .support-note {
+      display: none;
+      margin: 0;
+      color: #9f2c22;
+      font-size: 11px;
+      line-height: 1.4;
+      text-align: center;
+    }
+
+    .no-geometry .support-note {
+      display: block;
+    }
+
+    @media (max-width: 430px) {
+      body {
+        padding: 18px;
+      }
+
+      .demo {
+        width: min(390px, calc(100vw - 36px));
+      }
+
+      .stage {
+        border-radius: 30px;
+      }
+
+      .scene {
+        inset-inline: 14px;
+      }
+
+      .stage-head,
+      .stage-foot {
+        left: 22px;
+        right: 22px;
+      }
+
+      .property-readout {
+        max-width: 220px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 1ms !important;
+        animation-delay: 0ms !important;
+        transition-duration: 1ms !important;
+      }
+    }
+  </style>
+</head>
+<body data-mode="ray">
+  <main class="demo">
+    <button class="stage" id="stage" type="button" aria-label="Replay ray motion">
+      <span class="stage-head">
+        <span class="kicker" id="modeTitle">Motion path</span>
+        <span class="hint" id="hint">Click to replay</span>
+      </span>
+
+      <span class="scene" id="scene" aria-hidden="true">
+        <span class="scene-group ray-scene">
+          <span class="origin"></span>
+          <span class="ray-particle" style="--i: 0"></span>
+          <span class="ray-particle" style="--i: 1"></span>
+          <span class="ray-particle" style="--i: 2"></span>
+          <span class="ray-particle" style="--i: 3"></span>
+          <span class="ray-particle" style="--i: 4"></span>
+          <span class="ray-particle" style="--i: 5"></span>
+          <span class="ray-particle" style="--i: 6"></span>
+          <span class="ray-particle" style="--i: 7"></span>
+          <span class="ray-particle" style="--i: 8"></span>
+          <span class="ray-particle" style="--i: 9"></span>
+          <span class="ray-particle" style="--i: 10"></span>
+          <span class="ray-particle" style="--i: 11"></span>
+        </span>
+
+        <span class="scene-group orbit-scene">
+          <span class="orbit-guide"></span>
+          <span class="orbit-core"></span>
+          <span class="orbit-node" style="--i: 0"></span>
+          <span class="orbit-node" style="--i: 1"></span>
+          <span class="orbit-node" style="--i: 2"></span>
+          <span class="orbit-node" style="--i: 3"></span>
+          <span class="orbit-node" style="--i: 4"></span>
+          <span class="orbit-node" style="--i: 5"></span>
+          <span class="orbit-node" style="--i: 6"></span>
+          <span class="orbit-node" style="--i: 7"></span>
+          <span class="orbit-node" style="--i: 8"></span>
+          <span class="orbit-node" style="--i: 9"></span>
+          <span class="orbit-node" style="--i: 10"></span>
+          <span class="orbit-node" style="--i: 11"></span>
+        </span>
+
+        <span class="scene-group point-scene">
+          <span class="point-arrow"></span>
+          <span class="point-origin"></span>
+          <span class="point-target"></span>
+        </span>
+      </span>
+
+      <span class="stage-foot">
+        <code class="property-readout" id="readout">offset-path: ray(…); offset-distance: 76%;</code>
+        <span class="mode-index" id="modeIndex">01 / 03</span>
+      </span>
+    </button>
+
+    <section class="controls" aria-label="Geometry controls">
+      <div class="mode-switcher" aria-label="Demo mode">
+        <button class="mode-button" type="button" data-mode-button="ray" aria-pressed="true">Ray</button>
+        <button class="mode-button" type="button" data-mode-button="orbit" aria-pressed="false">Orbit</button>
+        <button class="mode-button" type="button" data-mode-button="point" aria-pressed="false">Point</button>
+      </div>
+
+      <div class="control-grid">
+        <div class="range-control" id="primaryControl">
+          <span class="range-head">
+            <label for="primaryRange" id="primaryLabel">Distance</label>
+            <output id="primaryOutput" for="primaryRange">76%</output>
+          </span>
+          <input id="primaryRange" type="range" min="20" max="118" value="76" step="1">
+        </div>
+
+        <div class="range-control" id="secondaryControl">
+          <span class="range-head">
+            <label for="secondaryRange" id="secondaryLabel">Anchor</label>
+            <output id="secondaryOutput" for="secondaryRange">50%</output>
+          </span>
+          <input id="secondaryRange" type="range" min="0" max="100" value="50" step="1">
+        </div>
+
+        <button class="option-button" id="orientationButton" type="button">Orientation · fixed</button>
+      </div>
+
+      <p class="support-note">This browser does not support the CSS geometry functions used by this specimen.</p>
+    </section>
+  </main>
+
+  <script>
+    const root = document.documentElement;
+    const body = document.body;
+    const stage = document.querySelector('#stage');
+    const scene = document.querySelector('#scene');
+    const modeTitle = document.querySelector('#modeTitle');
+    const hint = document.querySelector('#hint');
+    const readout = document.querySelector('#readout');
+    const modeIndex = document.querySelector('#modeIndex');
+    const primaryControl = document.querySelector('#primaryControl');
+    const secondaryControl = document.querySelector('#secondaryControl');
+    const primaryLabel = document.querySelector('#primaryLabel');
+    const secondaryLabel = document.querySelector('#secondaryLabel');
+    const primaryOutput = document.querySelector('#primaryOutput');
+    const secondaryOutput = document.querySelector('#secondaryOutput');
+    const primaryRange = document.querySelector('#primaryRange');
+    const secondaryRange = document.querySelector('#secondaryRange');
+    const orientationButton = document.querySelector('#orientationButton');
+    const modeButtons = [...document.querySelectorAll('[data-mode-button]')];
+
+    const state = {
+      mode: 'ray',
+      ray: { distance: 76, anchor: 50, tangent: true },
+      orbit: { radius: 106, phase: 0 },
+      point: { reach: 100 }
+    };
+
+    const geometrySupported =
+      CSS.supports('offset-path', 'ray(45deg farthest-side)') &&
+      CSS.supports('translate', 'calc(cos(45deg) * 10px)') &&
+      CSS.supports('rotate', 'atan2(10px, 10px)');
+
+    if (!geometrySupported) root.classList.add('no-geometry');
+
+    function replayRay() {
+      stage.classList.remove('is-playing');
+      void stage.offsetWidth;
+      stage.classList.add('is-playing');
+    }
+
+    function configureRange(input, { min, max, value, step = 1 }) {
+      input.min = min;
+      input.max = max;
+      input.step = step;
+      input.value = value;
+    }
+
+    function updateReadout() {
+      if (state.mode === 'ray') {
+        readout.textContent = `ray(…); distance: ${state.ray.distance}%; anchor: ${state.ray.anchor}%; rotate: ${state.ray.tangent ? 'auto 90deg' : '0deg'};`;
+      } else if (state.mode === 'orbit') {
+        readout.textContent = `translate: cos(θ) × ${state.orbit.radius}px, sin(θ) × ${state.orbit.radius}px;`;
+      } else {
+        const dx = Math.round(parseFloat(getComputedStyle(root).getPropertyValue('--dx')) || 0);
+        const dy = Math.round(parseFloat(getComputedStyle(root).getPropertyValue('--dy')) || 0);
+        readout.textContent = `rotate: atan2(${dy}px, ${dx}px); width: hypot(…) × ${state.point.reach / 100};`;
+      }
+    }
+
+    function setMode(mode) {
+      state.mode = mode;
+      body.dataset.mode = mode;
+      modeButtons.forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.modeButton === mode));
+      });
+
+      orientationButton.hidden = mode !== 'ray';
+      secondaryControl.hidden = mode === 'point';
+
+      if (mode === 'ray') {
+        modeTitle.textContent = 'Motion path';
+        hint.textContent = 'Click to replay';
+        modeIndex.textContent = '01 / 03';
+        stage.setAttribute('aria-label', 'Replay ray motion');
+        primaryLabel.textContent = 'Distance';
+        secondaryLabel.textContent = 'Anchor';
+        configureRange(primaryRange, { min: 20, max: 118, value: state.ray.distance });
+        configureRange(secondaryRange, { min: 0, max: 100, value: state.ray.anchor });
+        primaryOutput.textContent = `${state.ray.distance}%`;
+        secondaryOutput.textContent = `${state.ray.anchor}%`;
+        orientationButton.textContent = `Orientation · ${state.ray.tangent ? 'tangent' : 'fixed'}`;
+        requestAnimationFrame(replayRay);
+      } else if (mode === 'orbit') {
+        modeTitle.textContent = 'Trigonometric orbit';
+        hint.textContent = 'Click to advance';
+        modeIndex.textContent = '02 / 03';
+        stage.setAttribute('aria-label', 'Advance orbit phase');
+        primaryLabel.textContent = 'Radius';
+        secondaryLabel.textContent = 'Phase';
+        configureRange(primaryRange, { min: 48, max: 126, value: state.orbit.radius });
+        configureRange(secondaryRange, { min: 0, max: 360, value: state.orbit.phase });
+        primaryOutput.textContent = `${state.orbit.radius}px`;
+        secondaryOutput.textContent = `${state.orbit.phase}°`;
+      } else {
+        modeTitle.textContent = 'Pointer bearing';
+        hint.textContent = 'Move the pointer';
+        modeIndex.textContent = '03 / 03';
+        stage.setAttribute('aria-label', 'Pointer bearing demonstration');
+        primaryLabel.textContent = 'Reach';
+        configureRange(primaryRange, { min: 28, max: 100, value: state.point.reach });
+        primaryOutput.textContent = `${state.point.reach}%`;
+      }
+
+      updateReadout();
+    }
+
+    modeButtons.forEach(button => {
+      button.addEventListener('click', () => setMode(button.dataset.modeButton));
+    });
+
+    primaryRange.addEventListener('input', () => {
+      const value = Number(primaryRange.value);
+      if (state.mode === 'ray') {
+        state.ray.distance = value;
+        root.style.setProperty('--ray-distance', value);
+        primaryOutput.textContent = `${value}%`;
+      } else if (state.mode === 'orbit') {
+        state.orbit.radius = value;
+        root.style.setProperty('--orbit-radius', `${value}px`);
+        primaryOutput.textContent = `${value}px`;
+      } else {
+        state.point.reach = value;
+        root.style.setProperty('--point-reach', value / 100);
+        primaryOutput.textContent = `${value}%`;
+      }
+      updateReadout();
+    });
+
+    secondaryRange.addEventListener('input', () => {
+      const value = Number(secondaryRange.value);
+      if (state.mode === 'ray') {
+        state.ray.anchor = value;
+        root.style.setProperty('--ray-anchor', value);
+        secondaryOutput.textContent = `${value}%`;
+      } else if (state.mode === 'orbit') {
+        state.orbit.phase = value;
+        root.style.setProperty('--orbit-phase', `${value}deg`);
+        secondaryOutput.textContent = `${value}°`;
+      }
+      updateReadout();
+    });
+
+    orientationButton.addEventListener('click', () => {
+      state.ray.tangent = !state.ray.tangent;
+      root.style.setProperty('--ray-rotation', state.ray.tangent ? 'auto 90deg' : '0deg');
+      orientationButton.textContent = `Orientation · ${state.ray.tangent ? 'tangent' : 'fixed'}`;
+      replayRay();
+    });
+
+    stage.addEventListener('click', () => {
+      if (state.mode === 'ray') replayRay();
+      if (state.mode === 'orbit') {
+        state.orbit.phase = (state.orbit.phase + 45) % 361;
+        secondaryRange.value = state.orbit.phase;
+        secondaryOutput.textContent = `${state.orbit.phase}°`;
+        root.style.setProperty('--orbit-phase', `${state.orbit.phase}deg`);
+        updateReadout();
+      }
+    });
+
+    stage.addEventListener('pointermove', event => {
+      if (state.mode !== 'point') return;
+      const rect = scene.getBoundingClientRect();
+      const halfWidth = rect.width / 2;
+      const halfHeight = rect.height / 2;
+      const dx = Math.max(-halfWidth + 14, Math.min(halfWidth - 14, event.clientX - (rect.left + halfWidth)));
+      const dy = Math.max(-halfHeight + 14, Math.min(halfHeight - 14, event.clientY - (rect.top + halfHeight)));
+      root.style.setProperty('--dx', `${dx}px`);
+      root.style.setProperty('--dy', `${dy}px`);
+      updateReadout();
+    });
+
+    stage.addEventListener('keydown', event => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      if (state.mode !== 'orbit') return;
+      event.preventDefault();
+      const direction = event.key === 'ArrowRight' ? 15 : -15;
+      state.orbit.phase = (state.orbit.phase + direction + 360) % 360;
+      secondaryRange.value = state.orbit.phase;
+      secondaryOutput.textContent = `${state.orbit.phase}°`;
+      root.style.setProperty('--orbit-phase', `${state.orbit.phase}deg`);
+      updateReadout();
+    });
+
+    setMode('ray');
+  </script>
+</body>
+</html>
