@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Four progressive demos for CSS reading-flow, gap decorations, contrast-color(), and appearance: base-select.">
+  <title>CSS Layout Primitives Card</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #ededec;
+      --card: #1c1c1a;
+      --ink: #f8f8f5;
+      --muted: #97978f;
+      --line: rgb(255 255 255 / 11%);
+      --accent: #b7eb52;
+      --accent-ink: #18200d;
+      --rule-width: 2;
+      --contrast-hue: 120;
+      --bg: oklch(0.55 0.18 var(--contrast-hue));
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: #181817;
+      background: var(--canvas);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, select { font: inherit; }
+
+    .demo {
+      width: min(390px, calc(100vw - 48px));
+      display: grid;
+      gap: 14px;
+    }
+
+    .stage {
+      position: relative;
+      aspect-ratio: 1;
+      overflow: hidden;
+      border: 1px solid rgb(255 255 255 / 7%);
+      border-radius: 34px;
+      color: var(--ink);
+      background: var(--card);
+      box-shadow: 0 26px 70px rgb(25 25 22 / 13%);
+    }
+
+    .stage-head, .stage-foot {
+      position: absolute;
+      z-index: 30;
+      left: 25px;
+      right: 25px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .stage-head { top: 23px; }
+    .stage-foot { bottom: 23px; align-items: flex-end; }
+
+    .kicker, .hint, .property-readout, .source-badge { margin: 0; }
+
+    .kicker, .source-badge {
+      color: var(--ink);
+      font: 650 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hint {
+      max-width: 150px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 560;
+      line-height: 1.2;
+      text-align: right;
+    }
+
+    .property-readout {
+      max-width: 265px;
+      color: #a3a39b;
+      font: 500 9px/1.45 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      white-space: pre-wrap;
+    }
+
+    .source-badge { flex: none; color: var(--accent); letter-spacing: 0.04em; }
+
+    .scene {
+      position: absolute;
+      inset: 64px 20px 60px;
+    }
+
+    .scene-group {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 170ms ease, visibility 170ms step-end;
+    }
+
+    body[data-mode="reading"] .reading-scene,
+    body[data-mode="gaps"] .gaps-scene,
+    body[data-mode="contrast"] .contrast-scene,
+    body[data-mode="select"] .select-scene {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition: opacity 180ms ease, visibility 180ms step-start;
+    }
+
+    /* ── 01 · reading-flow ── */
+    .reading-instruction {
+      text-align: center;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 560;
+      margin-bottom: 10px;
+    }
+
+    .reading-instruction kbd {
+      display: inline-block;
+      padding: 1px 5px;
+      border: 1px solid rgb(255 255 255 / 18%);
+      border-radius: 4px;
+      color: var(--ink);
+      font: 650 9px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      background: rgb(255 255 255 / 6%);
+    }
+
+    .reading-grid {
+      display: flex;
+      flex-wrap: wrap;
+      flex-direction: row-reverse;
+      gap: 8px;
+      max-width: 260px;
+      margin: 0 auto;
+    }
+
+    .flow-visual .reading-grid {
+      reading-flow: flex-visual;
+    }
+
+    .reading-cell {
+      flex: 0 0 calc(33.333% - 6px);
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      color: var(--ink);
+      background: #292927;
+      font-size: 18px;
+      font-weight: 680;
+      cursor: pointer;
+    }
+
+    .reading-cell:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .reading-cell:focus {
+      border-color: var(--accent);
+      background: #363632;
+    }
+
+    .reading-flow-label {
+      margin-top: 9px;
+      text-align: center;
+      color: var(--muted);
+      font: 500 8px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    /* ── 02 · gap decorations ── */
+    .gaps-scene {
+      display: grid;
+      place-items: center;
+    }
+
+    .gaps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      width: 268px;
+      row-rule: calc(var(--rule-width) * 1px) dotted var(--accent);
+      column-rule: calc(var(--rule-width) * 1px) dotted var(--accent);
+      rule-break: none;
+    }
+
+    .gaps-cell {
+      aspect-ratio: 1;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #292927;
+    }
+
+    .polyfill-gaps .gaps-grid {
+      row-rule: none;
+      column-rule: none;
+    }
+
+    .polyfill-gaps .gaps-cell {
+      position: relative;
+    }
+
+    .polyfill-gaps .gaps-cell:nth-child(-n+3)::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -8px;
+      height: 2px;
+      background: var(--accent);
+      opacity: 0.4;
+    }
+
+    .polyfill-gaps .gaps-cell:not(:nth-child(3n))::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: -8px;
+      bottom: 0;
+      width: 2px;
+      background: var(--accent);
+      opacity: 0.4;
+    }
+
+    /* ── 03 · contrast-color() ── */
+    .contrast-scene {
+      display: grid;
+      place-items: center;
+    }
+
+    .contrast-panel {
+      width: 248px;
+      height: 180px;
+      display: grid;
+      place-items: center;
+      border-radius: 20px;
+      background: var(--bg);
+      transition: background 120ms ease;
+    }
+
+    .contrast-text {
+      font-size: 22px;
+      font-weight: 680;
+      letter-spacing: -0.04em;
+    }
+
+    .native-contrast .contrast-text {
+      color: contrast-color(var(--bg));
+    }
+
+    .contrast-info {
+      margin-top: 8px;
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      color: var(--muted);
+      font: 500 8px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    .contrast-info span {
+      color: var(--ink);
+    }
+
+    /* ── 04 · appearance: base-select ── */
+    .select-scene {
+      display: grid;
+      place-items: center;
+    }
+
+    .custom-select {
+      width: 220px;
+    }
+
+    .custom-select select,
+    .custom-select ::picker(select) {
+      appearance: base-select;
+    }
+
+    .custom-select select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      color: var(--ink);
+      background: #292927;
+      font-size: 13px;
+      font-weight: 580;
+      cursor: pointer;
+    }
+
+    .custom-select select:open {
+      border-color: var(--accent);
+    }
+
+    .custom-select ::picker(select) {
+      padding: 6px;
+      border: 1px solid #3a3a35;
+      border-radius: 11px;
+      background: #1e1e1b;
+      box-shadow: 0 12px 32px rgb(0 0 0 / 40%);
+    }
+
+    .custom-select option {
+      padding: 9px 12px;
+      border-radius: 7px;
+      color: var(--ink);
+      background: transparent;
+      font-size: 12px;
+    }
+
+    .custom-select option:hover,
+    .custom-select option:checked {
+      color: var(--accent-ink);
+      background: var(--accent);
+    }
+
+    .custom-select selectedcontent {
+      display: inline;
+    }
+
+    .polyfill-select .custom-select ::picker(select) {
+      appearance: auto;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+      padding: 10px;
+      border: 1px solid #d4d4d0;
+      border-radius: 16px;
+      background: #f8f8f6;
+      box-shadow: 0 8px 28px rgb(22 22 20 / 7%);
+    }
+
+    .mode-switcher {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 3px;
+      padding: 3px;
+      border-radius: 11px;
+      background: #e8e8e4;
+    }
+
+    .mode-button, .action-button {
+      min-height: 32px;
+      border: 0;
+      border-radius: 8px;
+      color: #6f6f69;
+      background: transparent;
+      font-size: 10px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .mode-button[aria-pressed="true"] {
+      color: #191918;
+      background: #fff;
+      box-shadow: 0 1px 4px rgb(22 22 20 / 10%);
+    }
+
+    .mode-button:focus-visible,
+    .action-button:focus-visible,
+    input[type="range"]:focus-visible {
+      outline: 2px solid #6d941f;
+      outline-offset: 2px;
+    }
+
+    .control-grid {
+      display: grid;
+      padding: 2px 4px 3px;
+    }
+
+    .range-control { display: grid; gap: 7px; }
+
+    .range-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .range-head label {
+      color: #2b2b29;
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .range-head output {
+      color: #777771;
+      font: 500 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 14px;
+      margin: 0;
+      accent-color: #222220;
+      cursor: ew-resize;
+    }
+
+    .action-button {
+      min-height: 34px;
+      border: 1px solid #d8d8d4;
+      color: #292927;
+      background: #f1f1ee;
+    }
+
+    .range-control[hidden], .action-button[hidden] { display: none; }
+
+    @media (max-width: 430px) {
+      body { padding: 18px; }
+      .demo { width: min(390px, calc(100vw - 36px)); }
+      .stage { border-radius: 30px; }
+      .scene { inset-inline: 14px; }
+      .stage-head, .stage-foot { left: 22px; right: 22px; }
+      .property-readout { max-width: 238px; }
+      .mode-button { font-size: 9px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 1ms !important;
+      }
+    }
+  </style>
+</head>
+<body data-mode="reading">
+  <main class="demo">
+    <section class="stage" id="stage" aria-label="CSS layout primitive specimen">
+      <header class="stage-head">
+        <p class="kicker" id="modeTitle">reading-flow</p>
+        <p class="hint" id="hint">Tab follows visual order</p>
+      </header>
+
+      <div class="scene">
+        <div class="scene-group reading-scene" aria-hidden="false">
+          <p class="reading-instruction">Press <kbd>Tab</kbd> to move through cards</p>
+          <div class="reading-grid" id="readingGrid">
+            <div class="reading-cell" tabindex="0">1</div>
+            <div class="reading-cell" tabindex="0">2</div>
+            <div class="reading-cell" tabindex="0">3</div>
+            <div class="reading-cell" tabindex="0">4</div>
+            <div class="reading-cell" tabindex="0">5</div>
+            <div class="reading-cell" tabindex="0">6</div>
+            <div class="reading-cell" tabindex="0">7</div>
+            <div class="reading-cell" tabindex="0">8</div>
+            <div class="reading-cell" tabindex="0">9</div>
+          </div>
+          <p class="reading-flow-label" id="flowLabel">reading-flow: flex-visual</p>
+        </div>
+
+        <div class="scene-group gaps-scene" aria-hidden="true">
+          <div class="gaps-grid" id="gapsGrid">
+            <div class="gaps-cell"></div><div class="gaps-cell"></div><div class="gaps-cell"></div>
+            <div class="gaps-cell"></div><div class="gaps-cell"></div><div class="gaps-cell"></div>
+          </div>
+        </div>
+
+        <div class="scene-group contrast-scene" aria-hidden="true">
+          <div class="contrast-panel" id="contrastPanel">
+            <span class="contrast-text" id="contrastText">Auto contrast</span>
+          </div>
+          <div class="contrast-info">
+            Text: <span id="contrastColorDisplay">#000</span>
+            Ratio: <span id="contrastRatio">AA</span>
+          </div>
+        </div>
+
+        <div class="scene-group select-scene" aria-hidden="true">
+          <div class="custom-select" id="customSelect">
+            <select>
+              <option>Design system token</option>
+              <option>CSS custom property</option>
+              <option>JavaScript variable</option>
+              <option>JSON theme file</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <footer class="stage-foot">
+        <code class="property-readout" id="readout">reading-flow: flex-visual;</code>
+        <span class="source-badge" id="sourceBadge">Native</span>
+      </footer>
+    </section>
+
+    <section class="controls" aria-label="Primitive controls">
+      <div class="mode-switcher" aria-label="Demo mode">
+        <button class="mode-button" type="button" data-mode-button="reading" aria-pressed="true">Reading</button>
+        <button class="mode-button" type="button" data-mode-button="gaps" aria-pressed="false">Gaps</button>
+        <button class="mode-button" type="button" data-mode-button="contrast" aria-pressed="false">Contrast</button>
+        <button class="mode-button" type="button" data-mode-button="select" aria-pressed="false">Select</button>
+      </div>
+      <div class="control-grid">
+        <div class="range-control" id="rangeControl">
+          <span class="range-head">
+            <label id="rangeLabel" for="valueRange">Rule width</label>
+            <output id="rangeOutput" for="valueRange">2px</output>
+          </span>
+          <input id="valueRange" type="range" min="1" max="4" value="2" step="1">
+        </div>
+        <button class="action-button" id="actionButton" type="button" hidden>Toggle reading flow</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const root = document.documentElement;
+    const body = document.body;
+    const modeTitle = document.querySelector('#modeTitle');
+    const hint = document.querySelector('#hint');
+    const readout = document.querySelector('#readout');
+    const sourceBadge = document.querySelector('#sourceBadge');
+    const rangeControl = document.querySelector('#rangeControl');
+    const rangeLabel = document.querySelector('#rangeLabel');
+    const valueRange = document.querySelector('#valueRange');
+    const rangeOutput = document.querySelector('#rangeOutput');
+    const actionButton = document.querySelector('#actionButton');
+    const readingGrid = document.querySelector('#readingGrid');
+    const flowLabel = document.querySelector('#flowLabel');
+    const contrastPanel = document.querySelector('#contrastPanel');
+    const contrastText = document.querySelector('#contrastText');
+    const contrastColorDisplay = document.querySelector('#contrastColorDisplay');
+    const contrastRatio = document.querySelector('#contrastRatio');
+    const modeButtons = [...document.querySelectorAll('[data-mode-button]')];
+    const scenes = [...document.querySelectorAll('.scene-group')];
+
+    const forceFallback = new URLSearchParams(location.search).has('force-fallback');
+    const support = {
+      reading: !forceFallback && CSS.supports('reading-flow', 'flex-visual'),
+      gaps: !forceFallback && CSS.supports('row-rule', '1px solid red'),
+      contrast: !forceFallback && CSS.supports('color', 'contrast-color(#fff)'),
+      select: !forceFallback && CSS.supports('appearance', 'base-select')
+    };
+
+    root.classList.toggle('polyfill-reading', !support.reading);
+    root.classList.toggle('polyfill-gaps', !support.gaps);
+    root.classList.toggle('native-contrast', support.contrast);
+    root.classList.toggle('polyfill-contrast', !support.contrast);
+    root.classList.toggle('polyfill-select', !support.select);
+
+    const state = {
+      mode: 'reading',
+      flowVisual: true,
+      gapWidth: 2,
+      contrastHue: 120
+    };
+
+    const controls = {
+      reading: { label: 'Flow mode', action: true },
+      gaps: { label: 'Rule width', min: 1, max: 4, step: 1, value: () => state.gapWidth, format: v => `${v}px` },
+      contrast: { label: 'Background hue', min: 0, max: 360, step: 1, value: () => state.contrastHue, format: v => `${v}°` },
+      select: { label: '', action: false }
+    };
+
+    function setSceneA11y(mode) {
+      const map = {
+        reading: '.reading-scene',
+        gaps: '.gaps-scene',
+        contrast: '.contrast-scene',
+        select: '.select-scene'
+      };
+      scenes.forEach(s => s.setAttribute('aria-hidden', String(!s.matches(map[mode]))));
+    }
+
+    function setBadge() { sourceBadge.textContent = support[state.mode] ? 'Native' : 'Fallback'; }
+
+    function syncRange(mode) {
+      const config = controls[mode];
+      if (config.action) {
+        rangeControl.hidden = true;
+        actionButton.hidden = false;
+        actionButton.textContent = state.flowVisual ? 'Switch to DOM order' : 'Switch to visual order';
+        return;
+      }
+      rangeControl.hidden = false;
+      actionButton.hidden = true;
+      const value = config.value();
+      rangeLabel.textContent = config.label;
+      valueRange.min = config.min;
+      valueRange.max = config.max;
+      valueRange.step = config.step;
+      valueRange.value = value;
+      rangeOutput.textContent = config.format(value);
+    }
+
+    function updateReadingFlow() {
+      if (support.reading) {
+        readingGrid.classList.toggle('flow-visual', state.flowVisual);
+      }
+      flowLabel.textContent = state.flowVisual
+        ? (support.reading ? 'reading-flow: flex-visual' : 'tab: DOM order (reading-flow unsupported)')
+        : (support.reading ? 'reading-flow: normal' : 'tab: DOM order');
+      actionButton.textContent = state.flowVisual ? 'Switch to DOM order' : 'Switch to visual order';
+    }
+
+    function getLuminance(r, g, b) {
+      const [rs, gs, bs] = [r, g, b].map(c => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); });
+      return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+    }
+
+    function hexToRgb(hex) {
+      const m = /^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [0, 0, 0];
+    }
+
+    function calcContrastRatio(l1, l2) {
+      const lighter = Math.max(l1, l2), darker = Math.min(l1, l2);
+      return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    function updateContrastFallback() {
+      const bg = getComputedStyle(contrastPanel).backgroundColor;
+      const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(bg);
+      if (!m) return;
+      const [r, g, b] = [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])];
+      const lum = getLuminance(r, g, b);
+      const ink = lum > 0.179 ? '#000000' : '#ffffff';
+      contrastText.style.color = support.contrast ? '' : ink;
+
+      const textColor = getComputedStyle(contrastText).color;
+      const tm = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(textColor);
+      const [tr, tg, tb] = tm ? [parseInt(tm[1]), parseInt(tm[2]), parseInt(tm[3])] : [0, 0, 0];
+      const textLum = getLuminance(tr, tg, tb);
+      const ratio = calcContrastRatio(Math.max(lum, textLum), Math.min(lum, textLum));
+      const hex = '#' + [tr, tg, tb].map(c => c.toString(16).padStart(2, '0')).join('');
+
+      contrastColorDisplay.textContent = hex;
+      contrastRatio.textContent = ratio >= 4.5 ? `AA ${ratio.toFixed(1)}:1` : `FAIL ${ratio.toFixed(1)}:1`;
+    }
+
+    function setMode(mode) {
+      state.mode = mode;
+      body.dataset.mode = mode;
+      setSceneA11y(mode);
+      modeButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.modeButton === mode)));
+      setBadge();
+
+      if (mode === 'reading') {
+        modeTitle.textContent = 'reading-flow';
+        hint.textContent = 'Tab follows visual order';
+        readout.textContent = 'reading-flow: flex-visual;';
+        syncRange(mode);
+        updateReadingFlow();
+      } else if (mode === 'gaps') {
+        modeTitle.textContent = 'Gap decorations';
+        hint.textContent = 'Dividers inside gaps';
+        readout.textContent = 'row-rule / column-rule: dotted;\nrule-break: none;';
+        syncRange(mode);
+      } else if (mode === 'contrast') {
+        modeTitle.textContent = 'contrast-color()';
+        hint.textContent = 'Auto black or white text';
+        readout.textContent = 'color: contrast-color(var(--bg));';
+        syncRange(mode);
+        requestAnimationFrame(updateContrastFallback);
+      } else if (mode === 'select') {
+        modeTitle.textContent = 'base-select';
+        hint.textContent = 'Fully styleable native';
+        readout.textContent = 'appearance: base-select;\n::picker(select) { … }';
+        rangeControl.hidden = true;
+        actionButton.hidden = true;
+      }
+    }
+
+    function updateRangeValue(rawValue) {
+      if (state.mode === 'gaps') {
+        state.gapWidth = Number(rawValue);
+        root.style.setProperty('--rule-width', state.gapWidth);
+      } else if (state.mode === 'contrast') {
+        state.contrastHue = Number(rawValue);
+        root.style.setProperty('--contrast-hue', state.contrastHue);
+        requestAnimationFrame(updateContrastFallback);
+      }
+      rangeOutput.textContent = controls[state.mode].format(rawValue);
+    }
+
+    modeButtons.forEach(b => b.addEventListener('click', () => setMode(b.dataset.modeButton)));
+    valueRange.addEventListener('input', e => updateRangeValue(e.currentTarget.value));
+    actionButton.addEventListener('click', () => {
+      state.flowVisual = !state.flowVisual;
+      updateReadingFlow();
+    });
+
+    setMode('reading');
+  </script>
+</body>
+</html>
