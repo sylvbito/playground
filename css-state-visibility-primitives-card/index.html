@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Four progressive demos for CSS container style queries, :target-current scroll-spy, column-wrap, and position-visibility.">
+  <title>CSS State Primitives Card</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #ededec;
+      --card: #1c1c1a;
+      --ink: #f8f8f5;
+      --muted: #97978f;
+      --line: rgb(255 255 255 / 11%);
+      --accent: #b7eb52;
+      --accent-ink: #18200d;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: #181817;
+      background: var(--canvas);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font: inherit; }
+
+    .demo {
+      width: min(390px, calc(100vw - 48px));
+      display: grid;
+      gap: 14px;
+    }
+
+    .stage {
+      position: relative;
+      aspect-ratio: 1;
+      overflow: hidden;
+      border: 1px solid rgb(255 255 255 / 7%);
+      border-radius: 34px;
+      color: var(--ink);
+      background: var(--card);
+      box-shadow: 0 26px 70px rgb(25 25 22 / 13%);
+    }
+
+    .stage-head, .stage-foot {
+      position: absolute;
+      z-index: 30;
+      left: 25px;
+      right: 25px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .stage-head { top: 23px; }
+    .stage-foot { bottom: 23px; align-items: flex-end; }
+
+    .kicker, .hint, .property-readout, .source-badge { margin: 0; }
+
+    .kicker, .source-badge {
+      color: var(--ink);
+      font: 650 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hint {
+      max-width: 150px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 560;
+      line-height: 1.2;
+      text-align: right;
+    }
+
+    .property-readout {
+      max-width: 265px;
+      color: #a3a39b;
+      font: 500 9px/1.45 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      white-space: pre-wrap;
+    }
+
+    .source-badge { flex: none; color: var(--accent); letter-spacing: 0.04em; }
+
+    .scene {
+      position: absolute;
+      inset: 64px 20px 60px;
+    }
+
+    .scene-group {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 170ms ease, visibility 170ms step-end;
+    }
+
+    body[data-mode="style"] .style-scene,
+    body[data-mode="spy"] .spy-scene,
+    body[data-mode="wrap"] .wrap-scene,
+    body[data-mode="visibility"] .visibility-scene {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition: opacity 180ms ease, visibility 180ms step-start;
+    }
+
+    /* ── 01 · container style queries ── */
+    .style-scene {
+      display: grid;
+      place-items: center;
+    }
+
+    .style-card {
+      container-type: inline-size;
+      container-name: variant-card;
+      width: 238px;
+      padding: 20px 18px;
+      display: grid;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #292927;
+      transition: background 200ms ease, box-shadow 200ms ease;
+    }
+
+    .style-card h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 680;
+      letter-spacing: -0.03em;
+    }
+
+    .style-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.4;
+    }
+
+    .style-card .cta {
+      justify-self: start;
+      padding: 8px 16px;
+      border: 0;
+      border-radius: 8px;
+      color: var(--accent-ink);
+      background: var(--accent);
+      font-size: 11px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    @container style(--variant: primary) {
+      .style-card { background: #2a3320; }
+      .style-card .cta { background: var(--accent); }
+    }
+
+    @container style(--variant: featured) {
+      .style-card {
+        background: #222a18;
+        box-shadow: 0 0 0 2px rgb(183 235 82 / 22%), 0 14px 34px rgb(0 0 0 / 28%);
+      }
+      .style-card h3 { font-size: 20px; }
+    }
+
+    .polyfill-style .style-card.is-primary { background: #2a3320; }
+    .polyfill-style .style-card.is-featured {
+      background: #222a18;
+      box-shadow: 0 0 0 2px rgb(183 235 82 / 22%), 0 14px 34px rgb(0 0 0 / 28%);
+    }
+    .polyfill-style .style-card.is-featured h3 { font-size: 20px; }
+
+    .variant-chooser {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .variant-btn {
+      padding: 5px 12px;
+      border: 1px solid rgb(255 255 255 / 14%);
+      border-radius: 7px;
+      color: var(--muted);
+      background: transparent;
+      font-size: 9px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .variant-btn.active {
+      color: var(--accent-ink);
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* ── 02 · :target-current scroll-spy ── */
+    .spy-scene {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 8px;
+    }
+
+    .spy-nav {
+      display: flex;
+      gap: 4px;
+    }
+
+    .spy-nav a {
+      flex: 1;
+      padding: 7px 0;
+      border: 1px solid rgb(255 255 255 / 10%);
+      border-radius: 7px;
+      color: var(--muted);
+      background: #292927;
+      font-size: 9px;
+      font-weight: 600;
+      text-align: center;
+      text-decoration: none;
+      scroll-target-group: auto;
+      transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+    }
+
+    .spy-nav a:target-current {
+      color: var(--accent-ink);
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .spy-track {
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      scroll-snap-type: y mandatory;
+      border-radius: 11px;
+    }
+
+    .spy-section {
+      height: 150px;
+      scroll-snap-align: start;
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .spy-section:nth-child(1) { background: #2a3320; color: var(--accent); }
+    .spy-section:nth-child(2) { background: #292927; color: var(--ink); }
+    .spy-section:nth-child(3) { background: #25252a; color: #8ab4f8; }
+
+    .polyfill-spy .spy-nav a { scroll-target-group: none; }
+    .polyfill-spy .spy-nav a.active {
+      color: var(--accent-ink);
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .spy-auto-btn {
+      margin-top: 6px;
+      padding: 6px 10px;
+      border: 1px solid rgb(255 255 255 / 12%);
+      border-radius: 7px;
+      color: var(--muted);
+      background: #292927;
+      font-size: 9px;
+      cursor: pointer;
+    }
+
+    /* ── 03 · column-wrap ── */
+    .wrap-scene {
+      display: grid;
+      place-items: center;
+    }
+
+    .wrap-container {
+      width: 268px;
+      columns: 2;
+      column-gap: 10px;
+      column-wrap: auto;
+    }
+
+    .wrap-chip {
+      break-inside: avoid;
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      background: #292927;
+      font-size: 10px;
+      font-weight: 580;
+    }
+
+    .polyfill-wrap .wrap-container { column-wrap: initial; }
+
+    /* ── 04 · position-visibility ── */
+    .visibility-scene {
+      position: relative;
+    }
+
+    .vis-scroll {
+      height: 100%;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      position: relative;
+    }
+
+    .vis-spacer { height: 120px; }
+
+    .vis-anchor {
+      margin: 0 auto;
+      width: 100px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      anchor-name: --vis-target;
+      color: var(--ink);
+      background: #292927;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .vis-spacer-bottom { height: 160px; }
+
+    .vis-tooltip {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      translate: -50% 0;
+      width: 164px;
+      padding: 10px 14px;
+      position-anchor: --vis-target;
+      position-area: top;
+      position-visibility: anchors-visible;
+      margin-bottom: 10px;
+      border-radius: 12px;
+      color: #1a1a18;
+      background: #f8f8f5;
+      box-shadow: 0 8px 24px rgb(0 0 0 / 30%);
+      font-size: 10px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .vis-tooltip .arrow {
+      position: absolute;
+      left: 50%;
+      bottom: -5px;
+      width: 10px;
+      aspect-ratio: 1;
+      translate: -50% 0;
+      rotate: 45deg;
+      background: inherit;
+    }
+
+    .polyfill-vis .vis-tooltip {
+      position-anchor: auto;
+      position-area: none;
+      position-visibility: visible;
+    }
+
+    .polyfill-vis .vis-tooltip.hidden { opacity: 0; pointer-events: none; }
+
+    .vis-scroll-btn {
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      z-index: 10;
+      padding: 5px 10px;
+      border: 1px solid rgb(255 255 255 / 14%);
+      border-radius: 6px;
+      color: var(--accent);
+      background: rgb(0 0 0 / 50%);
+      font-size: 9px;
+      cursor: pointer;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+      padding: 10px;
+      border: 1px solid #d4d4d0;
+      border-radius: 16px;
+      background: #f8f8f6;
+      box-shadow: 0 8px 28px rgb(22 22 20 / 7%);
+    }
+
+    .mode-switcher {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 3px;
+      padding: 3px;
+      border-radius: 11px;
+      background: #e8e8e4;
+    }
+
+    .mode-button, .action-button {
+      min-height: 32px;
+      border: 0;
+      border-radius: 8px;
+      color: #6f6f69;
+      background: transparent;
+      font-size: 10px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .mode-button[aria-pressed="true"] {
+      color: #191918;
+      background: #fff;
+      box-shadow: 0 1px 4px rgb(22 22 20 / 10%);
+    }
+
+    .mode-button:focus-visible,
+    .action-button:focus-visible {
+      outline: 2px solid #6d941f;
+      outline-offset: 2px;
+    }
+
+    .control-grid {
+      display: grid;
+      padding: 2px 4px 3px;
+    }
+
+    .action-button {
+      min-height: 34px;
+      border: 1px solid #d8d8d4;
+      color: #292927;
+      background: #f1f1ee;
+    }
+
+    .action-button[hidden], .variant-chooser[hidden] { display: none; }
+
+    @media (max-width: 430px) {
+      body { padding: 18px; }
+      .demo { width: min(390px, calc(100vw - 36px)); }
+      .stage { border-radius: 30px; }
+      .scene { inset-inline: 14px; }
+      .stage-head, .stage-foot { left: 22px; right: 22px; }
+      .property-readout { max-width: 238px; }
+      .mode-button { font-size: 9px; }
+      .wrap-container { width: 258px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 1ms !important;
+      }
+    }
+  </style>
+</head>
+<body data-mode="style">
+  <main class="demo">
+    <section class="stage" id="stage" aria-label="CSS state primitive specimen">
+      <header class="stage-head">
+        <p class="kicker" id="modeTitle">style() queries</p>
+        <p class="hint" id="hint">Query custom properties</p>
+      </header>
+
+      <div class="scene">
+        <div class="scene-group style-scene" aria-hidden="false">
+          <div class="style-card" id="styleCard" style="--variant: default">
+            <h3>Component card</h3>
+            <p>Style changes are driven by --variant property, not class names. The container query reads the computed value.</p>
+            <button class="cta" type="button">Call to action</button>
+            <div class="variant-chooser" id="variantChooser">
+              <button class="variant-btn active" data-variant="default">Default</button>
+              <button class="variant-btn" data-variant="primary">Primary</button>
+              <button class="variant-btn" data-variant="featured">Featured</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="scene-group spy-scene" aria-hidden="true">
+          <nav class="spy-nav" id="spyNav">
+            <a href="#s1">Section A</a>
+            <a href="#s2">Section B</a>
+            <a href="#s3">Section C</a>
+          </nav>
+          <div class="spy-track" id="spyTrack">
+            <div class="spy-section" id="s1">A</div>
+            <div class="spy-section" id="s2">B</div>
+            <div class="spy-section" id="s3">C</div>
+          </div>
+          <button class="spy-auto-btn" id="spyAutoBtn">Auto-scroll to B</button>
+        </div>
+
+        <div class="scene-group wrap-scene" aria-hidden="true">
+          <div class="wrap-container" id="wrapContainer">
+            <div class="wrap-chip">Token: --space-2xs</div>
+            <div class="wrap-chip">Design: colour ramp</div>
+            <div class="wrap-chip">Layout: auto grid</div>
+            <div class="wrap-chip">Type: Inter 400</div>
+            <div class="wrap-chip">Motion: ease-out</div>
+          </div>
+          <button class="spy-auto-btn" id="wrapBtn" style="margin-top:8px">Toggle column-wrap</button>
+        </div>
+
+        <div class="scene-group visibility-scene" aria-hidden="true">
+          <div class="vis-scroll" id="visScroll">
+            <div class="vis-spacer"></div>
+            <div class="vis-anchor" id="visAnchor">Anchor ↓</div>
+            <div class="vis-spacer-bottom"></div>
+          </div>
+          <div class="vis-tooltip" id="visTooltip">
+            Anchored tooltip
+            <span class="arrow"></span>
+          </div>
+          <button class="vis-scroll-btn" id="visScrollBtn">↓</button>
+        </div>
+      </div>
+
+      <footer class="stage-foot">
+        <code class="property-readout" id="readout">@container style(--variant: primary) { … }</code>
+        <span class="source-badge" id="sourceBadge">Native</span>
+      </footer>
+    </section>
+
+    <section class="controls" aria-label="Primitive controls">
+      <div class="mode-switcher" aria-label="Demo mode">
+        <button class="mode-button" type="button" data-mode-button="style" aria-pressed="true">Style</button>
+        <button class="mode-button" type="button" data-mode-button="spy" aria-pressed="false">Spy</button>
+        <button class="mode-button" type="button" data-mode-button="wrap" aria-pressed="false">Wrap</button>
+        <button class="mode-button" type="button" data-mode-button="visibility" aria-pressed="false">Vis</button>
+      </div>
+      <div class="control-grid" id="controlGrid"></div>
+    </section>
+  </main>
+
+  <script>
+    const root = document.documentElement;
+    const body = document.body;
+    const modeTitle = document.querySelector('#modeTitle');
+    const hint = document.querySelector('#hint');
+    const readout = document.querySelector('#readout');
+    const sourceBadge = document.querySelector('#sourceBadge');
+    const controlGrid = document.querySelector('#controlGrid');
+    const modeButtons = [...document.querySelectorAll('[data-mode-button]')];
+    const scenes = [...document.querySelectorAll('.scene-group')];
+
+    const styleCard = document.querySelector('#styleCard');
+    const variantChooser = document.querySelector('#variantChooser');
+    const variantBtns = [...document.querySelectorAll('.variant-btn')];
+    const spyNav = document.querySelector('#spyNav');
+    const spyTrack = document.querySelector('#spyTrack');
+    const spyAutoBtn = document.querySelector('#spyAutoBtn');
+    const wrapContainer = document.querySelector('#wrapContainer');
+    const wrapBtn = document.querySelector('#wrapBtn');
+    const visScroll = document.querySelector('#visScroll');
+    const visAnchor = document.querySelector('#visAnchor');
+    const visTooltip = document.querySelector('#visTooltip');
+    const visScrollBtn = document.querySelector('#visScrollBtn');
+
+    const forceFallback = new URLSearchParams(location.search).has('force-fallback');
+    const support = {
+      style: !forceFallback && CSS.supports('container-type', 'inline-size'),
+      spy: !forceFallback && CSS.supports('selector(:target-current)'),
+      wrap: !forceFallback && CSS.supports('column-wrap', 'auto'),
+      vis: !forceFallback && CSS.supports('position-visibility', 'anchors-visible')
+    };
+
+    root.classList.toggle('polyfill-style', !support.style);
+    root.classList.toggle('polyfill-spy', !support.spy);
+    root.classList.toggle('polyfill-wrap', !support.wrap);
+    root.classList.toggle('polyfill-vis', !support.vis);
+
+    const state = {
+      mode: 'style',
+      variant: 'default',
+      wrapEnabled: true
+    };
+
+    function setSceneA11y(m) {
+      const map = { style: '.style-scene', spy: '.spy-scene', wrap: '.wrap-scene', visibility: '.visibility-scene' };
+      scenes.forEach(s => s.setAttribute('aria-hidden', String(!s.matches(map[m]))));
+    }
+
+    function setBadge() { sourceBadge.textContent = support[state.mode] ? 'Native' : 'Fallback'; }
+
+    function buildControls(mode) {
+      controlGrid.innerHTML = '';
+      const modeButtonsEl = modeButtons.map(b => b.cloneNode(true));
+      const container = document.createElement('div');
+      container.style.cssText = 'display:contents';
+
+      if (mode === 'style') {
+        const chooser = variantChooser.cloneNode(true);
+        container.appendChild(chooser);
+        const btns = [...container.querySelectorAll('.variant-btn')];
+        btns.forEach(b => b.addEventListener('click', () => {
+          const v = b.dataset.variant;
+          state.variant = v;
+          btns.forEach(x => x.classList.toggle('active', x.dataset.variant === v));
+          if (support.style) {
+            styleCard.style.setProperty('--variant', v);
+          } else {
+            styleCard.classList.toggle('is-primary', v === 'primary');
+            styleCard.classList.toggle('is-featured', v === 'featured');
+          }
+        }));
+      } else if (mode === 'spy') {
+        // No extra controls; the interaction is scrolling
+      } else if (mode === 'wrap') {
+        const btn = document.createElement('button');
+        btn.className = 'action-button';
+        btn.textContent = 'Toggle column-wrap';
+        btn.addEventListener('click', () => {
+          state.wrapEnabled = !state.wrapEnabled;
+          wrapContainer.style.columnWrap = state.wrapEnabled ? 'auto' : 'initial';
+          btn.textContent = state.wrapEnabled ? 'Disable column-wrap' : 'Enable column-wrap';
+        });
+        container.appendChild(btn);
+      } else if (mode === 'visibility') {
+        // No extra controls; scroll interaction
+      }
+
+      controlGrid.appendChild(container);
+      return container;
+    }
+
+    function updateSpyFallback() {
+      // Always use IntersectionObserver — :target-current needs scroll-target-group: nearest (not yet in Chrome 150)
+      const links = [...spyNav.querySelectorAll('a')];
+      const sections = links.map(a => document.querySelector(a.getAttribute('href')));
+      const track = spyTrack;
+
+      const observer = new IntersectionObserver(entries => {
+        let best = null, bestRatio = 0;
+        entries.forEach(e => {
+          if (e.intersectionRatio > bestRatio) { bestRatio = e.intersectionRatio; best = e.target; }
+        });
+        if (!best) return;
+        links.forEach((l, i) => {
+          const match = sections[i] === best;
+          l.classList.toggle('active', match);
+          l.style.color = match ? 'var(--accent-ink)' : '';
+          l.style.background = match ? 'var(--accent)' : '';
+          l.style.borderColor = match ? 'var(--accent)' : '';
+        });
+      }, { threshold: [0, 0.5, 1], root: track });
+
+      sections.forEach(s => observer.observe(s));
+    }
+
+    function updateVisFallback() {
+      if (support.vis) return;
+      const track = visScroll;
+      function check() {
+        const rect = visAnchor.getBoundingClientRect();
+        const trackRect = track.getBoundingClientRect();
+        const visible = rect.bottom > trackRect.top && rect.top < trackRect.bottom;
+        visTooltip.classList.toggle('hidden', !visible);
+      }
+      track.addEventListener('scroll', check, { passive: true });
+      check();
+    }
+
+    function setMode(mode) {
+      state.mode = mode;
+      body.dataset.mode = mode;
+      setSceneA11y(mode);
+      modeButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.modeButton === mode)));
+      setBadge();
+
+      if (mode === 'style') {
+        modeTitle.textContent = 'style() queries';
+        hint.textContent = 'Query custom properties';
+        readout.textContent = '@container style(--variant: primary) { … }';
+        buildControls(mode);
+      } else if (mode === 'spy') {
+        modeTitle.textContent = ':target-current';
+        hint.textContent = 'CSS-native scroll spy';
+        readout.textContent = 'scroll-target-group: auto;\na:target-current { … }';
+        buildControls(mode);
+        requestAnimationFrame(updateSpyFallback);
+      } else if (mode === 'wrap') {
+        modeTitle.textContent = 'column-wrap';
+        hint.textContent = 'Balanced multicolumn';
+        readout.textContent = 'columns: 2;\ncolumn-wrap: auto;';
+        buildControls(mode);
+      } else if (mode === 'visibility') {
+        modeTitle.textContent = 'position-visibility';
+        hint.textContent = 'Hide when anchor is offscreen';
+        readout.textContent = 'position-visibility: anchors-visible;';
+        buildControls(mode);
+        requestAnimationFrame(updateVisFallback);
+        // scroll to show anchor
+        visScroll.scrollTop = 60;
+      }
+    }
+
+    modeButtons.forEach(b => b.addEventListener('click', () => setMode(b.dataset.modeButton)));
+
+    // Scroll-to-section for spy auto button
+    spyAutoBtn.addEventListener('click', () => {
+      document.querySelector('#s2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    // Scroll toggle for visibility
+    visScrollBtn.addEventListener('click', () => {
+      const atTop = visScroll.scrollTop < 100;
+      visScroll.scrollTo({ top: atTop ? 220 : 0, behavior: 'smooth' });
+      visScrollBtn.textContent = atTop ? '↑' : '↓';
+    });
+
+    setMode('style');
+  </script>
+</body>
+</html>
