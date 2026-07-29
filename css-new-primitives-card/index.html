@@ -312,24 +312,31 @@
       top: 50%;
       width: 34px;
       height: 34px;
+      display: grid;
+      place-items: center;
+      padding: 0;
       translate: 0 -65%;
       border: 1px solid var(--line);
       border-radius: 50%;
       color: var(--ink);
       background: #242422;
-      font-size: 19px;
-      line-height: 1;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: 18px 18px;
+      font-size: 0;
       cursor: pointer;
     }
 
     .native-carousel::scroll-button(left) {
-      content: "‹";
+      content: "";
       left: 2px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M12 5.5 7.5 10l4.5 4.5' fill='none' stroke='%23f8f8f5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     }
 
     .native-carousel::scroll-button(right) {
-      content: "›";
+      content: "";
       right: 2px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='m8 5.5 4.5 4.5L8 14.5' fill='none' stroke='%23f8f8f5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     }
 
     .native-carousel::scroll-button(left):disabled,
@@ -382,19 +389,31 @@
       top: 50%;
       width: 34px;
       height: 34px;
+      display: grid;
+      place-items: center;
+      padding: 0;
       translate: 0 -65%;
       border: 1px solid var(--line);
       border-radius: 50%;
       color: var(--ink);
       background: #242422;
-      font-size: 19px;
-      line-height: 1;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: 18px 18px;
+      font-size: 0;
       cursor: pointer;
       pointer-events: auto;
     }
 
-    .carousel-fallback-arrow[data-direction="-1"] { left: 2px; }
-    .carousel-fallback-arrow[data-direction="1"] { right: 2px; }
+    .carousel-fallback-arrow[data-direction="-1"] {
+      left: 2px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M12 5.5 7.5 10l4.5 4.5' fill='none' stroke='%23f8f8f5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    }
+
+    .carousel-fallback-arrow[data-direction="1"] {
+      right: 2px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='m8 5.5 4.5 4.5L8 14.5' fill='none' stroke='%23f8f8f5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    }
 
     .carousel-fallback-arrow:disabled {
       opacity: 0.28;
@@ -868,7 +887,7 @@
         token.dataset.x = `${x}px`;
         token.dataset.y = `${y}px`;
         token.dataset.radius = `${radius}px`;
-        token.dataset.colour = palette[(seed + index) % palette.length];
+        token.dataset.colour = palette[(state.shuffle + index) % palette.length];
         syncTokenFallback(token);
       });
       updateReadout();
