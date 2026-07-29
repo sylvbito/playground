@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Four demos for CSS media-state pseudo-classes, interest targets, column-wrap, and field-sizing — bleeding-edge primitives with fallbacks.">
+  <title>CSS Interaction Primitives Card</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #ededec;
+      --card: #1c1c1a;
+      --ink: #f8f8f5;
+      --muted: #97978f;
+      --line: rgb(255 255 255 / 11%);
+      --accent: #b7eb52;
+      --accent-ink: #18200d;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: #181817;
+      background: var(--canvas);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, textarea { font: inherit; }
+
+    .demo {
+      width: min(390px, calc(100vw - 48px));
+      display: grid;
+      gap: 14px;
+    }
+
+    .stage {
+      position: relative;
+      aspect-ratio: 1;
+      overflow: hidden;
+      border: 1px solid rgb(255 255 255 / 7%);
+      border-radius: 34px;
+      color: var(--ink);
+      background: var(--card);
+      box-shadow: 0 26px 70px rgb(25 25 22 / 13%);
+    }
+
+    .stage-head, .stage-foot {
+      position: absolute;
+      z-index: 30;
+      left: 25px;
+      right: 25px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .stage-head { top: 23px; }
+    .stage-foot { bottom: 23px; align-items: flex-end; }
+
+    .kicker, .hint, .property-readout, .source-badge { margin: 0; }
+
+    .kicker, .source-badge {
+      color: var(--ink);
+      font: 650 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hint {
+      max-width: 150px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 560;
+      line-height: 1.2;
+      text-align: right;
+    }
+
+    .property-readout {
+      max-width: 265px;
+      color: #a3a39b;
+      font: 500 9px/1.45 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      white-space: pre-wrap;
+    }
+
+    .source-badge { flex: none; color: var(--accent); letter-spacing: 0.04em; }
+
+    .scene {
+      position: absolute;
+      inset: 64px 20px 60px;
+    }
+
+    .scene-group {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 170ms ease, visibility 170ms step-end;
+    }
+
+    body[data-mode="media"] .media-scene,
+    body[data-mode="interest"] .interest-scene,
+    body[data-mode="wrap"] .wrap-scene,
+    body[data-mode="field"] .field-scene {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition: opacity 180ms ease, visibility 180ms step-start;
+    }
+
+    /* ── 01 · media-state pseudo-classes ── */
+    .media-scene {
+      display: grid;
+      place-items: center;
+      gap: 10px;
+    }
+
+    .media-player {
+      width: 240px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      background: #1a1a18;
+    }
+
+    .media-player video {
+      display: block;
+      width: 100%;
+      height: 134px;
+      object-fit: cover;
+      background: #111;
+    }
+
+    .media-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+    }
+
+    .media-btn {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 8px;
+      color: var(--ink);
+      background: #2a2a27;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 160ms ease;
+    }
+
+    .media-btn:hover { background: #3a3a35; }
+
+    /* Native path — these would work if pseudo-classes were supported */
+    .media-player:playing .play-icon::after { content: "⏸"; }
+    .media-player:paused .play-icon::after { content: "▶"; }
+    .media-player:muted .mute-icon::after { content: "🔇"; }
+    .media-player:not(:muted) .mute-icon::after { content: "🔊"; }
+
+    /* Fallback path */
+    .media-player.is-playing .play-icon::after { content: "⏸"; }
+    .media-player.is-paused .play-icon::after { content: "▶"; }
+    .media-player.is-muted .mute-icon::after { content: "🔇"; }
+    .media-player:not(.is-muted) .mute-icon::after { content: "🔊"; }
+
+    .media-label {
+      text-align: center;
+      color: var(--muted);
+      font: 500 8px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    .media-label span { color: var(--ink); }
+
+    /* ── 02 · interest target ── */
+    .interest-scene {
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 12px;
+      place-items: center;
+    }
+
+    .interest-trigger {
+      padding: 14px 28px;
+      border: 1px solid rgb(255 255 255 / 18%);
+      border-radius: 12px;
+      color: var(--ink);
+      background: #292927;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: default;
+    }
+
+    .interest-target {
+      padding: 18px;
+      border: 1px solid rgb(255 255 255 / 10%);
+      border-radius: 14px;
+      background: #292927;
+      font-size: 11px;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+
+    .interest-target.showing { opacity: 1; }
+
+    .interest-target.showing h4 { margin: 0 0 6px; font-size: 13px; }
+    .interest-target.showing p { margin: 0; color: var(--muted); font-size: 9px; }
+
+    /* Native — would work with interesttarget attribute + :popover-open or invoker */
+    [interesttrigger] + [interesttarget].\:popover-open { opacity: 1; }
+
+    .interest-css-note {
+      color: var(--muted);
+      font: 500 8px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      text-align: center;
+    }
+
+    /* ── 03 · column-wrap ── */
+    .wrap-scene {
+      display: grid;
+      place-items: center;
+    }
+
+    .wrap-panel {
+      width: 278px;
+      columns: 2;
+      column-gap: 12px;
+    }
+
+    .wrap-native .wrap-panel { column-wrap: auto; }
+
+    .wrap-chip {
+      break-inside: avoid;
+      margin-bottom: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #292927;
+      color: var(--ink);
+      font-size: 10px;
+      font-weight: 560;
+      text-align: center;
+    }
+
+    .wrap-chip:nth-child(odd) { background: #2d2d29; }
+
+    .wrap-stat {
+      margin-top: 8px;
+      display: flex;
+      gap: 16px;
+      color: var(--muted);
+      font: 500 8px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    .wrap-stat b { color: var(--accent); font-weight: 600; }
+
+    /* ── 04 · field-sizing ── */
+    .field-scene {
+      display: grid;
+      place-items: center;
+      gap: 10px;
+    }
+
+    .field-input {
+      width: 268px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--ink);
+      background: #292927;
+      font-size: 12px;
+      line-height: 1.5;
+      resize: none;
+      overflow: hidden;
+      transition: border-color 180ms ease;
+    }
+
+    .field-native .field-input { field-sizing: content; }
+    .field-input:focus { outline: none; border-color: var(--accent); }
+
+    .field-caption {
+      color: var(--muted);
+      font: 500 8px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      text-align: center;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+      padding: 10px;
+      border: 1px solid #d4d4d0;
+      border-radius: 16px;
+      background: #f8f8f6;
+      box-shadow: 0 8px 28px rgb(22 22 20 / 7%);
+    }
+
+    .mode-switcher {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 3px;
+      padding: 3px;
+      border-radius: 11px;
+      background: #e8e8e4;
+    }
+
+    .mode-button {
+      min-height: 32px;
+      border: 0;
+      border-radius: 8px;
+      color: #6f6f69;
+      background: transparent;
+      font-size: 10px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .mode-button[aria-pressed="true"] {
+      color: #191918;
+      background: #fff;
+      box-shadow: 0 1px 4px rgb(22 22 20 / 10%);
+    }
+
+    .mode-button:focus-visible {
+      outline: 2px solid #6d941f;
+      outline-offset: 2px;
+    }
+
+    .control-grid { padding: 2px 4px 3px; }
+
+    @media (max-width: 430px) {
+      body { padding: 18px; }
+      .demo { width: min(390px, calc(100vw - 36px)); }
+      .stage { border-radius: 30px; }
+      .scene { inset-inline: 14px; }
+      .stage-head, .stage-foot { left: 22px; right: 22px; }
+      .property-readout { max-width: 238px; }
+      .mode-button { font-size: 9px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 1ms !important;
+      }
+    }
+  </style>
+</head>
+<body data-mode="media">
+  <main class="demo">
+    <section class="stage" id="stage" aria-label="CSS interaction primitive specimen">
+      <header class="stage-head">
+        <p class="kicker" id="modeTitle">Media state</p>
+        <p class="hint" id="hint">Pure CSS play/mute detection</p>
+      </header>
+
+      <div class="scene">
+        <div class="scene-group media-scene" aria-hidden="false">
+          <div class="media-player" id="mediaPlayer">
+            <video id="mediaVideo" src="data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMWlzb28AAAAQaXNvbQAAAAEAAAAQAAAAAQAAAAAAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAYgAAACt2MnN0cmVhbQAAABRpc29tYXZjMQAAAAAAAAAAAAAAAAAA" muted loop playsinline></video>
+            <div class="media-controls">
+              <button class="media-btn play-icon" id="playBtn" aria-label="Play / Pause"></button>
+              <button class="media-btn mute-icon" id="muteBtn" aria-label="Mute / Unmute"></button>
+            </div>
+          </div>
+          <div class="media-label">
+            State: <span id="mediaStateLabel">paused</span> · <span id="mediaMuteLabel">unmuted</span>
+          </div>
+        </div>
+
+        <div class="scene-group interest-scene" aria-hidden="true">
+          <div class="interest-trigger" id="interestTrigger">Hover over me</div>
+          <div class="interest-target" id="interestTarget">
+            <h4>Interest target</h4>
+            <p>Shown via declarative hover — no JS event listeners</p>
+          </div>
+          <div class="interest-css-note" id="interestNote">
+            interesttarget="…" on trigger → target reacts
+          </div>
+        </div>
+
+        <div class="scene-group wrap-scene" aria-hidden="true">
+          <div class="wrap-panel" id="wrapPanel">
+            <div class="wrap-chip">Design tokens</div>
+            <div class="wrap-chip">Colour ramps</div>
+            <div class="wrap-chip">Type scale</div>
+            <div class="wrap-chip">Spacing values</div>
+            <div class="wrap-chip">Shadow levels</div>
+            <div class="wrap-chip">Breakpoints</div>
+            <div class="wrap-chip">Z-index stack</div>
+          </div>
+          <div class="wrap-stat">
+            Column 1: <b id="wrapLeft">4</b> items · Column 2: <b id="wrapRight">3</b> items
+          </div>
+        </div>
+
+        <div class="scene-group field-scene" aria-hidden="true">
+          <textarea class="field-input" id="fieldInput" rows="1" placeholder="Type something — this input grows with your text…"></textarea>
+          <div class="field-caption">
+            Height: <span id="fieldHeight">auto</span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="stage-foot">
+        <code class="property-readout" id="readout">video:playing .play-icon { … }</code>
+        <span class="source-badge" id="sourceBadge">Fallback</span>
+      </footer>
+    </section>
+
+    <section class="controls" aria-label="Primitive controls">
+      <div class="mode-switcher" aria-label="Demo mode">
+        <button class="mode-button" type="button" data-mode-button="media" aria-pressed="true">Media</button>
+        <button class="mode-button" type="button" data-mode-button="interest" aria-pressed="false">Interest</button>
+        <button class="mode-button" type="button" data-mode-button="wrap" aria-pressed="false">Wrap</button>
+        <button class="mode-button" type="button" data-mode-button="field" aria-pressed="false">Field</button>
+      </div>
+      <div class="control-grid"></div>
+    </section>
+  </main>
+
+  <script>
+    const root = document.documentElement;
+    const body = document.body;
+    const modeTitle = document.querySelector('#modeTitle');
+    const hint = document.querySelector('#hint');
+    const readout = document.querySelector('#readout');
+    const sourceBadge = document.querySelector('#sourceBadge');
+    const modeButtons = [...document.querySelectorAll('[data-mode-button]')];
+    const scenes = [...document.querySelectorAll('.scene-group')];
+
+    const mediaPlayer = document.querySelector('#mediaPlayer');
+    const mediaVideo = document.querySelector('#mediaVideo');
+    const playBtn = document.querySelector('#playBtn');
+    const muteBtn = document.querySelector('#muteBtn');
+    const mediaStateLabel = document.querySelector('#mediaStateLabel');
+    const mediaMuteLabel = document.querySelector('#mediaMuteLabel');
+    const interestTrigger = document.querySelector('#interestTrigger');
+    const interestTarget = document.querySelector('#interestTarget');
+    const interestNote = document.querySelector('#interestNote');
+    const wrapPanel = document.querySelector('#wrapPanel');
+    const wrapLeft = document.querySelector('#wrapLeft');
+    const wrapRight = document.querySelector('#wrapRight');
+    const fieldInput = document.querySelector('#fieldInput');
+    const fieldHeight = document.querySelector('#fieldHeight');
+
+    const forceFallback = new URLSearchParams(location.search).has('force-fallback');
+    const support = {
+      media: !forceFallback && CSS.supports('selector(:playing)'),
+      interest: !forceFallback && 'InterestTarget' in window,
+      wrap: !forceFallback && CSS.supports('column-wrap', 'auto'),
+      field: !forceFallback && CSS.supports('field-sizing', 'content')
+    };
+
+    root.classList.toggle('wrap-native', support.wrap);
+    root.classList.toggle('field-native', support.field);
+
+    const state = { mode: 'media' };
+
+    function setSceneA11y(m) {
+      const map = { media: '.media-scene', interest: '.interest-scene', wrap: '.wrap-scene', field: '.field-scene' };
+      scenes.forEach(s => s.setAttribute('aria-hidden', String(!s.matches(map[m]))));
+    }
+
+    function setBadge() { sourceBadge.textContent = support[state.mode] ? 'Native' : 'Fallback'; }
+
+    function updateMediaLabels() {
+      const p = !mediaVideo.paused;
+      const m = mediaVideo.muted;
+      mediaPlayer.classList.toggle('is-playing', p);
+      mediaPlayer.classList.toggle('is-paused', !p);
+      mediaPlayer.classList.toggle('is-muted', m);
+      mediaStateLabel.textContent = p ? 'playing' : 'paused';
+      mediaMuteLabel.textContent = m ? 'muted' : 'unmuted';
+    }
+
+    function countWrapColumns() {
+      const chips = [...wrapPanel.querySelectorAll('.wrap-chip')];
+      if (chips.length < 2) return;
+      const left = chips[0].getBoundingClientRect().left;
+      let leftCount = 0;
+      chips.forEach(c => { if (Math.abs(c.getBoundingClientRect().left - left) < 2) leftCount++; });
+      wrapLeft.textContent = leftCount;
+      wrapRight.textContent = chips.length - leftCount;
+    }
+
+    function updateFieldHeight() {
+      fieldHeight.textContent = fieldInput.scrollHeight + 'px';
+    }
+
+    function setMode(mode) {
+      state.mode = mode;
+      body.dataset.mode = mode;
+      setSceneA11y(mode);
+      modeButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.modeButton === mode)));
+      setBadge();
+
+      if (mode === 'media') {
+        modeTitle.textContent = 'Media state';
+        hint.textContent = 'Pure CSS play/mute detection';
+        readout.textContent = 'video:playing .icon { … }\nvideo:muted .icon { … }';
+        updateMediaLabels();
+      } else if (mode === 'interest') {
+        modeTitle.textContent = 'Interest target';
+        hint.textContent = 'Hover trigger → target reacts';
+        readout.textContent = 'interesttarget="target-id"\n/* no JS event listeners */';
+      } else if (mode === 'wrap') {
+        modeTitle.textContent = 'column-wrap';
+        hint.textContent = 'Auto-balanced columns';
+        readout.textContent = 'columns: 2;\ncolumn-wrap: auto;';
+        setTimeout(countWrapColumns, 100);
+      } else {
+        modeTitle.textContent = 'field-sizing';
+        hint.textContent = 'Input grows with content';
+        readout.textContent = 'field-sizing: content;\n/* no JS height calc */';
+        updateFieldHeight();
+      }
+    }
+
+    // Media controls
+    playBtn.addEventListener('click', () => {
+      if (mediaVideo.paused) mediaVideo.play(); else mediaVideo.pause();
+    });
+
+    muteBtn.addEventListener('click', () => {
+      mediaVideo.muted = !mediaVideo.muted;
+      updateMediaLabels();
+    });
+
+    mediaVideo.addEventListener('play', updateMediaLabels);
+    mediaVideo.addEventListener('pause', updateMediaLabels);
+    mediaVideo.addEventListener('volumechange', updateMediaLabels);
+
+    // Interest target fallback
+    interestTrigger.addEventListener('mouseenter', () => interestTarget.classList.add('showing'));
+    interestTrigger.addEventListener('mouseleave', () => interestTarget.classList.remove('showing'));
+    interestTrigger.addEventListener('focus', () => interestTarget.classList.add('showing'));
+    interestTrigger.addEventListener('blur', () => interestTarget.classList.remove('showing'));
+
+    // Field-sizing fallback
+    fieldInput.addEventListener('input', () => {
+      if (!support.field) {
+        fieldInput.style.height = 'auto';
+        fieldInput.style.height = fieldInput.scrollHeight + 'px';
+      }
+      updateFieldHeight();
+    });
+
+    modeButtons.forEach(b => b.addEventListener('click', () => setMode(b.dataset.modeButton)));
+    setMode('media');
+  </script>
+</body>
+</html>
