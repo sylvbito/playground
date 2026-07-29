@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Four minimal demos for corner-shape, sibling functions, typed attr(), and native CSS carousel controls.">
+  <title>CSS New Primitives Card</title>
+  <style>
+    :root {
+      --canvas: #ececea;
+      --card: #191918;
+      --ink: #f8f8f5;
+      --muted: #999992;
+      --line: #393937;
+      --accent: #b7eb52;
+      --accent-ink: #171b10;
+      --corner-k: 2;
+      --corner-radius: 42%;
+      --wave-amplitude: 80px;
+      --wave-phase: 0deg;
+      color-scheme: dark;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      background: var(--canvas);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100svh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: var(--canvas);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .demo {
+      width: min(390px, calc(100vw - 48px));
+      display: grid;
+      gap: 14px;
+    }
+
+    .stage {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      overflow: hidden;
+      border-radius: 36px;
+      color: var(--ink);
+      background: var(--card);
+      box-shadow: 0 22px 55px rgb(22 22 20 / 18%);
+    }
+
+    .stage:focus-within {
+      outline: 3px solid color-mix(in srgb, var(--accent) 72%, white);
+      outline-offset: 4px;
+    }
+
+    .stage-head,
+    .stage-foot {
+      position: absolute;
+      z-index: 20;
+      left: 26px;
+      right: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .stage-head {
+      top: 24px;
+    }
+
+    .stage-foot {
+      bottom: 24px;
+      align-items: flex-end;
+    }
+
+    .kicker,
+    .hint {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 650;
+      line-height: 1;
+      letter-spacing: 0.04em;
+    }
+
+    .kicker {
+      color: var(--ink);
+      text-transform: uppercase;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-weight: 500;
+      letter-spacing: 0;
+    }
+
+    .property-readout {
+      max-width: 258px;
+      color: var(--muted);
+      font: 500 10px/1.45 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      text-wrap: balance;
+    }
+
+    .mode-index {
+      flex: 0 0 auto;
+      color: var(--accent);
+      font: 600 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    .scene {
+      position: absolute;
+      inset: 58px 18px 58px;
+      overflow: hidden;
+      border-radius: 24px;
+    }
+
+    .scene-group {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 180ms ease, visibility 180ms step-end;
+    }
+
+    [data-mode="corners"] .corners-scene,
+    [data-mode="siblings"] .siblings-scene,
+    [data-mode="attributes"] .attributes-scene,
+    [data-mode="carousel"] .carousel-scene {
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 180ms ease, visibility 180ms step-start;
+    }
+
+    /* 01 — corner-shape */
+    .corner-specimen {
+      position: absolute;
+      inset: 0;
+      width: 190px;
+      aspect-ratio: 1;
+      margin: auto;
+      display: grid;
+      place-items: center;
+      border-radius: var(--corner-radius);
+      corner-shape: superellipse(var(--corner-k));
+      color: var(--accent-ink);
+      background: var(--accent);
+      transition:
+        border-radius 380ms cubic-bezier(.2, .75, .2, 1),
+        corner-shape 380ms cubic-bezier(.2, .75, .2, 1);
+    }
+
+    .corner-value {
+      display: grid;
+      justify-items: center;
+      gap: 6px;
+      translate: 0 -1px;
+    }
+
+    .corner-value strong {
+      font-size: 54px;
+      font-weight: 540;
+      line-height: 0.9;
+      letter-spacing: -0.07em;
+    }
+
+    .corner-value small {
+      font: 600 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      letter-spacing: 0.02em;
+    }
+
+    /* 02 — sibling-index() / sibling-count() */
+    .sibling-field {
+      position: absolute;
+      inset: 24px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+
+    .sibling-bar {
+      --index: sibling-index();
+      --count: sibling-count();
+      --angle: calc(((var(--index) - 1) / var(--count)) * 360deg + var(--wave-phase));
+      width: 9px;
+      height: calc(22px + ((sin(var(--angle)) + 1) / 2) * var(--wave-amplitude));
+      border-radius: 99px;
+      background: var(--accent);
+      opacity: calc(0.48 + ((sin(var(--angle)) + 1) / 2) * 0.52);
+      translate: 0 calc(cos(var(--angle)) * 18px);
+      transition:
+        height 460ms cubic-bezier(.2, .75, .2, 1),
+        translate 460ms cubic-bezier(.2, .75, .2, 1),
+        opacity 460ms ease;
+    }
+
+    /* 03 — typed attr() */
+    .attribute-field {
+      position: absolute;
+      inset: 0;
+    }
+
+    .attribute-token {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: attr(data-size type(<length>), 48px);
+      aspect-ratio: 1;
+      translate:
+        calc(-50% + attr(data-x type(<length>), 0px))
+        calc(-50% + attr(data-y type(<length>), 0px));
+      rotate: attr(data-angle type(<angle>), 0deg);
+      border-radius: attr(data-radius type(<length>), 14px);
+      background: attr(data-colour type(<color>), var(--accent));
+      box-shadow: 0 14px 30px rgb(0 0 0 / 16%);
+      transition:
+        width 420ms cubic-bezier(.2, .75, .2, 1),
+        translate 420ms cubic-bezier(.2, .75, .2, 1),
+        rotate 420ms cubic-bezier(.2, .75, .2, 1),
+        border-radius 420ms cubic-bezier(.2, .75, .2, 1),
+        background-color 220ms ease;
+    }
+
+    .attribute-token::after {
+      content: attr(data-angle);
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: color-mix(in srgb, var(--card) 72%, transparent);
+      font: 650 9px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    /* 04 — generated carousel controls */
+    .native-carousel {
+      position: absolute;
+      inset: 4px 0 0;
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding: 14px 42px 42px;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      scroll-marker-group: after;
+      scrollbar-width: none;
+      overscroll-behavior-inline: contain;
+    }
+
+    .native-carousel::-webkit-scrollbar {
+      display: none;
+    }
+
+    .carousel-panel {
+      flex: 0 0 100%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 22px;
+      scroll-snap-align: center;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: #242422;
+    }
+
+    .carousel-panel:nth-child(2) {
+      color: var(--accent-ink);
+      border-color: transparent;
+      background: var(--accent);
+    }
+
+    .carousel-panel:nth-child(3) {
+      color: var(--accent-ink);
+      border-color: transparent;
+      background: var(--ink);
+    }
+
+    .carousel-panel span {
+      font: 600 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      opacity: 0.62;
+    }
+
+    .carousel-panel strong {
+      font-size: 48px;
+      font-weight: 520;
+      line-height: 0.9;
+      letter-spacing: -0.07em;
+    }
+
+    .native-carousel::scroll-button(left),
+    .native-carousel::scroll-button(right) {
+      position: absolute;
+      z-index: 8;
+      top: 50%;
+      width: 34px;
+      height: 34px;
+      translate: 0 -65%;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      color: var(--ink);
+      background: #242422;
+      font-size: 19px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .native-carousel::scroll-button(left) {
+      content: "‹";
+      left: 2px;
+    }
+
+    .native-carousel::scroll-button(right) {
+      content: "›";
+      right: 2px;
+    }
+
+    .native-carousel::scroll-button(left):disabled,
+    .native-carousel::scroll-button(right):disabled {
+      opacity: 0.28;
+      cursor: default;
+    }
+
+    .native-carousel::scroll-marker-group {
+      position: absolute;
+      z-index: 8;
+      left: 50%;
+      bottom: 14px;
+      display: flex;
+      gap: 7px;
+      translate: -50% 0;
+    }
+
+    .carousel-panel::scroll-marker {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border: 1px solid #70706b;
+      border-radius: 50%;
+      background: transparent;
+    }
+
+    .carousel-panel::scroll-marker:target-current {
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+      padding: 10px;
+      border: 1px solid #d4d4d0;
+      border-radius: 16px;
+      background: #f8f8f6;
+      box-shadow: 0 8px 28px rgb(22 22 20 / 7%);
+    }
+
+    .mode-switcher {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 3px;
+      padding: 3px;
+      border-radius: 11px;
+      background: #e8e8e4;
+    }
+
+    .mode-button,
+    .action-button {
+      min-height: 32px;
+      border: 0;
+      border-radius: 8px;
+      color: #6f6f69;
+      background: transparent;
+      font-size: 10px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .mode-button[aria-pressed="true"] {
+      color: #191918;
+      background: #ffffff;
+      box-shadow: 0 1px 4px rgb(22 22 20 / 10%);
+    }
+
+    .mode-button:focus-visible,
+    .action-button:focus-visible,
+    input[type="range"]:focus-visible,
+    .native-carousel::scroll-button(left):focus-visible,
+    .native-carousel::scroll-button(right):focus-visible,
+    .carousel-panel::scroll-marker:focus-visible {
+      outline: 2px solid #6d941f;
+      outline-offset: 2px;
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 2px 4px 3px;
+    }
+
+    .range-control {
+      min-width: 0;
+      display: grid;
+      gap: 7px;
+    }
+
+    .range-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .range-head label {
+      color: #2b2b29;
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .range-head output {
+      color: #777771;
+      font: 500 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 14px;
+      margin: 0;
+      accent-color: #222220;
+      cursor: ew-resize;
+    }
+
+    .action-button {
+      grid-column: 1 / -1;
+      min-height: 34px;
+      border: 1px solid #d8d8d4;
+      color: #292927;
+      background: #f1f1ee;
+    }
+
+    .range-control[hidden],
+    .action-button[hidden],
+    .control-grid[hidden] {
+      display: none;
+    }
+
+    body[data-mode="attributes"] .control-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .support-note {
+      display: none;
+      margin: 0;
+      color: #9f2c22;
+      font-size: 11px;
+      line-height: 1.4;
+      text-align: center;
+    }
+
+    .no-new-css .support-note {
+      display: block;
+    }
+
+    @media (max-width: 430px) {
+      body {
+        padding: 18px;
+      }
+
+      .demo {
+        width: min(390px, calc(100vw - 36px));
+      }
+
+      .stage {
+        border-radius: 30px;
+      }
+
+      .scene {
+        inset-inline: 14px;
+      }
+
+      .stage-head,
+      .stage-foot {
+        left: 22px;
+        right: 22px;
+      }
+
+      .property-readout {
+        max-width: 232px;
+      }
+
+      .mode-button {
+        font-size: 9px;
+      }
+
+      .sibling-field {
+        gap: 5px;
+      }
+
+      .sibling-bar {
+        width: 8px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 1ms !important;
+      }
+    }
+  </style>
+</head>
+<body data-mode="corners">
+  <main class="demo">
+    <section class="stage" id="stage" aria-label="New CSS primitive specimen">
+      <header class="stage-head">
+        <p class="kicker" id="modeTitle">Corner shape</p>
+        <p class="hint" id="hint">Adjust the exponent</p>
+      </header>
+
+      <div class="scene" id="scene" aria-live="off">
+        <div class="scene-group corners-scene" aria-hidden="false">
+          <div class="corner-specimen">
+            <span class="corner-value">
+              <strong id="cornerValue">2</strong>
+              <small>superellipse</small>
+            </span>
+          </div>
+        </div>
+
+        <div class="scene-group siblings-scene" aria-hidden="true">
+          <div class="sibling-field">
+            <span class="sibling-bar"></span><span class="sibling-bar"></span><span class="sibling-bar"></span>
+            <span class="sibling-bar"></span><span class="sibling-bar"></span><span class="sibling-bar"></span>
+            <span class="sibling-bar"></span><span class="sibling-bar"></span><span class="sibling-bar"></span>
+            <span class="sibling-bar"></span><span class="sibling-bar"></span><span class="sibling-bar"></span>
+            <span class="sibling-bar"></span><span class="sibling-bar"></span><span class="sibling-bar"></span>
+          </div>
+        </div>
+
+        <div class="scene-group attributes-scene" aria-hidden="true">
+          <div class="attribute-field">
+            <span class="attribute-token" data-size="74px" data-x="-92px" data-y="-62px" data-angle="-14deg" data-radius="22px" data-colour="#b7eb52"></span>
+            <span class="attribute-token" data-size="54px" data-x="18px" data-y="-86px" data-angle="18deg" data-radius="50px" data-colour="#f8f8f5"></span>
+            <span class="attribute-token" data-size="88px" data-x="78px" data-y="4px" data-angle="32deg" data-radius="18px" data-colour="#b7eb52"></span>
+            <span class="attribute-token" data-size="62px" data-x="-68px" data-y="66px" data-angle="8deg" data-radius="16px" data-colour="#f8f8f5"></span>
+            <span class="attribute-token" data-size="42px" data-x="30px" data-y="78px" data-angle="-24deg" data-radius="12px" data-colour="#777771"></span>
+          </div>
+        </div>
+
+        <div class="scene-group carousel-scene" aria-hidden="true">
+          <div class="native-carousel" aria-label="CSS generated carousel">
+            <article class="carousel-panel"><span>Generated controls</span><strong>01</strong></article>
+            <article class="carousel-panel"><span>No carousel JS</span><strong>02</strong></article>
+            <article class="carousel-panel"><span>Native state</span><strong>03</strong></article>
+          </div>
+        </div>
+      </div>
+
+      <footer class="stage-foot">
+        <code class="property-readout" id="readout">corner-shape: superellipse(2); border-radius: 42%;</code>
+        <span class="mode-index" id="modeIndex">CSS 01</span>
+      </footer>
+    </section>
+
+    <section class="controls" aria-label="Primitive controls">
+      <div class="mode-switcher" aria-label="Demo mode">
+        <button class="mode-button" type="button" data-mode-button="corners" aria-pressed="true">Corners</button>
+        <button class="mode-button" type="button" data-mode-button="siblings" aria-pressed="false">Siblings</button>
+        <button class="mode-button" type="button" data-mode-button="attributes" aria-pressed="false">Attr</button>
+        <button class="mode-button" type="button" data-mode-button="carousel" aria-pressed="false">Carousel</button>
+      </div>
+
+      <div class="control-grid" id="controlGrid">
+        <div class="range-control" id="primaryControl">
+          <span class="range-head">
+            <label for="primaryRange" id="primaryLabel">Exponent</label>
+            <output id="primaryOutput" for="primaryRange">2</output>
+          </span>
+          <input id="primaryRange" type="range" min="-1" max="4" value="2" step="0.1">
+        </div>
+
+        <div class="range-control" id="secondaryControl">
+          <span class="range-head">
+            <label for="secondaryRange" id="secondaryLabel">Radius</label>
+            <output id="secondaryOutput" for="secondaryRange">42%</output>
+          </span>
+          <input id="secondaryRange" type="range" min="12" max="50" value="42" step="1">
+        </div>
+
+        <button class="action-button" id="actionButton" type="button" hidden>Shuffle data attributes</button>
+      </div>
+
+      <p class="support-note">This browser does not support every CSS primitive used by this specimen.</p>
+    </section>
+  </main>
+
+  <script>
+    const root = document.documentElement;
+    const body = document.body;
+    const stage = document.querySelector('#stage');
+    const modeTitle = document.querySelector('#modeTitle');
+    const hint = document.querySelector('#hint');
+    const readout = document.querySelector('#readout');
+    const modeIndex = document.querySelector('#modeIndex');
+    const controlGrid = document.querySelector('#controlGrid');
+    const primaryControl = document.querySelector('#primaryControl');
+    const secondaryControl = document.querySelector('#secondaryControl');
+    const primaryLabel = document.querySelector('#primaryLabel');
+    const secondaryLabel = document.querySelector('#secondaryLabel');
+    const primaryOutput = document.querySelector('#primaryOutput');
+    const secondaryOutput = document.querySelector('#secondaryOutput');
+    const primaryRange = document.querySelector('#primaryRange');
+    const secondaryRange = document.querySelector('#secondaryRange');
+    const actionButton = document.querySelector('#actionButton');
+    const cornerValue = document.querySelector('#cornerValue');
+    const modeButtons = [...document.querySelectorAll('[data-mode-button]')];
+    const scenes = [...document.querySelectorAll('.scene-group')];
+    const tokens = [...document.querySelectorAll('.attribute-token')];
+
+    const state = {
+      mode: 'corners',
+      corners: { exponent: 2, radius: 42 },
+      siblings: { amplitude: 80, phase: 0 },
+      shuffle: 0
+    };
+
+    const allSupported = [
+      CSS.supports('corner-shape', 'superellipse(2)'),
+      CSS.supports('height', 'calc(sibling-index() * 1px)'),
+      CSS.supports('rotate', 'attr(data-angle type(<angle>))'),
+      CSS.supports('scroll-marker-group', 'after')
+    ].every(Boolean);
+
+    if (!allSupported) root.classList.add('no-new-css');
+
+    function configureRange(input, { min, max, value, step = 1 }) {
+      input.min = min;
+      input.max = max;
+      input.step = step;
+      input.value = value;
+    }
+
+    function setSceneA11y(mode) {
+      const map = {
+        corners: '.corners-scene',
+        siblings: '.siblings-scene',
+        attributes: '.attributes-scene',
+        carousel: '.carousel-scene'
+      };
+      scenes.forEach(scene => scene.setAttribute('aria-hidden', String(!scene.matches(map[mode]))));
+    }
+
+    function updateReadout() {
+      if (state.mode === 'corners') {
+        readout.textContent = `corner-shape: superellipse(${state.corners.exponent}); border-radius: ${state.corners.radius}%;`;
+      } else if (state.mode === 'siblings') {
+        readout.textContent = `--i: sibling-index(); --n: sibling-count(); phase: ${state.siblings.phase}°;`;
+      } else if (state.mode === 'attributes') {
+        readout.textContent = `rotate: attr(data-angle type(<angle>)); shuffle: ${state.shuffle};`;
+      } else {
+        readout.textContent = `::scroll-button(); ::scroll-marker; scroll-marker-group: after;`;
+      }
+    }
+
+    function setMode(mode) {
+      state.mode = mode;
+      body.dataset.mode = mode;
+      setSceneA11y(mode);
+      modeButtons.forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.modeButton === mode));
+      });
+
+      controlGrid.hidden = mode === 'carousel';
+      actionButton.hidden = mode !== 'attributes';
+      primaryControl.hidden = mode === 'attributes';
+      secondaryControl.hidden = mode === 'attributes';
+
+      if (mode === 'corners') {
+        modeTitle.textContent = 'Corner shape';
+        hint.textContent = 'Adjust the exponent';
+        modeIndex.textContent = 'CSS 01';
+        primaryLabel.textContent = 'Exponent';
+        secondaryLabel.textContent = 'Radius';
+        configureRange(primaryRange, { min: -1, max: 4, value: state.corners.exponent, step: 0.1 });
+        configureRange(secondaryRange, { min: 12, max: 50, value: state.corners.radius });
+        primaryOutput.textContent = state.corners.exponent;
+        secondaryOutput.textContent = `${state.corners.radius}%`;
+      } else if (mode === 'siblings') {
+        modeTitle.textContent = 'Sibling functions';
+        hint.textContent = 'Click to advance';
+        modeIndex.textContent = 'CSS 02';
+        primaryLabel.textContent = 'Amplitude';
+        secondaryLabel.textContent = 'Phase';
+        configureRange(primaryRange, { min: 24, max: 112, value: state.siblings.amplitude });
+        configureRange(secondaryRange, { min: 0, max: 360, value: state.siblings.phase });
+        primaryOutput.textContent = `${state.siblings.amplitude}px`;
+        secondaryOutput.textContent = `${state.siblings.phase}°`;
+      } else if (mode === 'attributes') {
+        modeTitle.textContent = 'Typed attributes';
+        hint.textContent = 'Click to shuffle';
+        modeIndex.textContent = 'CSS 03';
+      } else {
+        modeTitle.textContent = 'CSS carousel';
+        hint.textContent = 'Use generated controls';
+        modeIndex.textContent = 'CSS 04';
+      }
+
+      updateReadout();
+    }
+
+    function shuffleAttributes() {
+      state.shuffle += 1;
+      const palette = ['#b7eb52', '#f8f8f5', '#777771'];
+      tokens.forEach((token, index) => {
+        const seed = state.shuffle * 37 + index * 71;
+        const angle = ((seed * 13) % 75) - 37;
+        const size = 42 + (seed % 49);
+        const x = ((seed * 17) % 181) - 90;
+        const y = ((seed * 29) % 171) - 85;
+        const radius = 10 + (seed % 35);
+        token.dataset.angle = `${angle}deg`;
+        token.dataset.size = `${size}px`;
+        token.dataset.x = `${x}px`;
+        token.dataset.y = `${y}px`;
+        token.dataset.radius = `${radius}px`;
+        token.dataset.colour = palette[(seed + index) % palette.length];
+      });
+      updateReadout();
+    }
+
+    modeButtons.forEach(button => {
+      button.addEventListener('click', () => setMode(button.dataset.modeButton));
+    });
+
+    primaryRange.addEventListener('input', () => {
+      const value = Number(primaryRange.value);
+      if (state.mode === 'corners') {
+        state.corners.exponent = value;
+        root.style.setProperty('--corner-k', value);
+        cornerValue.textContent = value;
+        primaryOutput.textContent = value;
+      } else if (state.mode === 'siblings') {
+        state.siblings.amplitude = value;
+        root.style.setProperty('--wave-amplitude', `${value}px`);
+        primaryOutput.textContent = `${value}px`;
+      }
+      updateReadout();
+    });
+
+    secondaryRange.addEventListener('input', () => {
+      const value = Number(secondaryRange.value);
+      if (state.mode === 'corners') {
+        state.corners.radius = value;
+        root.style.setProperty('--corner-radius', `${value}%`);
+        secondaryOutput.textContent = `${value}%`;
+      } else if (state.mode === 'siblings') {
+        state.siblings.phase = value;
+        root.style.setProperty('--wave-phase', `${value}deg`);
+        secondaryOutput.textContent = `${value}°`;
+      }
+      updateReadout();
+    });
+
+    actionButton.addEventListener('click', shuffleAttributes);
+
+    stage.addEventListener('click', event => {
+      if (state.mode === 'siblings') {
+        state.siblings.phase = (state.siblings.phase + 45) % 360;
+        root.style.setProperty('--wave-phase', `${state.siblings.phase}deg`);
+        secondaryRange.value = state.siblings.phase;
+        secondaryOutput.textContent = `${state.siblings.phase}°`;
+        updateReadout();
+      } else if (state.mode === 'attributes') {
+        shuffleAttributes();
+      }
+    });
+
+    setMode('corners');
+  </script>
+</body>
+</html>
