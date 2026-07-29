@@ -40,7 +40,7 @@ Every mode demonstrates a browser primitive that changes the boundary of a compo
 1. **Border** — vary a cut value on a non-rectangular specimen. Native `border-shape: polygon(...)` keeps border and shadow aligned; fallback uses the same polygon through `clip-path` with a deliberately small faux-border treatment.
 2. **Function** — vary the ratio of a five-step modular scale computed by `@function --modular(...)`. Native CSS calculates every size; fallback JavaScript writes equivalent custom-property sizes.
 3. **Anchor** — move an anchor vertically until its tooltip uses `position-try-fallbacks: flip-block`. `@container anchored(fallback: flip-block)` moves and rotates the arrow and changes the resolved-state treatment; fallback JavaScript positions the bubble and sets the equivalent state.
-4. **Scope** — run two concurrent `element.startViewTransition()` calls on separate component subtrees that intentionally reuse the same `view-transition-name`. Fallback uses ordinary CSS transitions without pretending to reproduce the browser snapshot tree.
+4. **Scope** — run two concurrent `element.startViewTransition(() => update())` calls on separate component subtrees that intentionally reuse the same `view-transition-name`. Fallback uses ordinary CSS transitions without pretending to reproduce the browser snapshot tree.
 
 ## Progressive enhancement
 

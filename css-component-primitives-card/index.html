@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Four progressive demos for CSS border-shape, custom functions, anchored container queries, and element-scoped view transitions.">
+  <title>CSS Component Primitives Card</title>
+  <style>
+    @function --modular(--step <number>, --ratio <number>) returns <length> {
+      result: calc(44px * pow(var(--ratio), var(--step)));
+    }
+
+    @function --function-probe() returns <length> {
+      result: 37px;
+    }
+
+    :root {
+      color-scheme: light;
+      --canvas: #ededec;
+      --card: #1c1c1a;
+      --ink: #f8f8f5;
+      --muted: #97978f;
+      --line: rgb(255 255 255 / 11%);
+      --accent: #b7eb52;
+      --accent-ink: #18200d;
+      --border-cut: 18%;
+      --function-ratio: 1.3;
+      --anchor-y: 32%;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: #181817;
+      background: var(--canvas);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button,
+    input { font: inherit; }
+
+    .demo {
+      width: min(390px, calc(100vw - 48px));
+      display: grid;
+      gap: 14px;
+    }
+
+    .stage {
+      position: relative;
+      aspect-ratio: 1;
+      overflow: hidden;
+      border: 1px solid rgb(255 255 255 / 7%);
+      border-radius: 34px;
+      color: var(--ink);
+      background: var(--card);
+      box-shadow: 0 26px 70px rgb(25 25 22 / 13%);
+    }
+
+    .stage-head,
+    .stage-foot {
+      position: absolute;
+      z-index: 30;
+      left: 25px;
+      right: 25px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .stage-head { top: 23px; }
+    .stage-foot { bottom: 23px; align-items: flex-end; }
+
+    .kicker,
+    .hint,
+    .property-readout,
+    .source-badge { margin: 0; }
+
+    .kicker,
+    .source-badge {
+      color: var(--ink);
+      font: 650 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hint {
+      max-width: 150px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 560;
+      line-height: 1.2;
+      text-align: right;
+    }
+
+    .property-readout {
+      max-width: 265px;
+      color: #a3a39b;
+      font: 500 9px/1.45 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      white-space: normal;
+    }
+
+    .source-badge {
+      flex: none;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+
+    .scene {
+      position: absolute;
+      inset: 64px 20px 60px;
+    }
+
+    .scene-group {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 170ms ease, visibility 170ms step-end;
+    }
+
+    body[data-mode="border"] .border-scene,
+    body[data-mode="function"] .function-scene,
+    body[data-mode="anchor"] .anchor-scene,
+    body[data-mode="scope"] .scope-scene {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition: opacity 180ms ease, visibility 180ms step-start;
+    }
+
+    /* 01 — border-shape */
+    .border-scene {
+      display: grid;
+      place-items: center;
+    }
+
+    .border-specimen {
+      position: relative;
+      width: 214px;
+      height: 180px;
+      display: grid;
+      place-items: center;
+      border: 3px solid var(--accent);
+      border-shape: polygon(
+        var(--border-cut) 0,
+        calc(100% - var(--border-cut)) 0,
+        100% var(--border-cut),
+        100% calc(100% - var(--border-cut)),
+        calc(100% - var(--border-cut)) 100%,
+        var(--border-cut) 100%,
+        0 calc(100% - var(--border-cut)),
+        0 var(--border-cut)
+      );
+      color: var(--ink);
+      background: #292927;
+      box-shadow: 0 18px 42px rgb(0 0 0 / 34%);
+    }
+
+    .border-specimen strong,
+    .border-specimen small {
+      position: relative;
+      z-index: 2;
+      display: block;
+      text-align: center;
+    }
+
+    .border-specimen strong {
+      font-size: 34px;
+      font-weight: 560;
+      line-height: 0.9;
+      letter-spacing: -0.055em;
+    }
+
+    .border-specimen small {
+      margin-top: 9px;
+      color: var(--muted);
+      font: 650 9px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .polyfill-border .border-specimen {
+      border: 0;
+      background: var(--accent);
+      box-shadow: none;
+      clip-path: polygon(
+        var(--border-cut) 0,
+        calc(100% - var(--border-cut)) 0,
+        100% var(--border-cut),
+        100% calc(100% - var(--border-cut)),
+        calc(100% - var(--border-cut)) 100%,
+        var(--border-cut) 100%,
+        0 calc(100% - var(--border-cut)),
+        0 var(--border-cut)
+      );
+    }
+
+    .polyfill-border .border-specimen::before {
+      content: "";
+      position: absolute;
+      inset: 3px;
+      clip-path: inherit;
+      background: #292927;
+    }
+
+    /* 02 — @function */
+    .function-scene {
+      display: grid;
+      place-items: center;
+    }
+
+    .function-scale {
+      width: 286px;
+      min-height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+    }
+
+    .function-token {
+      --size: var(--fallback-size, 44px);
+      flex: none;
+      width: var(--size);
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      color: var(--accent-ink);
+      background: var(--accent);
+      box-shadow: 0 10px 24px rgb(0 0 0 / 16%);
+      transition: width 220ms cubic-bezier(.2,.75,.2,1);
+    }
+
+    .function-token:nth-child(2),
+    .function-token:nth-child(4) {
+      color: var(--ink);
+      background: #5f5f59;
+    }
+
+    .function-token:nth-child(3) {
+      color: #1a1a18;
+      background: #f8f8f5;
+    }
+
+    .function-token span {
+      font: 650 8px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    .native-function .function-token {
+      --size: --modular(var(--step), var(--function-ratio));
+    }
+
+    .function-probe {
+      position: fixed;
+      left: -9999px;
+      width: --function-probe();
+      height: 1px;
+      visibility: hidden;
+    }
+
+    /* 03 — anchored container query */
+    .anchor-lab {
+      position: absolute;
+      inset: 0;
+    }
+
+    .anchor-target {
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      top: var(--anchor-y);
+      width: 76px;
+      height: 34px;
+      translate: -50% 0;
+      display: grid;
+      place-items: center;
+      border: 1px solid #676762;
+      border-radius: 11px;
+      anchor-name: --component-anchor;
+      color: var(--ink);
+      background: #292927;
+      font: 650 9px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .anchor-tooltip {
+      position: absolute;
+      z-index: 4;
+      width: 154px;
+      height: 66px;
+      position-anchor: --component-anchor;
+      position-area: bottom;
+      position-try-fallbacks: flip-block;
+      container-type: anchored;
+      margin: 12px 0;
+    }
+
+    .anchor-bubble {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      border-radius: 17px;
+      color: #1a1a18;
+      background: #f8f8f5;
+      box-shadow: 0 14px 30px rgb(0 0 0 / 23%);
+      transition: color 180ms ease, background-color 180ms ease;
+    }
+
+    .anchor-bubble strong {
+      font-size: 13px;
+      font-weight: 680;
+    }
+
+    .anchor-bubble .flipped-label { display: none; }
+
+    .anchor-arrow {
+      position: absolute;
+      left: 50%;
+      top: -5px;
+      width: 11px;
+      aspect-ratio: 1;
+      translate: -50% 0;
+      rotate: 45deg;
+      background: inherit;
+    }
+
+    @container anchored(fallback: flip-block) {
+      .anchor-bubble {
+        color: var(--accent-ink);
+        background: var(--accent);
+      }
+
+      .anchor-bubble .default-label { display: none; }
+      .anchor-bubble .flipped-label { display: inline; }
+
+      .anchor-arrow {
+        top: auto;
+        bottom: -5px;
+      }
+    }
+
+    .polyfill-anchor .anchor-tooltip {
+      left: 50%;
+      translate: -50% 0;
+      margin: 0;
+      position-anchor: auto;
+      position-area: none;
+      position-try-fallbacks: none;
+      container-type: normal;
+    }
+
+    .polyfill-anchor .anchor-tooltip.is-flipped .anchor-bubble {
+      color: var(--accent-ink);
+      background: var(--accent);
+    }
+
+    .polyfill-anchor .anchor-tooltip.is-flipped .default-label { display: none; }
+    .polyfill-anchor .anchor-tooltip.is-flipped .flipped-label { display: inline; }
+
+    .polyfill-anchor .anchor-tooltip.is-flipped .anchor-arrow {
+      top: auto;
+      bottom: -5px;
+    }
+
+    /* 04 — element-scoped view transitions */
+    .scope-scene {
+      display: grid;
+      place-items: center;
+    }
+
+    .scope-grid {
+      width: 286px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .scope-card {
+      position: relative;
+      height: 154px;
+      overflow: hidden;
+      contain: layout;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: #292927;
+    }
+
+    .scope-card::after {
+      content: attr(data-label);
+      position: absolute;
+      left: 13px;
+      bottom: 12px;
+      color: var(--muted);
+      font: 650 8px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .scope-token {
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      width: 48px;
+      aspect-ratio: 1;
+      border-radius: 13px;
+      background: var(--accent);
+      view-transition-name: shared-token;
+    }
+
+    .scope-card:nth-child(2) .scope-token {
+      left: auto;
+      right: 14px;
+      background: #f8f8f5;
+    }
+
+    .scope-card[data-phase="b"] .scope-token {
+      left: calc(100% - 72px);
+      top: 64px;
+      width: 58px;
+      border-radius: 50%;
+    }
+
+    .scope-card:nth-child(2)[data-phase="b"] .scope-token {
+      left: 14px;
+      right: auto;
+      top: 64px;
+    }
+
+    ::view-transition-group(shared-token) {
+      animation-duration: 560ms;
+      animation-timing-function: cubic-bezier(.2,.75,.2,1);
+    }
+
+    .polyfill-scope .scope-token {
+      transition:
+        left 560ms cubic-bezier(.2,.75,.2,1),
+        top 560ms cubic-bezier(.2,.75,.2,1),
+        width 560ms cubic-bezier(.2,.75,.2,1),
+        border-radius 560ms cubic-bezier(.2,.75,.2,1);
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+      padding: 10px;
+      border: 1px solid #d4d4d0;
+      border-radius: 16px;
+      background: #f8f8f6;
+      box-shadow: 0 8px 28px rgb(22 22 20 / 7%);
+    }
+
+    .mode-switcher {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 3px;
+      padding: 3px;
+      border-radius: 11px;
+      background: #e8e8e4;
+    }
+
+    .mode-button,
+    .action-button {
+      min-height: 32px;
+      border: 0;
+      border-radius: 8px;
+      color: #6f6f69;
+      background: transparent;
+      font-size: 10px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .mode-button[aria-pressed="true"] {
+      color: #191918;
+      background: #fff;
+      box-shadow: 0 1px 4px rgb(22 22 20 / 10%);
+    }
+
+    .mode-button:focus-visible,
+    .action-button:focus-visible,
+    input[type="range"]:focus-visible {
+      outline: 2px solid #6d941f;
+      outline-offset: 2px;
+    }
+
+    .control-grid {
+      display: grid;
+      padding: 2px 4px 3px;
+    }
+
+    .range-control {
+      display: grid;
+      gap: 7px;
+    }
+
+    .range-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .range-head label {
+      color: #2b2b29;
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .range-head output {
+      color: #777771;
+      font: 500 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 14px;
+      margin: 0;
+      accent-color: #222220;
+      cursor: ew-resize;
+    }
+
+    .action-button {
+      min-height: 34px;
+      border: 1px solid #d8d8d4;
+      color: #292927;
+      background: #f1f1ee;
+    }
+
+    .range-control[hidden],
+    .action-button[hidden] { display: none; }
+
+    @media (max-width: 430px) {
+      body { padding: 18px; }
+      .demo { width: min(390px, calc(100vw - 36px)); }
+      .stage { border-radius: 30px; }
+      .scene { inset-inline: 14px; }
+      .stage-head,
+      .stage-foot { left: 22px; right: 22px; }
+      .property-readout { max-width: 238px; }
+      .mode-button { font-size: 9px; }
+      .function-scale,
+      .scope-grid { width: 278px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 1ms !important;
+      }
+
+      ::view-transition-group(*) { animation-duration: 1ms !important; }
+    }
+  </style>
+</head>
+<body data-mode="border">
+  <main class="demo">
+    <section class="stage" id="stage" aria-label="Component CSS primitive specimen">
+      <header class="stage-head">
+        <p class="kicker" id="modeTitle">CSS border-shape</p>
+        <p class="hint" id="hint">Border follows geometry</p>
+      </header>
+
+      <div class="scene">
+        <div class="scene-group border-scene" aria-hidden="false">
+          <div class="border-specimen" id="borderSpecimen">
+            <span><strong id="borderValue">18%</strong><small>cut</small></span>
+          </div>
+        </div>
+
+        <div class="scene-group function-scene" aria-hidden="true">
+          <div class="function-scale" aria-label="Five values calculated by one CSS custom function">
+            <span class="function-token" style="--step: -2"><span>−2</span></span>
+            <span class="function-token" style="--step: -1"><span>−1</span></span>
+            <span class="function-token" style="--step: 0"><span>0</span></span>
+            <span class="function-token" style="--step: 1"><span>+1</span></span>
+            <span class="function-token" style="--step: 2"><span>+2</span></span>
+          </div>
+          <span class="function-probe" id="functionProbe" aria-hidden="true"></span>
+        </div>
+
+        <div class="scene-group anchor-scene" aria-hidden="true">
+          <div class="anchor-lab" id="anchorLab">
+            <div class="anchor-target" id="anchorTarget">Anchor</div>
+            <div class="anchor-tooltip" id="anchorTooltip">
+              <div class="anchor-bubble" id="anchorBubble">
+                <span class="anchor-arrow"></span>
+                <strong class="default-label">Bottom resolved</strong>
+                <strong class="flipped-label">Top fallback</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="scene-group scope-scene" aria-hidden="true">
+          <div class="scope-grid" aria-label="Two independent transition scopes">
+            <article class="scope-card" data-phase="a" data-label="Scope A"><span class="scope-token"></span></article>
+            <article class="scope-card" data-phase="a" data-label="Scope B"><span class="scope-token"></span></article>
+          </div>
+        </div>
+      </div>
+
+      <footer class="stage-foot">
+        <code class="property-readout" id="readout">border-shape: polygon(var(--cut) 0, …);</code>
+        <span class="source-badge" id="sourceBadge">Native</span>
+      </footer>
+    </section>
+
+    <section class="controls" aria-label="Primitive controls">
+      <div class="mode-switcher" aria-label="Demo mode">
+        <button class="mode-button" type="button" data-mode-button="border" aria-pressed="true">Border</button>
+        <button class="mode-button" type="button" data-mode-button="function" aria-pressed="false">Function</button>
+        <button class="mode-button" type="button" data-mode-button="anchor" aria-pressed="false">Anchor</button>
+        <button class="mode-button" type="button" data-mode-button="scope" aria-pressed="false">Scope</button>
+      </div>
+      <div class="control-grid">
+        <div class="range-control" id="rangeControl">
+          <span class="range-head">
+            <label id="rangeLabel" for="valueRange">Corner cut</label>
+            <output id="rangeOutput" for="valueRange">18%</output>
+          </span>
+          <input id="valueRange" type="range" min="8" max="32" value="18" step="1">
+        </div>
+        <button class="action-button" id="actionButton" type="button" hidden>Morph both scopes</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const root = document.documentElement;
+    const body = document.body;
+    const modeTitle = document.querySelector('#modeTitle');
+    const hint = document.querySelector('#hint');
+    const readout = document.querySelector('#readout');
+    const sourceBadge = document.querySelector('#sourceBadge');
+    const rangeControl = document.querySelector('#rangeControl');
+    const rangeLabel = document.querySelector('#rangeLabel');
+    const valueRange = document.querySelector('#valueRange');
+    const rangeOutput = document.querySelector('#rangeOutput');
+    const actionButton = document.querySelector('#actionButton');
+    const borderValue = document.querySelector('#borderValue');
+    const functionProbe = document.querySelector('#functionProbe');
+    const functionTokens = [...document.querySelectorAll('.function-token')];
+    const anchorLab = document.querySelector('#anchorLab');
+    const anchorTarget = document.querySelector('#anchorTarget');
+    const anchorTooltip = document.querySelector('#anchorTooltip');
+    const anchorBubble = document.querySelector('#anchorBubble');
+    const scopeCards = [...document.querySelectorAll('.scope-card')];
+    const modeButtons = [...document.querySelectorAll('[data-mode-button]')];
+    const scenes = [...document.querySelectorAll('.scene-group')];
+
+    const forceFallback = new URLSearchParams(location.search).has('force-fallback');
+    const support = {
+      border: !forceFallback && CSS.supports('border-shape', 'polygon(0 0, 100% 0, 100% 100%, 0 100%)'),
+      function: !forceFallback && getComputedStyle(functionProbe).width === '37px',
+      anchor: !forceFallback && CSS.supports('container-type', 'anchored') && CSS.supports('position-area', 'bottom'),
+      scope: !forceFallback && 'startViewTransition' in HTMLElement.prototype
+    };
+
+    root.classList.toggle('polyfill-border', !support.border);
+    root.classList.toggle('native-function', support.function);
+    root.classList.toggle('polyfill-function', !support.function);
+    root.classList.toggle('polyfill-anchor', !support.anchor);
+    root.classList.toggle('polyfill-scope', !support.scope);
+
+    const state = {
+      mode: 'border',
+      borderCut: 18,
+      functionRatio: 1.3,
+      anchorY: 32,
+      scopePhase: 'a'
+    };
+
+    const controls = {
+      border: { label: 'Corner cut', min: 8, max: 32, step: 1, value: () => state.borderCut, format: value => `${value}%` },
+      function: { label: 'Scale ratio', min: 1.08, max: 1.55, step: 0.01, value: () => state.functionRatio, format: value => `×${Number(value).toFixed(2)}` },
+      anchor: { label: 'Anchor position', min: 16, max: 82, step: 1, value: () => state.anchorY, format: value => `${value}%` }
+    };
+
+    function setSceneA11y(mode) {
+      const map = {
+        border: '.border-scene',
+        function: '.function-scene',
+        anchor: '.anchor-scene',
+        scope: '.scope-scene'
+      };
+      scenes.forEach(scene => scene.setAttribute('aria-hidden', String(!scene.matches(map[mode]))));
+    }
+
+    function setBadge() {
+      sourceBadge.textContent = support[state.mode] ? 'Native' : 'Fallback';
+    }
+
+    function syncRange(mode) {
+      const config = controls[mode];
+      const value = config.value();
+      rangeLabel.textContent = config.label;
+      valueRange.min = config.min;
+      valueRange.max = config.max;
+      valueRange.step = config.step;
+      valueRange.value = value;
+      rangeOutput.textContent = config.format(value);
+    }
+
+    function setMode(mode) {
+      state.mode = mode;
+      body.dataset.mode = mode;
+      setSceneA11y(mode);
+      modeButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.modeButton === mode)));
+      rangeControl.hidden = mode === 'scope';
+      actionButton.hidden = mode !== 'scope';
+
+      if (mode === 'border') {
+        modeTitle.textContent = 'CSS border-shape';
+        hint.textContent = 'Border follows geometry';
+        readout.textContent = 'border-shape: polygon(var(--cut) 0, …);';
+      } else if (mode === 'function') {
+        modeTitle.textContent = 'CSS @function';
+        hint.textContent = 'One rule, five values';
+        readout.textContent = 'width: --modular(var(--step), var(--ratio));';
+      } else if (mode === 'anchor') {
+        modeTitle.textContent = 'Anchored query';
+        hint.textContent = 'Move until fallback wins';
+        readout.textContent = '@container anchored(fallback: flip-block) { … }';
+        requestAnimationFrame(updateAnchorFallback);
+      } else {
+        modeTitle.textContent = 'Scoped transition';
+        hint.textContent = 'Same name, separate scopes';
+        readout.textContent = 'element.startViewTransition(() => update());';
+      }
+
+      if (mode !== 'scope') syncRange(mode);
+      setBadge();
+    }
+
+    function syncFunctionFallback() {
+      functionTokens.forEach(token => {
+        const step = Number(token.style.getPropertyValue('--step'));
+        const size = 44 * Math.pow(state.functionRatio, step);
+        token.style.setProperty('--fallback-size', `${size.toFixed(3)}px`);
+      });
+    }
+
+    function updateAnchorFallback() {
+      if (support.anchor) {
+        anchorTooltip.style.removeProperty('top');
+        anchorTooltip.classList.remove('is-flipped');
+        return;
+      }
+
+      const labHeight = anchorLab.clientHeight;
+      const targetHeight = anchorTarget.offsetHeight;
+      const tooltipHeight = anchorTooltip.offsetHeight;
+      const targetTop = labHeight * state.anchorY / 100;
+      const gap = 12;
+      const shouldFlip = targetTop + targetHeight + gap + tooltipHeight > labHeight;
+      anchorTooltip.classList.toggle('is-flipped', shouldFlip);
+      anchorTooltip.style.top = `${shouldFlip ? targetTop - tooltipHeight - gap : targetTop + targetHeight + gap}px`;
+    }
+
+    function updateRangeValue(rawValue) {
+      if (state.mode === 'border') {
+        state.borderCut = Number(rawValue);
+        root.style.setProperty('--border-cut', `${state.borderCut}%`);
+        borderValue.textContent = `${state.borderCut}%`;
+      } else if (state.mode === 'function') {
+        state.functionRatio = Number(rawValue);
+        root.style.setProperty('--function-ratio', state.functionRatio);
+        syncFunctionFallback();
+      } else if (state.mode === 'anchor') {
+        state.anchorY = Number(rawValue);
+        root.style.setProperty('--anchor-y', `${state.anchorY}%`);
+        requestAnimationFrame(updateAnchorFallback);
+      }
+      rangeOutput.textContent = controls[state.mode].format(rawValue);
+    }
+
+    function morphScopes() {
+      state.scopePhase = state.scopePhase === 'a' ? 'b' : 'a';
+      const update = card => { card.dataset.phase = state.scopePhase; };
+
+      if (support.scope) {
+        window.__scopeTransitions = scopeCards.map(card => card.startViewTransition(() => update(card)));
+      } else {
+        scopeCards.forEach(update);
+        window.__scopeTransitions = [];
+      }
+    }
+
+    modeButtons.forEach(button => button.addEventListener('click', () => setMode(button.dataset.modeButton)));
+    valueRange.addEventListener('input', event => updateRangeValue(event.currentTarget.value));
+    actionButton.addEventListener('click', morphScopes);
+    window.addEventListener('resize', () => {
+      if (state.mode === 'anchor') updateAnchorFallback();
+    });
+
+    syncFunctionFallback();
+    setMode('border');
+  </script>
+</body>
+</html>
