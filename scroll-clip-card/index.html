@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Scroll-driven image clipping reveal — Webflow's Year of the Rabbit ranges vs settle, cascade and centre variants. Pure CSS view() timeline, no JS scroll listeners.">
+  <title>Scroll Clip Card</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #ededec;
+      --card: #1c1c1a;
+      --ink: #f8f8f5;
+      --muted: #97978f;
+      --line: rgb(255 255 255 / 11%);
+      --accent: #b7eb52;
+      --accent-ink: #18200d;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: #181817;
+      background: var(--canvas);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button { font: inherit; }
+
+    .demo {
+      width: min(390px, calc(100vw - 48px));
+      display: grid;
+      gap: 14px;
+    }
+
+    .stage {
+      position: relative;
+      aspect-ratio: 1;
+      overflow: hidden;
+      border: 1px solid rgb(255 255 255 / 7%);
+      border-radius: 34px;
+      color: var(--ink);
+      background: var(--card);
+      box-shadow: 0 26px 70px rgb(25 25 22 / 13%);
+    }
+
+    .stage-head, .stage-foot {
+      position: absolute;
+      z-index: 30;
+      left: 25px;
+      right: 25px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .stage-head { top: 23px; }
+    .stage-foot { bottom: 23px; align-items: flex-end; }
+
+    .kicker, .hint, .property-readout, .source-badge { margin: 0; }
+
+    .kicker, .source-badge {
+      color: var(--ink);
+      font: 650 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hint {
+      max-width: 150px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 560;
+      line-height: 1.2;
+      text-align: right;
+    }
+
+    .property-readout {
+      max-width: 265px;
+      color: #a3a39b;
+      font: 500 9px/1.45 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      white-space: pre-wrap;
+    }
+
+    .source-badge { flex: none; color: var(--accent); letter-spacing: 0.04em; }
+
+    /* ── scroller ── */
+    .scroller {
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgb(255 255 255 / 14%) transparent;
+    }
+
+    .scroller::-webkit-scrollbar { width: 6px; }
+    .scroller::-webkit-scrollbar-thumb {
+      background: rgb(255 255 255 / 14%);
+      border-radius: 99px;
+    }
+    .scroller::-webkit-scrollbar-track { background: transparent; }
+
+    .gallery {
+      display: grid;
+      gap: 14px;
+      min-height: 100%;
+      padding: 64px 20px 58px;
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    /* ── clip cards ── */
+    .clip-card {
+      --radius: 16px;
+      position: relative;
+      overflow: clip;
+      border-radius: var(--radius);
+      background: #232320;
+    }
+
+    .clip-card.featured { width: 100%; height: 100%; min-height: 260px; }
+    .grid2 .clip-card { width: 100%; aspect-ratio: 3 / 3.6; }
+
+    .clip-card img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* YOTR base state — closed until the timeline moves */
+    @supports (animation-timeline: view()) {
+      .clip-card {
+        clip-path: inset(0 0 100% 0 round var(--radius));
+        animation-name: enterAnimation, exitAnimation;
+        animation-timing-function: linear, linear;
+        animation-duration: 1s, 1s;
+        animation-fill-mode: forwards, forwards;
+        animation-timeline: view(), view();
+        /* animation-range per mode below */
+      }
+
+      @keyframes enterAnimation {
+        0%   { clip-path: inset(0 0 100% 0 round var(--radius)); }
+        100% { clip-path: inset(0 0 0 0 round var(--radius)); }
+      }
+      @keyframes exitAnimation {
+        0%   { clip-path: inset(0 0 0 0 round var(--radius)); }
+        100% { clip-path: inset(100% 0 0 0 round var(--radius)); }
+      }
+      @keyframes centreIn {
+        0%   { clip-path: inset(50% 0 50% 0 round var(--radius)); }
+        100% { clip-path: inset(0 0 0 0 round var(--radius)); }
+      }
+      @keyframes centreOut {
+        0%   { clip-path: inset(0 0 0 0 round var(--radius)); }
+        100% { clip-path: inset(50% 0 50% 0 round var(--radius)); }
+      }
+
+      /* ── 01 · YOTR — Sylvain's Webflow ranges (faithful copy) ── */
+      [data-mode="yotr"] .clip-card {
+        animation-range:
+          entry-crossing 1rem entry-crossing calc(100% + 1rem),
+          exit-crossing -1rem exit-crossing calc(100% - 1rem);
+      }
+
+      /* ── 02 · Settle — reveal completes in the bottom third, holds open ── */
+      [data-mode="settle"] .clip-card {
+        animation-range:
+          entry 1rem entry 35%,
+          exit exit-crossing;
+      }
+
+      /* ── 03 · Cascade — settle + per-row stagger ── */
+      [data-mode="cascade"] .clip-card {
+        --reveal-offset: 0%;
+        animation-range:
+          entry calc(1rem + var(--reveal-offset)) entry 35%,
+          exit exit-crossing;
+      }
+      [data-mode="cascade"] .grid2 .clip-card:nth-child(1),
+      [data-mode="cascade"] .grid2 .clip-card:nth-child(2) { --reveal-offset: 10%; }
+      [data-mode="cascade"] .grid2 .clip-card:nth-child(3),
+      [data-mode="cascade"] .grid2 .clip-card:nth-child(4) { --reveal-offset: 20%; }
+
+      /* ── 04 · Centre — bloom from the vertical centre, mirror exit ── */
+      [data-mode="centre"] .clip-card {
+        animation-name: centreIn, centreOut;
+        animation-range:
+          entry 1rem entry 35%,
+          exit exit-crossing;
+      }
+    }
+
+    /* Fallback — no scroll timeline support: static rounded cards */
+    @supports not (animation-timeline: view()) {
+      .clip-card { border: 1px solid rgb(255 255 255 / 12%); }
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+      padding: 10px;
+      border: 1px solid #d4d4d0;
+      border-radius: 16px;
+      background: #f8f8f6;
+      box-shadow: 0 8px 28px rgb(22 22 20 / 7%);
+    }
+
+    .mode-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 3px;
+      padding: 3px;
+      border-radius: 11px;
+      background: #e8e8e4;
+    }
+
+    .mode-tab {
+      min-height: 32px;
+      border: 0;
+      border-radius: 8px;
+      color: #6f6f69;
+      background: transparent;
+      font-size: 10px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .mode-tab[aria-selected="true"] {
+      color: #191918;
+      background: #fff;
+      box-shadow: 0 1px 4px rgb(22 22 20 / 10%);
+    }
+
+    .mode-tab:focus-visible {
+      outline: 2px solid #6d941f;
+      outline-offset: 2px;
+    }
+
+    .mode-note {
+      margin: 0;
+      padding: 0 4px 3px;
+      color: #6f6f69;
+      font-size: 10px;
+      font-weight: 560;
+      line-height: 1.5;
+    }
+
+    .mode-note code {
+      font: 500 9px/1.5 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      color: #3f3f3b;
+      background: #efefe9;
+      padding: 1px 4px;
+      border-radius: 5px;
+    }
+
+    @media (max-width: 430px) {
+      body { padding: 18px; }
+      .demo { width: min(390px, calc(100vw - 36px)); }
+      .stage { border-radius: 30px; }
+      .stage-head, .stage-foot { left: 22px; right: 22px; }
+      .property-readout { max-width: 238px; }
+      .mode-tab { font-size: 9px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 1ms !important;
+      }
+    }
+  </style>
+</head>
+<body data-mode="yotr">
+  <main class="demo">
+    <section class="stage" aria-label="Image clipping scroll effect specimen">
+      <header class="stage-head">
+        <p class="kicker" id="modeTitle">YOTR ranges</p>
+        <p class="hint" id="hint">Scroll the gallery to reveal</p>
+      </header>
+
+      <div class="scroller" id="scroller" tabindex="0" aria-label="Gallery — scroll to reveal">
+        <div class="gallery">
+          <figure class="clip-card featured">
+            <img src="img/2023tuzi_1.webp" alt="Year of the Rabbit — featured render" loading="lazy">
+          </figure>
+          <div class="grid2">
+            <figure class="clip-card">
+              <img src="img/tuzi1_1.webp" alt="Year of the Rabbit — close study" loading="lazy">
+            </figure>
+            <figure class="clip-card">
+              <img src="img/still1_1.webp" alt="Year of the Rabbit — still 1" loading="lazy">
+            </figure>
+            <figure class="clip-card">
+              <img src="img/still2_1.webp" alt="Year of the Rabbit — still 2" loading="lazy">
+            </figure>
+            <figure class="clip-card">
+              <img src="img/stilltuzi_1.webp" alt="Year of the Rabbit — detail" loading="lazy">
+            </figure>
+          </div>
+        </div>
+      </div>
+
+      <footer class="stage-foot">
+        <code class="property-readout" id="readout">animation-range: entry-crossing 1rem → entry-crossing calc(100% + 1rem)</code>
+        <span class="source-badge" id="sourceBadge">Native</span>
+      </footer>
+    </section>
+
+    <section class="controls" aria-label="Reveal variant controls">
+      <div class="mode-tabs" role="tablist" aria-label="Reveal variants">
+        <button class="mode-tab" type="button" role="tab" data-mode="yotr" aria-selected="true" tabindex="0">YOTR</button>
+        <button class="mode-tab" type="button" role="tab" data-mode="settle" aria-selected="false" tabindex="-1">Settle</button>
+        <button class="mode-tab" type="button" role="tab" data-mode="cascade" aria-selected="false" tabindex="-1">Cascade</button>
+        <button class="mode-tab" type="button" role="tab" data-mode="centre" aria-selected="false" tabindex="-1">Centre</button>
+      </div>
+      <p class="mode-note" id="modeNote"></p>
+    </section>
+  </main>
+
+  <script>
+    const forceFallback = new URLSearchParams(location.search).has('force-fallback');
+    const native = !forceFallback && CSS.supports('animation-timeline', 'view()');
+
+    const body = document.body;
+    const modeTitle = document.querySelector('#modeTitle');
+    const readout = document.querySelector('#readout');
+    const modeNote = document.querySelector('#modeNote');
+    const sourceBadge = document.querySelector('#sourceBadge');
+    const tabs = [...document.querySelectorAll('.mode-tab')];
+    const scroller = document.querySelector('#scroller');
+
+    const MODES = {
+      yotr: {
+        title: 'YOTR ranges',
+        readout: 'animation-range: entry-crossing 1rem → entry-crossing calc(100% + 1rem)',
+        note: 'Faithful copy of the Webflow effect — the wipe spans nearly the whole journey, so cards are still mid-clip at the top of the viewport, and rows move in lockstep.'
+      },
+      settle: {
+        title: 'Settle',
+        readout: 'animation-range: entry 1rem → entry 35%',
+        note: 'The reveal completes in the bottom third of the viewport, then the card <strong>holds fully open</strong> through the middle — closing only as it actually exits.'
+      },
+      cascade: {
+        title: 'Cascade',
+        readout: 'animation-range: entry calc(1rem + var(--reveal-offset)) → entry 35%',
+        note: 'Settle plus a per-row <code>--reveal-offset</code> (10% / 20%) — each row waits its turn at the bottom edge, then wipes open in sequence.'
+      },
+      centre: {
+        title: 'Centre bloom',
+        readout: 'clip-path: inset(50% 0 50% 0) → inset(0 0 0 0)',
+        note: 'Same primitive, different keyframes — the card blooms from the vertical centre and the exit mirrors the entry, so the motion feels continuous.'
+      }
+    };
+
+    function selectMode(mode, save = true) {
+      if (!MODES[mode]) mode = 'yotr';
+      body.dataset.mode = mode;
+      tabs.forEach(t => {
+        const active = t.dataset.mode === mode;
+        t.setAttribute('aria-selected', String(active));
+        t.tabIndex = active ? 0 : -1;
+      });
+      modeTitle.textContent = MODES[mode].title;
+      readout.textContent = MODES[mode].readout;
+      modeNote.innerHTML = MODES[mode].note;
+      if (save) {
+        try { localStorage.setItem('scroll-clip-card:mode', mode); } catch (e) {}
+      }
+    }
+
+    tabs.forEach(t => t.addEventListener('click', () => selectMode(t.dataset.mode)));
+
+    sourceBadge.textContent = native ? 'Native' : 'Fallback';
+
+    let saved = 'yotr';
+    try { saved = localStorage.getItem('scroll-clip-card:mode') || 'yotr'; } catch (e) {}
+    selectMode(saved, false);
+  </script>
+</body>
+</html>
