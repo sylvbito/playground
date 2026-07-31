@@ -12,6 +12,64 @@
       initial-value: oklch(0.94 0.025 90);
     }
 
+    /* Pure-CSS contrast solver for the CSS engine tab (Chromium @function). */
+    @function --contrast-ink(
+      --base <color>,
+      --ratio <number>,
+      --saturation <number>
+    ) returns <color> {
+      --y: calc(0.2126 * r + 0.7152 * g + 0.0722 * b);
+      --toward-black: clamp(0, sign(var(--y) - 0.179128784748), 1);
+      --target-dark: clamp(0, (var(--y) + 0.05) / var(--ratio) - 0.05, 1);
+      --target-light: clamp(0, var(--ratio) * (var(--y) + 0.05) - 0.05, 1);
+      --target: calc(
+        var(--toward-black) * var(--target-dark) +
+        (1 - var(--toward-black)) * var(--target-light)
+      );
+      --pole: calc(1 - var(--toward-black));
+      --mix: calc((var(--target) - var(--y)) / (var(--pole) - var(--y)));
+      --solved-r: calc(r + var(--mix) * (var(--pole) - r));
+      --solved-g: calc(g + var(--mix) * (var(--pole) - g));
+      --solved-b: calc(b + var(--mix) * (var(--pole) - b));
+      --delta-r: calc(var(--solved-r) - var(--target));
+      --delta-g: calc(var(--solved-g) - var(--target));
+      --delta-b: calc(var(--solved-b) - var(--target));
+      --epsilon: 0.000001;
+      --up-r: max(0, sign(var(--delta-r)));
+      --up-g: max(0, sign(var(--delta-g)));
+      --up-b: max(0, sign(var(--delta-b)));
+      --down-r: max(0, sign(calc(-1 * var(--delta-r))));
+      --down-g: max(0, sign(calc(-1 * var(--delta-g))));
+      --down-b: max(0, sign(calc(-1 * var(--delta-b))));
+      --limit-r: calc(
+        var(--up-r) * (1 - var(--target)) / max(var(--delta-r), var(--epsilon)) +
+        var(--down-r) * var(--target) / max(calc(-1 * var(--delta-r)), var(--epsilon)) +
+        (1 - var(--up-r) - var(--down-r)) * 999
+      );
+      --limit-g: calc(
+        var(--up-g) * (1 - var(--target)) / max(var(--delta-g), var(--epsilon)) +
+        var(--down-g) * var(--target) / max(calc(-1 * var(--delta-g)), var(--epsilon)) +
+        (1 - var(--up-g) - var(--down-g)) * 999
+      );
+      --limit-b: calc(
+        var(--up-b) * (1 - var(--target)) / max(var(--delta-b), var(--epsilon)) +
+        var(--down-b) * var(--target) / max(calc(-1 * var(--delta-b)), var(--epsilon)) +
+        (1 - var(--up-b) - var(--down-b)) * 999
+      );
+      --max-sat: min(var(--limit-r), var(--limit-g), var(--limit-b));
+      --sat: calc(clamp(0, var(--saturation), 1) * var(--max-sat));
+      result: color(
+        from var(--base) srgb-linear
+        calc(var(--target) + var(--sat) * (var(--solved-r) - var(--target)))
+        calc(var(--target) + var(--sat) * (var(--solved-g) - var(--target)))
+        calc(var(--target) + var(--sat) * (var(--solved-b) - var(--target)))
+      );
+    }
+
+    @function --css-functions-supported() {
+      result: supported;
+    }
+
     :root {
       --theme-hue: 90;
       --theme-lightness: 94;
@@ -25,7 +83,8 @@
       --contrast-high: 7;
       --surface-distance: 10%;
       --accent-strength: 60;
-      /* Safe first-paint defaults; JS replaces them with exact generated colours. */
+      --css-functions: --css-functions-supported();
+      /* Safe first-paint defaults; Burn engine replaces them with exact colours. */
       --color-card-low: rgb(166 131 0);
       --color-card-high: rgb(97 75 0);
       --color-controls-low: rgb(166 131 0);
@@ -56,6 +115,29 @@
       color-scheme: light dark;
       font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
       background: var(--color-surface-sunken);
+    }
+
+    /*
+     * CSS engine tab: every output colour is derived by CSS alone.
+     * Fallbacks first; @function browsers replace them with exact ratios.
+     */
+    body[data-colour-mode="css"] {
+      --color-card-low: contrast-color(var(--color-base));
+      --color-card-high: contrast-color(var(--color-base));
+      --color-controls-low: contrast-color(var(--color-surface-raised));
+      --color-controls-high: contrast-color(var(--color-surface-raised));
+      --color-contrast-pole: contrast-color(var(--color-base));
+    }
+
+    @container style(--css-functions: supported) {
+      body[data-colour-mode="css"] {
+        --color-card-low: --contrast-ink(var(--color-base), var(--contrast-low), 1);
+        --color-card-high: --contrast-ink(var(--color-base), var(--contrast-high), 1);
+        --color-controls-low:
+          --contrast-ink(var(--color-surface-raised), var(--contrast-low), 1);
+        --color-controls-high:
+          --contrast-ink(var(--color-surface-raised), var(--contrast-high), 1);
+      }
     }
 
     * {
@@ -153,6 +235,45 @@
       transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease;
     }
 
+    .mode-tabs {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4px;
+      padding: 3px;
+      border-radius: 10px;
+      background: color-mix(in oklch, var(--color-contrast-pole) 5%, transparent);
+    }
+
+    .mode-tab {
+      min-height: 29px;
+      padding: 0 8px;
+      border: 0;
+      border-radius: 7px;
+      color: inherit;
+      background: transparent;
+      font: inherit;
+      font-size: 10px;
+      font-weight: 650;
+      cursor: pointer;
+      transition: color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    .mode-tab:hover {
+      background: var(--color-control-hover);
+    }
+
+    .mode-tab[aria-selected="true"] {
+      background: var(--color-surface-raised);
+      box-shadow: 0 1px 5px color-mix(in oklch, var(--color-contrast-pole) 12%, transparent);
+    }
+
+    .mode-note {
+      min-height: 12px;
+      margin: -4px 3px 0;
+      color: var(--color-controls-low);
+      font-size: 10px;
+      line-height: 1.2;
+    }
 
     .theme-summary {
       display: flex;
@@ -304,7 +425,7 @@
     }
   </style>
 </head>
-<body>
+<body data-colour-mode="burn">
   <main>
     <article class="weather-card" aria-label="Melbourne weather, 32 degrees Celsius">
       <div class="card-top">
@@ -315,6 +436,12 @@
     </article>
 
     <div class="controls" aria-label="Colour controls">
+      <div class="mode-tabs" role="tablist" aria-label="Colour engine">
+        <button class="mode-tab" type="button" role="tab" data-mode="burn" aria-selected="true" tabindex="0">Burn</button>
+        <button class="mode-tab" type="button" role="tab" data-mode="css" aria-selected="false" tabindex="-1">CSS</button>
+      </div>
+      <p class="mode-note" id="modeNote">JS engine · exact contrast · OKLCH burn</p>
+
       <div class="theme-summary">
         <span class="theme-swatch" aria-hidden="true"></span>
         <span id="themeLabel">Theme</span>
@@ -387,8 +514,11 @@
 
   <script>
     const root = document.documentElement;
-    const storageKey = 'contrast-axis-card-theme-v5';
+    const storageKey = 'contrast-axis-card-theme-v6';
     const themeValue = document.querySelector('#themeValue');
+    const modeNote = document.querySelector('#modeNote');
+    const modeButtons = [...document.querySelectorAll('[data-mode]')];
+    let activeMode = 'burn';
 
     const controls = [
       {
@@ -582,6 +712,8 @@
     }
 
     function updateDerivedColours() {
+      if (activeMode === 'css') return;
+
       const surfaces = currentSurfaces();
       const lowRatio = controlNumber('lowContrast');
       const highRatio = controlNumber('highContrast');
@@ -620,6 +752,7 @@
 
     function currentState() {
       return {
+        mode: activeMode,
         controls: Object.fromEntries(
           controls.map(control => [control.key, control.input.value])
         ),
@@ -634,11 +767,41 @@
       }
     }
 
+    const modeNotes = {
+      burn: 'JS engine · exact contrast · OKLCH burn',
+      css: 'CSS engine · @function ratio solving · contrast-color() fallback',
+    };
+
+    function selectMode(name, persist = true) {
+      activeMode = modeNotes[name] ? name : 'burn';
+      document.body.dataset.colourMode = activeMode;
+      modeButtons.forEach(button => {
+        const selected = button.dataset.mode === activeMode;
+        button.setAttribute('aria-selected', String(selected));
+        button.tabIndex = selected ? 0 : -1;
+      });
+      modeNote.textContent = modeNotes[activeMode];
+      updateDerivedColours();
+      if (persist) saveState();
+    }
+
     controls.forEach(control => {
       control.input.addEventListener('input', () => {
         applyControl(control);
         updateDerivedColours();
         saveState();
+      });
+    });
+
+    modeButtons.forEach((button, index) => {
+      button.addEventListener('click', () => selectMode(button.dataset.mode));
+      button.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        event.preventDefault();
+        const direction = event.key === 'ArrowRight' ? 1 : -1;
+        const next = modeButtons[(index + direction + modeButtons.length) % modeButtons.length];
+        next.focus();
+        selectMode(next.dataset.mode);
       });
     });
 
@@ -648,8 +811,10 @@
       controls.forEach(control => {
         applyControl(control, saved?.controls?.[control.key] ?? control.input.value);
       });
+      selectMode(saved?.mode ?? 'burn', false);
     } catch {
       controls.forEach(control => applyControl(control));
+      selectMode('burn', false);
     }
 
     updateDerivedColours();
