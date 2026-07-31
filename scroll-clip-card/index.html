@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Scroll-driven image clipping reveal — Webflow's Year of the Rabbit ranges vs settle, cascade and centre variants. Pure CSS view() timeline, no JS scroll listeners.">
+  <meta name="description" content="Scroll-driven clip window — Sylvain's Year of the Rabbit ranges vs the journey-anchored fix. Smooth both directions, works for cards taller than the viewport. Pure CSS view() timeline.">
   <title>Scroll Clip Card</title>
   <style>
     :root {
@@ -77,7 +77,7 @@
     }
 
     .hint {
-      max-width: 150px;
+      max-width: 170px;
       color: var(--muted);
       font-size: 10px;
       font-weight: 560;
@@ -86,7 +86,7 @@
     }
 
     .property-readout {
-      max-width: 265px;
+      max-width: 250px;
       color: #a3a39b;
       font: 500 9px/1.45 ui-monospace, "SFMono-Regular", Menlo, monospace;
       white-space: pre-wrap;
@@ -123,17 +123,29 @@
       gap: 14px;
     }
 
-    /* ── clip cards ── */
+    .tall-wrap { display: grid; gap: 6px; }
+
+    .card-chip {
+      margin: 0;
+      color: var(--muted);
+      font: 650 8px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* ── clip cards — space reserved up front (no layout shift on image load) ── */
     .clip-card {
       --radius: 16px;
       position: relative;
       overflow: clip;
+      width: 100%;
       border-radius: var(--radius);
       background: #232320;
     }
 
-    .clip-card.featured { width: 100%; height: 100%; min-height: 260px; }
-    .grid2 .clip-card { width: 100%; aspect-ratio: 3 / 3.6; }
+    .clip-card.featured { aspect-ratio: 3 / 2.6; }
+    .grid2 .clip-card { aspect-ratio: 3 / 3.6; }
+    .clip-card.tall { aspect-ratio: 3 / 4.4; }
 
     .clip-card img {
       display: block;
@@ -142,67 +154,40 @@
       object-fit: cover;
     }
 
-    /* YOTR base state — closed until the timeline moves */
     @supports (animation-timeline: view()) {
-      .clip-card {
-        clip-path: inset(0 0 100% 0 round var(--radius));
-        animation-name: enterAnimation, exitAnimation;
-        animation-timing-function: linear, linear;
-        animation-duration: 1s, 1s;
-        animation-fill-mode: forwards, forwards;
-        animation-timeline: view(), view();
-        /* animation-range per mode below */
-      }
+      .clip-card { clip-path: inset(0 0 100% 0 round var(--radius)); }
 
-      @keyframes enterAnimation {
-        0%   { clip-path: inset(0 0 100% 0 round var(--radius)); }
-        100% { clip-path: inset(0 0 0 0 round var(--radius)); }
-      }
-      @keyframes exitAnimation {
-        0%   { clip-path: inset(0 0 0 0 round var(--radius)); }
-        100% { clip-path: inset(100% 0 0 0 round var(--radius)); }
-      }
-      @keyframes centreIn {
-        0%   { clip-path: inset(50% 0 50% 0 round var(--radius)); }
-        100% { clip-path: inset(0 0 0 0 round var(--radius)); }
-      }
-      @keyframes centreOut {
-        0%   { clip-path: inset(0 0 0 0 round var(--radius)); }
-        100% { clip-path: inset(50% 0 50% 0 round var(--radius)); }
-      }
-
-      /* ── 01 · YOTR — Sylvain's Webflow ranges (faithful copy) ── */
+      /* ── 01 · YOTR — faithful copy of Sylvain's Webflow CSS ── */
       [data-mode="yotr"] .clip-card {
+        transition: clip-path 0.1s ease-out;
+        animation: enterAnimation 1s linear forwards, exitAnimation 1s linear forwards;
+        animation-timeline: view(block), view(block);
         animation-range:
           entry-crossing 1rem entry-crossing calc(100% + 1rem),
           exit-crossing -1rem exit-crossing calc(100% - 1rem);
       }
 
-      /* ── 02 · Settle — reveal completes in the bottom third, holds open ── */
-      [data-mode="settle"] .clip-card {
-        animation-range:
-          entry 1rem entry 35%,
-          exit exit-crossing;
+      @keyframes enterAnimation {
+        from { clip-path: inset(0 0 100% 0 round var(--radius)); }
+        to   { clip-path: inset(0 0 0 0 round var(--radius)); }
+      }
+      @keyframes exitAnimation {
+        from { clip-path: inset(0 0 0 0 round var(--radius)); }
+        to   { clip-path: inset(100% 0 0 0 round var(--radius)); }
       }
 
-      /* ── 03 · Cascade — settle + per-row stagger ── */
-      [data-mode="cascade"] .clip-card {
-        --reveal-offset: 0%;
-        animation-range:
-          entry calc(1rem + var(--reveal-offset)) entry 35%,
-          exit exit-crossing;
+      /* ── 02 · Window — one journey-anchored animation, the fix ── */
+      [data-mode="window"] .clip-card {
+        animation: windowReveal linear both;
+        animation-timeline: view(block);
+        animation-range: cover;
+        will-change: clip-path;
       }
-      [data-mode="cascade"] .grid2 .clip-card:nth-child(1),
-      [data-mode="cascade"] .grid2 .clip-card:nth-child(2) { --reveal-offset: 10%; }
-      [data-mode="cascade"] .grid2 .clip-card:nth-child(3),
-      [data-mode="cascade"] .grid2 .clip-card:nth-child(4) { --reveal-offset: 20%; }
 
-      /* ── 04 · Centre — bloom from the vertical centre, mirror exit ── */
-      [data-mode="centre"] .clip-card {
-        animation-name: centreIn, centreOut;
-        animation-range:
-          entry 1rem entry 35%,
-          exit exit-crossing;
+      @keyframes windowReveal {
+        0%   { clip-path: inset(0 0 100% 0 round var(--radius)); }
+        50%  { clip-path: inset(0 0 0 0 round var(--radius)); }
+        100% { clip-path: inset(100% 0 0 0 round var(--radius)); }
       }
     }
 
@@ -223,7 +208,7 @@
 
     .mode-tabs {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 3px;
       padding: 3px;
       border-radius: 11px;
@@ -274,8 +259,7 @@
       .demo { width: min(390px, calc(100vw - 36px)); }
       .stage { border-radius: 30px; }
       .stage-head, .stage-foot { left: 22px; right: 22px; }
-      .property-readout { max-width: 238px; }
-      .mode-tab { font-size: 9px; }
+      .property-readout { max-width: 230px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -290,8 +274,8 @@
   <main class="demo">
     <section class="stage" aria-label="Image clipping scroll effect specimen">
       <header class="stage-head">
-        <p class="kicker" id="modeTitle">YOTR ranges</p>
-        <p class="hint" id="hint">Scroll the gallery to reveal</p>
+        <p class="kicker" id="modeTitle">YOTR</p>
+        <p class="hint" id="hint">Scroll the gallery — then back up</p>
       </header>
 
       <div class="scroller" id="scroller" tabindex="0" aria-label="Gallery — scroll to reveal">
@@ -313,6 +297,12 @@
               <img src="img/stilltuzi_1.webp" alt="Year of the Rabbit — detail" loading="lazy">
             </figure>
           </div>
+          <div class="tall-wrap">
+            <p class="card-chip">tall · taller than the viewport</p>
+            <figure class="clip-card tall">
+              <img src="img/still1_1.webp" alt="Year of the Rabbit — tall card" loading="lazy">
+            </figure>
+          </div>
         </div>
       </div>
 
@@ -325,9 +315,7 @@
     <section class="controls" aria-label="Reveal variant controls">
       <div class="mode-tabs" role="tablist" aria-label="Reveal variants">
         <button class="mode-tab" type="button" role="tab" data-mode="yotr" aria-selected="true" tabindex="0">YOTR</button>
-        <button class="mode-tab" type="button" role="tab" data-mode="settle" aria-selected="false" tabindex="-1">Settle</button>
-        <button class="mode-tab" type="button" role="tab" data-mode="cascade" aria-selected="false" tabindex="-1">Cascade</button>
-        <button class="mode-tab" type="button" role="tab" data-mode="centre" aria-selected="false" tabindex="-1">Centre</button>
+        <button class="mode-tab" type="button" role="tab" data-mode="window" aria-selected="false" tabindex="-1">Window</button>
       </div>
       <p class="mode-note" id="modeNote"></p>
     </section>
@@ -343,28 +331,17 @@
     const modeNote = document.querySelector('#modeNote');
     const sourceBadge = document.querySelector('#sourceBadge');
     const tabs = [...document.querySelectorAll('.mode-tab')];
-    const scroller = document.querySelector('#scroller');
 
     const MODES = {
       yotr: {
-        title: 'YOTR ranges',
-        readout: 'animation-range: entry-crossing 1rem → entry-crossing calc(100% + 1rem)',
-        note: 'Faithful copy of the Webflow effect — the wipe spans nearly the whole journey, so cards are still mid-clip at the top of the viewport, and rows move in lockstep.'
+        title: 'YOTR',
+        readout: 'animation-range:\n  entry-crossing 1rem → entry-crossing calc(100% + 1rem)\n  exit-crossing -1rem → exit-crossing calc(100% - 1rem)',
+        note: 'Faithful copy of the Webflow effect — two edge-anchored animations. The clip window tracks the card, but: <strong>scroll back up</strong> and the card snaps shut (<code>fill-mode: forwards</code>, not <code>both</code>), and the <strong>tall card stays closed</strong> for its whole pass — the ranges break when the element is taller than the viewport.'
       },
-      settle: {
-        title: 'Settle',
-        readout: 'animation-range: entry 1rem → entry 35%',
-        note: 'The reveal completes in the bottom third of the viewport, then the card <strong>holds fully open</strong> through the middle — closing only as it actually exits.'
-      },
-      cascade: {
-        title: 'Cascade',
-        readout: 'animation-range: entry calc(1rem + var(--reveal-offset)) → entry 35%',
-        note: 'Settle plus a per-row <code>--reveal-offset</code> (10% / 20%) — each row waits its turn at the bottom edge, then wipes open in sequence.'
-      },
-      centre: {
-        title: 'Centre bloom',
-        readout: 'clip-path: inset(50% 0 50% 0) → inset(0 0 0 0)',
-        note: 'Same primitive, different keyframes — the card blooms from the vertical centre and the exit mirrors the entry, so the motion feels continuous.'
+      window: {
+        title: 'Window',
+        readout: 'animation: windowReveal linear both\nanimation-timeline: view()\nanimation-range: cover',
+        note: 'One journey-anchored animation over the full pass — opens as it enters, closes as it leaves, peaks when the card centres (same geometry as yours). No handoff, no up-scroll snap (<code>fill-mode: both</code>), the tall card opens properly, and <code>aspect-ratio</code> reserves space so lazy images can\'t shift the layout mid-scroll.'
       }
     };
 
