@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Scroll-driven clip window — Sylvain's Year of the Rabbit ranges vs the journey-anchored fix. Smooth both directions, works for cards taller than the viewport. Pure CSS view() timeline.">
+  <meta name="description" content="Scroll-driven clip window — Sylvain's Year of the Rabbit ranges vs independent edge variables vs a JS rAF engine. Padded-box margins, smooth both directions, works for cards taller than the viewport.">
   <title>Scroll Clip Card</title>
   <style>
     :root {
@@ -136,6 +136,7 @@
     /* ── clip cards — space reserved up front (no layout shift on image load) ── */
     .clip-card {
       --radius: 16px;
+      --pad: 22px;
       position: relative;
       overflow: clip;
       width: 100%;
@@ -194,8 +195,8 @@
         animation: clipTop linear both, clipBottom linear both;
         animation-timeline: view(block), view(block);
         animation-range:
-          exit exit-crossing,    /* top edge: clips as the card leaves */
-          entry entry-crossing;  /* bottom edge: reveals as the card enters */
+          exit calc(0px - var(--pad)) exit-crossing,   /* top edge: clips as the card leaves, pad early */
+          entry entry-crossing calc(100% + var(--pad)); /* bottom edge: reveals as the card enters, pad late */
         will-change: clip-path;
       }
 
@@ -226,7 +227,7 @@
 
     .mode-tabs {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 3px;
       padding: 3px;
       border-radius: 11px;
@@ -334,6 +335,7 @@
       <div class="mode-tabs" role="tablist" aria-label="Reveal variants">
         <button class="mode-tab" type="button" role="tab" data-mode="yotr" aria-selected="true" tabindex="0">YOTR</button>
         <button class="mode-tab" type="button" role="tab" data-mode="window" aria-selected="false" tabindex="-1">Window</button>
+        <button class="mode-tab" type="button" role="tab" data-mode="js" aria-selected="false" tabindex="-1">JS · rAF</button>
       </div>
       <p class="mode-note" id="modeNote"></p>
     </section>
@@ -358,14 +360,61 @@
       },
       window: {
         title: 'Window',
-        readout: 'clip-path: inset(var(--clip-top) 0 var(--clip-bottom) 0)\nanimation: clipTop, clipBottom — linear both\nranges: exit → exit-crossing · entry → entry-crossing',
-        note: 'Same idea as yours, restructured: one <code>clip-path</code>, two <strong>independent edge variables</strong>. Each edge animates its own custom property on its own named range — the bottom edge reveals as the card enters (<code>entry → entry-crossing</code>), the top edge clips as it leaves (<code>exit → exit-crossing</code>). Each edge stays glued to its viewport edge, so the window tracks the scroll 1:1 — and the ranges hold for any card height, so the tall card stays visible and smooth. <code>fill-mode: both</code> + no transition = no snaps in either direction. Pure CSS, no JS.'
+        readout: 'clip-path: inset(var(--clip-top) 0 var(--clip-bottom) 0)\nanimation: clipTop, clipBottom — linear both\nranges: exit − pad → exit-crossing · entry → entry-crossing + pad',
+        note: 'Same idea as yours, restructured: one <code>clip-path</code>, two <strong>independent edge variables</strong> — each edge animates its own custom property on its own named range, glued to its viewport edge (<code>entry → entry-crossing</code> reveals, <code>exit → exit-crossing</code> clips). The <code>--pad</code> margin on both edges reproduces your padded-box: the reveal finishes ~24px <em>after</em> the card is fully entered, the top clip starts ~24px <em>before</em> it reaches the top. No snaps (<code>fill-mode: both</code>, no transition), works at any height. Pure CSS, no JS.'
+      },
+      js: {
+        title: 'JS · rAF',
+        readout: 'scroll listener (passive) + rAF\nclip-path: inset(top% 0 bottom% 0)\ntop = (t − vh + pad) / h · bottom = (h − t + pad) / h',
+        note: 'The same curve, computed per frame — no animation machinery at all. One <code>scrollTop</code> read per frame, rects cached, <code>ResizeObserver</code> keeps them fresh. No named-range quirks to dodge, works in every browser (even without <code>animation-timeline</code>), and the tall card is in sync by construction. Identical <code>--pad</code> margin.'
       }
     };
+
+    /* ── JS engine (mode: js) — exact spatial model + pad, rAF-throttled ── */
+    const scroller = document.querySelector('#scroller');
+    const jsCards = [...document.querySelectorAll('.clip-card')];
+    let jsActive = false;
+    let jsVh = 1, jsPad = 22;
+    let jsTicking = false;
+
+    function jsMeasure() {
+      jsVh = scroller.clientHeight;
+      if (jsCards[0]) {
+        jsPad = parseFloat(getComputedStyle(jsCards[0]).getPropertyValue('--pad')) || 22;
+      }
+      for (const card of jsCards) {
+        const r = card.getBoundingClientRect();
+        card._docTop = r.top + scroller.scrollTop;
+        card._h = r.height;
+      }
+    }
+
+    function jsUpdate() {
+      jsTicking = false;
+      if (!jsActive) return;
+      const st = scroller.scrollTop, vh = jsVh, pad = jsPad;
+      for (const card of jsCards) {
+        const h = card._h;
+        if (!h) continue;
+        const t = st - (card._docTop - vh);
+        const bottom = Math.max(0, Math.min(1, (h - t + pad) / h)) * 100;
+        const top = Math.max(0, Math.min(1, (t - vh + pad) / h)) * 100;
+        card.style.clipPath = `inset(${top.toFixed(2)}% 0 ${bottom.toFixed(2)}% 0 round var(--radius))`;
+      }
+    }
+
+    scroller.addEventListener('scroll', () => {
+      if (!jsTicking) { jsTicking = true; requestAnimationFrame(jsUpdate); }
+    }, { passive: true });
+
+    const jsResize = new ResizeObserver(() => { if (jsActive) { jsMeasure(); jsUpdate(); } });
+    jsResize.observe(scroller);
+    jsCards.forEach(c => jsResize.observe(c));
 
     function selectMode(mode, save = true) {
       if (!MODES[mode]) mode = 'yotr';
       body.dataset.mode = mode;
+      jsActive = mode === 'js';
       tabs.forEach(t => {
         const active = t.dataset.mode === mode;
         t.setAttribute('aria-selected', String(active));
@@ -374,14 +423,14 @@
       modeTitle.textContent = MODES[mode].title;
       readout.textContent = MODES[mode].readout;
       modeNote.innerHTML = MODES[mode].note;
+      sourceBadge.textContent = mode === 'js' ? 'JS · rAF' : (native ? 'Native' : 'Fallback');
+      if (jsActive) { jsMeasure(); jsUpdate(); }
       if (save) {
         try { localStorage.setItem('scroll-clip-card:mode', mode); } catch (e) {}
       }
     }
 
     tabs.forEach(t => t.addEventListener('click', () => selectMode(t.dataset.mode)));
-
-    sourceBadge.textContent = native ? 'Native' : 'Fallback';
 
     let saved = 'yotr';
     try { saved = localStorage.getItem('scroll-clip-card:mode') || 'yotr'; } catch (e) {}
