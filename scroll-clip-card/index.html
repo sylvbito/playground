@@ -210,6 +210,18 @@
       }
     }
 
+    /* ── 03 · JS — no clip-path at all: the image slides through the frame ── */
+    [data-mode="js"] .clip-card {
+      clip-path: none; /* the frame's overflow does the clipping */
+    }
+    [data-mode="js"] .clip-card img {
+      position: absolute;
+      inset: 0;
+      height: 165%;
+      object-fit: cover;
+      will-change: transform;
+    }
+
     /* Fallback — no scroll timeline support: static rounded cards */
     @supports not (animation-timeline: view()) {
       .clip-card { border: 1px solid rgb(255 255 255 / 12%); }
@@ -300,26 +312,26 @@
       <div class="scroller" id="scroller" tabindex="0" aria-label="Gallery — scroll to reveal">
         <div class="gallery">
           <figure class="clip-card featured">
-            <img src="img/2023tuzi_1.webp" alt="Year of the Rabbit — featured render" loading="lazy">
+            <img src="img/2023tuzi_1.webp" alt="Year of the Rabbit — featured render">
           </figure>
           <div class="grid2">
             <figure class="clip-card">
-              <img src="img/tuzi1_1.webp" alt="Year of the Rabbit — close study" loading="lazy">
+              <img src="img/tuzi1_1.webp" alt="Year of the Rabbit — close study">
             </figure>
             <figure class="clip-card">
-              <img src="img/still1_1.webp" alt="Year of the Rabbit — still 1" loading="lazy">
+              <img src="img/still1_1.webp" alt="Year of the Rabbit — still 1">
             </figure>
             <figure class="clip-card">
-              <img src="img/still2_1.webp" alt="Year of the Rabbit — still 2" loading="lazy">
+              <img src="img/still2_1.webp" alt="Year of the Rabbit — still 2">
             </figure>
             <figure class="clip-card">
-              <img src="img/stilltuzi_1.webp" alt="Year of the Rabbit — detail" loading="lazy">
+              <img src="img/stilltuzi_1.webp" alt="Year of the Rabbit — detail">
             </figure>
           </div>
           <div class="tall-wrap">
             <p class="card-chip">tall · taller than the viewport</p>
             <figure class="clip-card tall">
-              <img src="img/still1_1.webp" alt="Year of the Rabbit — tall card" loading="lazy">
+              <img src="img/still1_1.webp" alt="Year of the Rabbit — tall card">
             </figure>
           </div>
         </div>
@@ -365,41 +377,38 @@
       },
       js: {
         title: 'JS · rAF',
-        readout: 'scroll listener (passive) + rAF\nclip-path: inset(top% 0 bottom% 0)\ntop = (t − vh + pad) / h · bottom = (h − t + pad) / h',
-        note: 'The same curve, computed per frame — no animation machinery at all. One <code>scrollTop</code> read per frame, rects cached, <code>ResizeObserver</code> keeps them fresh. No named-range quirks to dodge, works in every browser (even without <code>animation-timeline</code>), and the tall card is in sync by construction. Identical <code>--pad</code> margin.'
+        readout: 'scroll listener (passive) + rAF\nimg transform: translate3d(0, −journey × drift, 0)\nframe = overflow: hidden · no clip-path',
+        note: 'A different mechanism for the same padded-box: <strong>no clip-path at all</strong>. The image is 165% of the frame and slides through it with a composited <code>translate3d</code> — the frame\'s own edges become the clip, so the only work per frame is one <code>transform</code> write on a GPU layer. Zero repaints, zero style recalc — the smoothness a JS clip-path can\'t give you. Rects cached, <code>ResizeObserver</code> keeps them fresh, works in every browser.'
       }
     };
 
-    /* ── JS engine (mode: js) — exact spatial model + pad, rAF-throttled ── */
+    /* ── JS engine (mode: js) — composited: image slides through the frame ── */
     const scroller = document.querySelector('#scroller');
     const jsCards = [...document.querySelectorAll('.clip-card')];
     let jsActive = false;
-    let jsVh = 1, jsPad = 22;
+    let jsVh = 1;
     let jsTicking = false;
 
     function jsMeasure() {
       jsVh = scroller.clientHeight;
-      if (jsCards[0]) {
-        jsPad = parseFloat(getComputedStyle(jsCards[0]).getPropertyValue('--pad')) || 22;
-      }
       for (const card of jsCards) {
         const r = card.getBoundingClientRect();
         card._docTop = r.top + scroller.scrollTop;
         card._h = r.height;
+        card._img = card.querySelector('img');
+        card._drift = card._h * 0.65; // image = 165% of frame → slides 65% through it
       }
     }
 
     function jsUpdate() {
       jsTicking = false;
       if (!jsActive) return;
-      const st = scroller.scrollTop, vh = jsVh, pad = jsPad;
+      const st = scroller.scrollTop, vh = jsVh;
       for (const card of jsCards) {
         const h = card._h;
-        if (!h) continue;
-        const t = st - (card._docTop - vh);
-        const bottom = Math.max(0, Math.min(1, (h - t + pad) / h)) * 100;
-        const top = Math.max(0, Math.min(1, (t - vh + pad) / h)) * 100;
-        card.style.clipPath = `inset(${top.toFixed(2)}% 0 ${bottom.toFixed(2)}% 0 round var(--radius))`;
+        if (!h || !card._img) continue;
+        const j = Math.max(0, Math.min(1, (st - (card._docTop - vh)) / (h + vh)));
+        card._img.style.transform = `translate3d(0, ${(-j * card._drift).toFixed(2)}px, 0)`;
       }
     }
 
