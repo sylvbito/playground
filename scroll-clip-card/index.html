@@ -210,16 +210,19 @@
       }
     }
 
-    /* ── 03 · JS — no clip-path at all: the image slides through the frame ── */
+    /* ── 03 · JS — no clip-path, no parallax: two solid panels wipe the static image ── */
     [data-mode="js"] .clip-card {
       clip-path: none; /* the frame's overflow does the clipping */
     }
-    [data-mode="js"] .clip-card img {
+    [data-mode="js"] .clip-card .js-panel {
       position: absolute;
-      inset: 0;
-      height: 165%;
-      object-fit: cover;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 100%;
+      background: var(--card);
       will-change: transform;
+      pointer-events: none;
     }
 
     /* Fallback — no scroll timeline support: static rounded cards */
@@ -377,38 +380,50 @@
       },
       js: {
         title: 'JS · rAF',
-        readout: 'scroll listener (passive) + rAF\nimg transform: translate3d(0, −journey × drift, 0)\nframe = overflow: hidden · no clip-path',
-        note: 'A different mechanism for the same padded-box: <strong>no clip-path at all</strong>. The image is 165% of the frame and slides through it with a composited <code>translate3d</code> — the frame\'s own edges become the clip, so the only work per frame is one <code>transform</code> write on a GPU layer. Zero repaints, zero style recalc — the smoothness a JS clip-path can\'t give you. Rects cached, <code>ResizeObserver</code> keeps them fresh, works in every browser.'
+        readout: 'scroll listener (passive) + rAF\n2 solid panels, transform: translate3d(0, edge, 0)\nreveal edge → viewport bottom − pad · clip edge → viewport top + pad',
+        note: 'The same wipe, built from composited pieces: the <strong>image stays static</strong> (no parallax) and two solid panels slide over it with <code>translate3d</code> — the bottom panel\'s edge reveals as the card enters (pinned to the viewport bottom minus the <code>--pad</code>), the top panel\'s edge clips as it leaves (pinned to the viewport top plus the pad). Hard wipe edges, in sync, any card height — and the only per-frame work is two <code>transform</code> writes on GPU layers. No clip-path, no repaint.'
       }
     };
 
-    /* ── JS engine (mode: js) — composited: image slides through the frame ── */
+    /* ── JS engine (mode: js) — composited wipe: panels pinned to the viewport edges ── */
     const scroller = document.querySelector('#scroller');
     const jsCards = [...document.querySelectorAll('.clip-card')];
     let jsActive = false;
-    let jsVh = 1;
+    let jsVh = 1, jsPad = 22;
     let jsTicking = false;
 
     function jsMeasure() {
       jsVh = scroller.clientHeight;
+      if (jsCards[0]) {
+        jsPad = parseFloat(getComputedStyle(jsCards[0]).getPropertyValue('--pad')) || 22;
+      }
       for (const card of jsCards) {
         const r = card.getBoundingClientRect();
         card._docTop = r.top + scroller.scrollTop;
         card._h = r.height;
-        card._img = card.querySelector('img');
-        card._drift = card._h * 0.65; // image = 165% of frame → slides 65% through it
+        if (!card._pb) {
+          card._pb = document.createElement('div');
+          card._pb.className = 'js-panel';
+          card._pt = document.createElement('div');
+          card._pt.className = 'js-panel';
+          card.appendChild(card._pb);
+          card.appendChild(card._pt);
+        }
       }
     }
 
     function jsUpdate() {
       jsTicking = false;
       if (!jsActive) return;
-      const st = scroller.scrollTop, vh = jsVh;
+      const st = scroller.scrollTop, vh = jsVh, pad = jsPad;
       for (const card of jsCards) {
         const h = card._h;
-        if (!h || !card._img) continue;
-        const j = Math.max(0, Math.min(1, (st - (card._docTop - vh)) / (h + vh)));
-        card._img.style.transform = `translate3d(0, ${(-j * card._drift).toFixed(2)}px, 0)`;
+        if (!h || !card._pb) continue;
+        const ct = card._docTop - st; // card top in viewport coords
+        const tyB = Math.max(0, Math.min(h, vh - pad - ct)); // reveal edge → viewport bottom − pad
+        const tyT = Math.max(0, Math.min(h, pad - ct));      // clip edge → viewport top + pad
+        card._pb.style.transform = `translate3d(0, ${tyB.toFixed(2)}px, 0)`;
+        card._pt.style.transform = `translate3d(0, ${(tyT - h).toFixed(2)}px, 0)`;
       }
     }
 
