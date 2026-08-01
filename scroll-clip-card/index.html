@@ -154,6 +154,18 @@
       object-fit: cover;
     }
 
+    /* ── edge variables — animatable, independent ── */
+    @property --clip-top {
+      syntax: '<percentage>';
+      inherits: false;
+      initial-value: 0%;
+    }
+    @property --clip-bottom {
+      syntax: '<percentage>';
+      inherits: false;
+      initial-value: 100%;
+    }
+
     @supports (animation-timeline: view()) {
       .clip-card { clip-path: inset(0 0 100% 0 round var(--radius)); }
 
@@ -176,18 +188,24 @@
         to   { clip-path: inset(100% 0 0 0 round var(--radius)); }
       }
 
-      /* ── 02 · Window — one journey-anchored animation, the fix ── */
+      /* ── 02 · Window — two independent edge variables, one clip-path ── */
       [data-mode="window"] .clip-card {
-        animation: windowReveal linear both;
-        animation-timeline: view(block);
-        animation-range: cover;
+        clip-path: inset(var(--clip-top) 0 var(--clip-bottom) 0 round var(--radius));
+        animation: clipTop linear both, clipBottom linear both;
+        animation-timeline: view(block), view(block);
+        animation-range:
+          exit exit-crossing,    /* top edge: clips as the card leaves */
+          entry entry-crossing;  /* bottom edge: reveals as the card enters */
         will-change: clip-path;
       }
 
-      @keyframes windowReveal {
-        0%   { clip-path: inset(0 0 100% 0 round var(--radius)); }
-        50%  { clip-path: inset(0 0 0 0 round var(--radius)); }
-        100% { clip-path: inset(100% 0 0 0 round var(--radius)); }
+      @keyframes clipTop {
+        from { --clip-top: 0%; }
+        to   { --clip-top: 100%; }
+      }
+      @keyframes clipBottom {
+        from { --clip-bottom: 100%; }
+        to   { --clip-bottom: 0%; }
       }
     }
 
@@ -340,8 +358,8 @@
       },
       window: {
         title: 'Window',
-        readout: 'animation: windowReveal linear both\nanimation-timeline: view()\nanimation-range: cover',
-        note: 'One journey-anchored animation over the full pass — opens as it enters, closes as it leaves, peaks when the card centres (same geometry as yours). No handoff, no up-scroll snap (<code>fill-mode: both</code>), the tall card opens properly, and <code>aspect-ratio</code> reserves space so lazy images can\'t shift the layout mid-scroll.'
+        readout: 'clip-path: inset(var(--clip-top) 0 var(--clip-bottom) 0)\nanimation: clipTop, clipBottom — linear both\nranges: exit → exit-crossing · entry → entry-crossing',
+        note: 'Same idea as yours, restructured: one <code>clip-path</code>, two <strong>independent edge variables</strong>. Each edge animates its own custom property on its own named range — the bottom edge reveals as the card enters (<code>entry → entry-crossing</code>), the top edge clips as it leaves (<code>exit → exit-crossing</code>). Each edge stays glued to its viewport edge, so the window tracks the scroll 1:1 — and the ranges hold for any card height, so the tall card stays visible and smooth. <code>fill-mode: both</code> + no transition = no snaps in either direction. Pure CSS, no JS.'
       }
     };
 
