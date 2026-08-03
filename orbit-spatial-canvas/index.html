@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Orbit · Spatial canvas concept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- quiet brand -->
+    <header class="brand">
+      <span class="brand-mark"></span>
+      <span class="brand-name">Orbit</span>
+    </header>
+
+    <!-- dotted spatial stage -->
+    <main class="stage" id="stage">
+      <div class="canvas" id="canvas">
+        <!-- ENTRY: narrow composer -->
+        <section class="entry" id="entry" aria-label="Start a conversation">
+          <h1 class="entry-title">What do you need to work&nbsp;through?</h1>
+          <p class="entry-sub">This is yours alone until it needs a room, shared context, or a canvas.</p>
+          <form class="composer" id="composer" autocomplete="off">
+            <input class="composer-input" id="composerInput" type="text"
+                   placeholder="Message Hermes…" aria-label="Message Hermes" />
+            <button class="composer-send" type="submit" aria-label="Send message">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            </button>
+          </form>
+          <p class="entry-note">Hermes sees this chat only.</p>
+        </section>
+
+        <!-- ROOM: spatial canvas scene -->
+        <section class="room" id="room" aria-label="Workspace" hidden>
+          <!-- hero conversation panel -->
+          <article class="panel panel--hero" id="hero" tabindex="0" role="button" aria-label="Focus conversation">
+            <header class="panel-head">
+              <span class="panel-title">Website redesign</span>
+              <span class="status-dot" title="Active"></span>
+            </header>
+            <div class="panel-body">
+              <div class="msg msg--user">Let's explore the spatial canvas direction for Orbit.</div>
+              <div class="msg msg--ai">
+                <p><strong>Goal:</strong> make the room feel like a space — objects at depth, conversation as the hero.</p>
+                <p><strong>Current truth:</strong> three-column SaaS layout, canvas framed by chrome.</p>
+                <p><strong>Next action:</strong> depth system + dotted grid + floating conversation.</p>
+              </div>
+            </div>
+            <footer class="panel-composer">
+              <span class="continue">Continue…</span>
+            </footer>
+          </article>
+
+          <!-- reference cards at lower elevation -->
+          <article class="panel panel--ref ref--1" id="ref1" tabindex="0" role="button" aria-label="Focus design system">
+            <div class="ref-kicker">Reference</div>
+            <div class="ref-title">Design system</div>
+            <ul class="ref-list">
+              <li><span class="swatch"></span> Lime <code>#b7eb52</code></li>
+              <li><span class="swatch swatch--ink"></span> Ink <code>#1a1a19</code></li>
+              <li>Manrope · squircles 28/24/20/14</li>
+            </ul>
+          </article>
+
+          <article class="panel panel--ref ref--2" id="ref2" tabindex="0" role="button" aria-label="Focus inspiration">
+            <div class="ref-kicker">Reference</div>
+            <div class="ref-title">Inspo · spatial canvas</div>
+            <div class="mini-canvas" aria-hidden="true">
+              <i class="mini mini--a"></i><i class="mini mini--b"></i><i class="mini mini--c"></i>
+            </div>
+            <p class="ref-note">Objects float at depth. Dotted grid grounds the space.</p>
+          </article>
+
+          <article class="panel panel--ref ref--3" id="ref3" tabindex="0" role="button" aria-label="Focus brief">
+            <div class="ref-kicker">Reference</div>
+            <div class="ref-title">Website redesign brief</div>
+            <p class="ref-note">Keep the ChatGPT skeleton. Give the rooms the spatial soul.</p>
+          </article>
+
+          <!-- generated UI card -->
+          <article class="panel panel--gen" id="gen" tabindex="0" role="button" aria-label="Focus layout proposal">
+            <div class="ref-kicker">Proposal</div>
+            <div class="ref-title">Layout proposal</div>
+            <div class="wire" aria-hidden="true">
+              <span class="wire-hero"></span><span class="wire-ref"></span><span class="wire-ref"></span>
+            </div>
+            <p class="ref-note">Conversation floats; references sit behind.</p>
+          </article>
+
+          <!-- archive landmark, far back -->
+          <article class="panel panel--landmark" id="lm" tabindex="0" role="button" aria-label="Archive">
+            <div class="ref-kicker">Archive</div>
+            <div class="ref-title">Previous direction</div>
+          </article>
+
+          <!-- frosted review chrome -->
+          <button class="review" id="review" type="button">
+            Review proposed layout
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+
+          <button class="overview" id="overview" type="button" hidden>← Overview</button>
+        </section>
+      </div>
+    </main>
+
+    <!-- connector layer -->
+    <svg class="connectors" id="connectors" aria-hidden="true"></svg>
+  </div>
+<script src="app.js"></script>
+</body>
+</html>
