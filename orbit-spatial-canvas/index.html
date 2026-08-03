@@ -11,11 +11,43 @@
 </head>
 <body>
   <div class="app" id="app">
-    <!-- quiet brand -->
-    <header class="brand">
-      <span class="brand-mark"></span>
-      <span class="brand-name">Orbit</span>
-    </header>
+    <!-- rooms rail: available, but frosted and collapsible so the canvas stays hero -->
+    <aside class="rail" id="rail" aria-label="Rooms">
+      <button class="rail-toggle" id="railToggle" type="button" aria-label="Toggle sidebar">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+      <div class="rail-scroll">
+        <button class="rail-item rail-item--new" type="button">
+          <span class="rail-icon">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          </span>
+          <span class="rail-label">New chat</span>
+        </button>
+        <button class="rail-item" type="button">
+          <span class="rail-icon">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H8l-4 4z"/></svg>
+          </span>
+          <span class="rail-label">Inbox <span class="rail-count">14</span></span>
+        </button>
+
+        <div class="rail-section">Rooms</div>
+        <button class="rail-item rail-item--active" type="button">
+          <span class="rail-dot"></span>
+          <span class="rail-label">Website redesign <span class="rail-count">15</span></span>
+        </button>
+        <button class="rail-item" type="button">
+          <span class="rail-dot rail-dot--dim"></span>
+          <span class="rail-label">Orbit principles <span class="rail-count">10</span></span>
+        </button>
+        <button class="rail-item" type="button">
+          <span class="rail-dot rail-dot--dim"></span>
+          <span class="rail-label">Research inbox <span class="rail-count">14</span></span>
+        </button>
+      </div>
+      <div class="rail-foot">
+        <span class="rail-hermes">Hermes collaborates inside every room</span>
+      </div>
+    </aside>
 
     <!-- dotted spatial stage -->
     <main class="stage" id="stage">

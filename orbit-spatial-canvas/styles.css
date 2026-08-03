@@ -42,10 +42,70 @@ body {
 }
 
 .canvas {
-  position: absolute; inset: 0;
-  transition: transform 0.7s var(--ease);
+  position: absolute;
+  left: 232px; top: 0; right: 0; bottom: 0;
+  transition: left 0.4s var(--ease), transform 0.7s var(--ease);
   will-change: transform;
 }
+.app.rail-closed .canvas { left: 58px; }
+
+/* ---- rooms rail (frosted, collapsible) ---- */
+.rail {
+  position: absolute; left: 0; top: 0; bottom: 0; z-index: 50;
+  width: 232px;
+  display: flex; flex-direction: column;
+  background: rgba(250, 250, 249, 0.78);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  border-right: 1px solid rgba(26, 26, 25, 0.06);
+  padding: 18px 10px 14px;
+  transition: width 0.4s var(--ease), transform 0.4s var(--ease);
+  overflow: hidden;
+}
+.rail.collapsed { width: 58px; }
+.rail-toggle {
+  align-self: flex-end;
+  width: 32px; height: 32px; margin-bottom: 10px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 10px;
+  background: transparent; color: var(--muted); cursor: pointer;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+.rail-toggle:hover { background: rgba(26, 26, 25, 0.06); color: var(--ink); }
+.rail-scroll { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.rail-section {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--faint);
+  padding: 14px 10px 6px;
+  white-space: nowrap; overflow: hidden;
+}
+.rail-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 8px 10px;
+  border: 0; border-radius: 12px;
+  background: transparent; color: var(--muted);
+  font: 600 13px var(--font); text-align: left; cursor: pointer;
+  white-space: nowrap; overflow: hidden;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+.rail-item:hover { background: rgba(26, 26, 25, 0.05); color: var(--ink); }
+.rail-item--active { background: rgba(183, 235, 82, 0.28); color: var(--ink); }
+.rail-item--new { color: var(--ink); font-weight: 700; }
+.rail-icon { flex: 0 0 auto; display: grid; place-items: center; width: 20px; }
+.rail-dot {
+  flex: 0 0 auto; width: 9px; height: 9px; margin-left: 5px; margin-right: 1px;
+  border-radius: 50%; background: var(--accent);
+}
+.rail-dot--dim { background: #c9cac6; }
+.rail-count { color: var(--faint); font-size: 11px; font-weight: 500; }
+.rail-label { overflow: hidden; text-overflow: ellipsis; }
+.rail-foot {
+  padding: 10px; border-top: 1px solid rgba(26, 26, 25, 0.06);
+  white-space: nowrap; overflow: hidden;
+}
+.rail-hermes { font-size: 11px; color: var(--faint); font-weight: 500; }
+.rail.collapsed .rail-label,
+.rail.collapsed .rail-section,
+.rail.collapsed .rail-foot { opacity: 0; }
 
 /* ---- brand ---- */
 .brand {
@@ -171,8 +231,9 @@ body {
   transform: scale(0.9);
   opacity: 0.88;
 }
-.ref--1 { left: 90px; top: 640px; }
-.ref--2 { left: 870px; top: 500px; }
+/* confident stack: refs tuck under hero / proposal — deliberate depth */
+.ref--1 { left: 100px; top: 460px; }
+.ref--2 { left: 850px; top: 400px; }
 .ref--3 { left: 430px; top: 640px; transform: scale(0.9) translateY(6px); }
 .panel--gen { left: 600px; top: 210px; width: 260px; }
 .ref-kicker {
@@ -248,13 +309,24 @@ body {
 }
 .connectors path {
   fill: none;
-  stroke: rgba(26, 26, 25, 0.22);
+  stroke: rgba(26, 26, 25, 0.28);
   stroke-width: 1.5;
   stroke-linecap: round;
 }
 .connectors path.halo {
   stroke: rgba(26, 26, 25, 0.05);
   stroke-width: 5;
+}
+.connectors path.dotted {
+  stroke: rgba(26, 26, 25, 0.4);
+  stroke-dasharray: 1.5 7;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+.connectors circle.node {
+  fill: var(--ink);
+  stroke: #fff;
+  stroke-width: 2;
 }
 
 /* ---- room reveal (narrow → expand) ---- */
