@@ -235,25 +235,39 @@ body {
 .ref--3 { left: 480px; top: 660px; transform: scale(0.9) translateY(6px); }
 .panel--gen { left: 620px; top: 380px; width: 260px; }
 
-/* image nodes */
+/* single-image node */
 .panel--image { width: 280px; left: 900px; top: 110px; }
-.panel--multi { top: 470px; }
 .img-node {
   display: block; width: 100%; margin-top: 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
 }
-.img-grid {
-  margin-top: 12px;
-  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+
+/* multi-image node: bare tilted photo stack — no card chrome */
+.node--stack {
+  width: 300px; height: 300px;
+  left: 900px; top: 470px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
 }
-.img-grid img {
-  width: 100%; aspect-ratio: 3 / 4;
+.node--stack .stack-img {
+  position: absolute;
+  width: 186px; aspect-ratio: 3 / 4;
   object-fit: cover;
-  display: block;
+  border-radius: 16px;
+  box-shadow: var(--elev-2);
+  background: #fff;
+  transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
 }
+.stack-img--1 { left: 34px; top: 44px; transform: rotate(-4deg); z-index: 1; }
+.stack-img--2 { left: 86px; top: 30px; transform: rotate(3.2deg); z-index: 2; }
+.stack-img--3 { left: 60px; top: 58px; transform: rotate(-0.6deg); z-index: 3; }
+.node--stack:hover .stack-img { box-shadow: var(--elev-3); }
+.node--stack:hover .stack-img--1 { transform: rotate(-4deg) translateY(-3px); }
+.node--stack:hover .stack-img--2 { transform: rotate(3.2deg) translateY(-3px); }
+.node--stack:hover .stack-img--3 { transform: rotate(-0.6deg) translateY(-4px); }
 .ref-kicker {
   font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em;
   text-transform: uppercase; color: #8a8b87; margin-bottom: 6px;
@@ -283,7 +297,7 @@ body {
 
 /* archive landmark — elevation 1, far back */
 .panel--landmark {
-  width: 170px; left: 1180px; top: 540px;
+  width: 170px; left: 1230px; top: 520px;
   box-shadow: var(--elev-1);
   z-index: 10;
   transform: scale(0.82);
