@@ -96,14 +96,14 @@
 
     // source anchor
     let x1, y1;
-    if (below) { x1 = r1.left + r1.width * 0.6; y1 = r1.bottom; }
+    if (below) { x1 = r1.left + r1.width / 2; y1 = r1.bottom; }
     else if (right) { x1 = r1.right; y1 = r1.top + r1.height * 0.45; }
     else if (left) { x1 = r1.left; y1 = r1.top + r1.height * 0.45; }
     else { x1 = r1.left + r1.width / 2; y1 = r1.top + r1.height * 0.45; }
 
     // target anchor (mirror)
     let x2, y2;
-    if (below) { x2 = r2.left + r2.width * 0.4; y2 = r2.top; }
+    if (below) { x2 = r2.left + r2.width / 2; y2 = r2.top; }
     else if (right) { x2 = r2.left; y2 = r2.top + r2.height * 0.45; }
     else if (left) { x2 = r2.right; y2 = r2.top + r2.height * 0.45; }
     else { x2 = r2.left + r2.width / 2; y2 = r2.top + r2.height * 0.45; }
@@ -120,7 +120,6 @@
     const routes = [
       { from: "hero", to: "gen", dotted: false },
       { from: "hero", to: "inspo", dotted: true },
-      { from: "inspo", to: "moodboard", dotted: true },
     ];
     const parts = [];
     routes.forEach((route) => {
@@ -140,7 +139,7 @@
       if (route.dotted) {
         const p0 = { x: x1, y: y1 }, p1 = { x: c1x, y: y1 },
               p2 = { x: c2x, y: y2 }, p3 = { x: x2, y: y2 };
-        const ts = route.from === "hero" ? [0.3, 0.55, 0.8] : [0.33, 0.66];
+        const ts = route.from === "hero" ? [0.3, 0.55, 0.8] : [0.5];
         for (const tt of ts) {
           const pt = bezierPoint(p0, p1, p2, p3, tt);
           parts.push(
