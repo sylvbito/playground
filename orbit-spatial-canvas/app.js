@@ -59,27 +59,26 @@
 
   /* ---------- semantic depth: focus a card ---------- */
   const focusables = [
-    { el: hero, cls: "focus-hero" },
-    { el: document.getElementById("ref1"), cls: "focus-ref1" },
-    { el: document.getElementById("ref2"), cls: "focus-ref2" },
-    { el: document.getElementById("gen"), cls: "focus-gen" },
+    "hero", "ref1", "inspo", "moodboard", "gen", "ref3"
   ];
 
-  focusables.forEach(({ el, cls }) => {
+  focusables.forEach((id) => {
+    const el = document.getElementById(id);
     el.addEventListener("click", () => {
-      canvas.classList.remove("focus-hero", "focus-ref1", "focus-ref2", "focus-gen");
-      canvas.classList.add(cls);
+      canvas.classList.add("focus");
+      document.querySelectorAll(".panel.focused").forEach((p) => p.classList.remove("focused"));
+      el.classList.add("focused");
       overview.hidden = false;
     });
   });
 
   overview.addEventListener("click", () => {
-    canvas.classList.remove("focus-hero", "focus-ref1", "focus-ref2", "focus-gen");
-    canvas.classList.add("focus-hero");
+    canvas.classList.remove("focus");
+    document.querySelectorAll(".panel.focused").forEach((p) => p.classList.remove("focused"));
     overview.hidden = true;
   });
 
-  /* ---------- connectors: hero → references + proposal ---------- */
+  /* ---------- connectors: explicit routes, corridor-clean ---------- */
   function bezierPoint(p0, p1, p2, p3, t) {
     const mt = 1 - t;
     return {
@@ -88,51 +87,61 @@
     };
   }
 
+  function edgeAnchors(fromEl, toEl) {
+    const r1 = fromEl.getBoundingClientRect();
+    const r2 = toEl.getBoundingClientRect();
+    const below = r2.top > r1.bottom;
+    const right = r2.left > r1.right;
+    const left = r2.right < r1.left;
+
+    // source anchor
+    let x1, y1;
+    if (below) { x1 = r1.left + r1.width * 0.6; y1 = r1.bottom; }
+    else if (right) { x1 = r1.right; y1 = r1.top + r1.height * 0.45; }
+    else if (left) { x1 = r1.left; y1 = r1.top + r1.height * 0.45; }
+    else { x1 = r1.left + r1.width / 2; y1 = r1.top + r1.height * 0.45; }
+
+    // target anchor (mirror)
+    let x2, y2;
+    if (below) { x2 = r2.left + r2.width * 0.4; y2 = r2.top; }
+    else if (right) { x2 = r2.left; y2 = r2.top + r2.height * 0.45; }
+    else if (left) { x2 = r2.right; y2 = r2.top + r2.height * 0.45; }
+    else { x2 = r2.left + r2.width / 2; y2 = r2.top + r2.height * 0.45; }
+
+    // nudge endpoints just outside the panel borders
+    const pad = 6;
+    const dx = Math.sign(x2 - x1), dy = Math.sign(y2 - y1);
+    x1 += dx * pad; y1 += dy * pad;
+    x2 -= dx * pad; y2 -= dy * pad;
+    return { x1, y1, x2, y2 };
+  }
+
   function drawConnectors() {
-    const targets = ["ref2", "gen"].map((id) =>
-      document.getElementById(id)
-    );
+    const routes = [
+      { from: "hero", to: "gen", dotted: false },
+      { from: "hero", to: "inspo", dotted: true },
+      { from: "inspo", to: "moodboard", dotted: true },
+    ];
     const parts = [];
-    targets.forEach((t) => {
-      const r1 = hero.getBoundingClientRect();
-      const r2 = t.getBoundingClientRect();
-
-      // hero anchor: bottom edge for below-targets (clears intermediate cards),
-      // right-mid for everything else
-      const targetBelow = r2.top > r1.bottom;
-      const targetRight = r2.left > r1.right;
-      let x1, y1;
-      if (targetBelow) { x1 = r1.left + r1.width * 0.7; y1 = r1.bottom; }
-      else if (targetRight) { x1 = r1.right; y1 = r1.top + r1.height / 2; }
-      else { x1 = r1.right; y1 = r1.top + r1.height / 2; }
-
-      // target anchor: left-mid when hero is left of target, top-mid when above
-      let x2, y2;
-      if (r1.right < r2.left) { x2 = r2.left; y2 = r2.top + r2.height / 2; }
-      else if (r1.bottom < r2.top) { x2 = r2.left + r2.width / 2; y2 = r2.top; }
-      else { x2 = r2.left; y2 = r2.top + r2.height / 2; }
-
-      // nudge endpoints just outside the panel borders
-      const pad = 6;
-      const dx = Math.sign(x2 - x1), dy = Math.sign(y2 - y1);
-      x1 += dx * pad; y1 += dy * pad;
-      x2 -= dx * pad; y2 -= dy * pad;
+    routes.forEach((route) => {
+      const fromEl = document.getElementById(route.from);
+      const toEl = document.getElementById(route.to);
+      const { x1, y1, x2, y2 } = edgeAnchors(fromEl, toEl);
 
       const c1x = x1 + (x2 - x1) * 0.5;
       const c2x = x1 + (x2 - x1) * 0.5;
 
-      // inspiration-path language: hero → inspo is a dotted path with nodes
-      const dotted = t.id === "ref2";
       parts.push(
         `<path class="halo" d="M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}"/>`,
-        `<path class="${dotted ? "dotted" : ""}" d="M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}"/>`,
+        `<path class="${route.dotted ? "dotted" : ""}" d="M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}"/>`,
         `<circle cx="${x1}" cy="${y1}" r="3" fill="#ffffff" stroke="rgba(26,26,25,0.4)" stroke-width="1.5"/>`,
         `<circle cx="${x2}" cy="${y2}" r="3" fill="#ffffff" stroke="rgba(26,26,25,0.4)" stroke-width="1.5"/>`
       );
-      if (dotted) {
+      if (route.dotted) {
         const p0 = { x: x1, y: y1 }, p1 = { x: c1x, y: y1 },
               p2 = { x: c2x, y: y2 }, p3 = { x: x2, y: y2 };
-        for (const tt of [0.28, 0.5, 0.72]) {
+        const ts = route.from === "hero" ? [0.3, 0.55, 0.8] : [0.33, 0.66];
+        for (const tt of ts) {
           const pt = bezierPoint(p0, p1, p2, p3, tt);
           parts.push(
             `<circle class="node" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="3.5"/>`

@@ -231,11 +231,29 @@ body {
   transform: scale(0.9);
   opacity: 0.88;
 }
-/* confident stack: refs tuck under hero / proposal — deliberate depth */
-.ref--1 { left: 100px; top: 460px; }
-.ref--2 { left: 850px; top: 400px; }
-.ref--3 { left: 430px; top: 640px; transform: scale(0.9) translateY(6px); }
-.panel--gen { left: 600px; top: 210px; width: 260px; }
+.ref--1 { left: 130px; top: 540px; }
+.ref--3 { left: 480px; top: 600px; transform: scale(0.9) translateY(6px); }
+.panel--gen { left: 620px; top: 380px; width: 260px; }
+
+/* image nodes */
+.panel--image { width: 280px; left: 900px; top: 110px; }
+.panel--multi { top: 470px; }
+.img-node {
+  display: block; width: 100%; margin-top: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+.img-grid {
+  margin-top: 12px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.img-grid img {
+  width: 100%; aspect-ratio: 3 / 4;
+  object-fit: cover;
+  display: block;
+}
 .ref-kicker {
   font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em;
   text-transform: uppercase; color: #8a8b87; margin-bottom: 6px;
@@ -351,27 +369,17 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ---- focus (semantic depth: selected object comes forward) ---- */
-.canvas.focus-ref1 .panel--hero { transform: scale(0.88); opacity: 0.55; }
-.canvas.focus-ref1 .panel--gen  { transform: scale(0.88); opacity: 0.55; }
-.canvas.focus-ref1 .ref--2, .canvas.focus-ref1 .ref--3 { transform: scale(0.9); opacity: 0.5; }
-.canvas.focus-ref1 .panel--landmark { transform: scale(0.82); opacity: 0.35; }
-.canvas.focus-ref1 .ref--1 { transform: scale(1.06); opacity: 1; z-index: 40; box-shadow: var(--elev-3); }
-
-.canvas.focus-ref2 .panel--hero { transform: scale(0.88); opacity: 0.55; }
-.canvas.focus-ref2 .panel--gen  { transform: scale(0.88); opacity: 0.55; }
-.canvas.focus-ref2 .ref--1, .canvas.focus-ref2 .ref--3 { transform: scale(0.9); opacity: 0.5; }
-.canvas.focus-ref2 .panel--landmark { transform: scale(0.82); opacity: 0.35; }
-.canvas.focus-ref2 .ref--2 { transform: scale(1.06); opacity: 1; z-index: 40; box-shadow: var(--elev-3); }
-
-.canvas.focus-gen .panel--hero { transform: scale(0.88); opacity: 0.55; }
-.canvas.focus-gen .ref--1, .canvas.focus-gen .ref--2, .canvas.focus-gen .ref--3 { transform: scale(0.9); opacity: 0.5; }
-.canvas.focus-gen .panel--landmark { transform: scale(0.82); opacity: 0.35; }
-.canvas.focus-gen .panel--gen { transform: scale(1.06); opacity: 1; z-index: 40; box-shadow: var(--elev-3); }
-
-.canvas.focus-hero .panel--hero { transform: scale(1); opacity: 1; }
-.canvas.focus-hero .panel--ref, .canvas.focus-hero .panel--gen { transform: scale(0.94); opacity: 0.94; }
-.canvas.focus-hero .panel--landmark { transform: scale(0.82); opacity: 0.45; }
+/* ---- focus (semantic depth: the selected object comes forward) ---- */
+.canvas.focus .panel { opacity: 0.55; filter: saturate(0.85); }
+.canvas.focus .panel.focused {
+  opacity: 1; filter: none;
+  z-index: 40;
+  transform: scale(1.05);
+  box-shadow: var(--elev-3);
+}
+.canvas.focus .panel--ref.focused, .canvas.focus .panel--gen.focused,
+.canvas.focus .panel--image.focused { opacity: 1; transform: scale(1.05); }
+.canvas.focus .panel--landmark { opacity: 0.3; }
 
 /* hover lift */
 .panel:hover { box-shadow: var(--elev-3); }

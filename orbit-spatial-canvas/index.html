@@ -98,13 +98,25 @@
             </ul>
           </article>
 
-          <article class="panel panel--ref ref--2" id="ref2" tabindex="0" role="button" aria-label="Focus inspiration">
+          <!-- single-image node: the inspiration slide itself -->
+          <article class="panel panel--image" id="inspo" tabindex="0" role="button" aria-label="Focus inspiration image">
             <div class="ref-kicker">Reference</div>
             <div class="ref-title">Inspo · spatial canvas</div>
-            <div class="mini-canvas" aria-hidden="true">
-              <i class="mini mini--a"></i><i class="mini mini--b"></i><i class="mini mini--c"></i>
-            </div>
+            <img class="img-node" src="img/inspo1.png" alt="Spatial canvas concept slides" />
             <p class="ref-note">Objects float at depth. Dotted grid grounds the space.</p>
+          </article>
+
+          <!-- multi-image node: 2x2 moodboard grid -->
+          <article class="panel panel--image panel--multi" id="moodboard" tabindex="0" role="button" aria-label="Focus moodboard">
+            <div class="ref-kicker">Moodboard</div>
+            <div class="ref-title">Collected references</div>
+            <div class="img-grid">
+              <img src="img/mobile1.png" alt="Mobile inspiration 1" />
+              <img src="img/mobile2.png" alt="Mobile inspiration 2" />
+              <img src="img/mobile3.png" alt="Mobile inspiration 3" />
+              <img src="img/inspo3.png" alt="Spatial canvas slide 3" />
+            </div>
+            <p class="ref-note">Multi-image nodes hold the collection together.</p>
           </article>
 
           <article class="panel panel--ref ref--3" id="ref3" tabindex="0" role="button" aria-label="Focus brief">
