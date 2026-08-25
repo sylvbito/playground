@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orbit — navigation study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --field:#f6f6f3;
+    --paper:#fdfdfb;
+    --ink:#26261f;
+    --ink-soft:#55544a;
+    --ink-faint:#8b8a7f;
+    --grey-1:#efefec;
+    --grey-2:#deded8;
+    --grey-3:#c2c2ba;
+    --coral:#ef6a4f;
+    --coral-soft:#f29a83;
+    --line:rgba(38,38,31,.12);
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;
+    --mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:var(--sans);color:var(--ink);background:var(--field);overflow:hidden;-webkit-font-smoothing:antialiased}
+  .viewport{position:relative;width:100vw;height:100svh;min-height:700px;overflow:hidden;background:radial-gradient(120% 90% at 50% 0%, #fdfdfb 0%, var(--field) 52%, #eeeee9 100%);isolation:isolate}
+  .world{position:absolute;width:1020px;height:1040px;left:0;top:0;transform-origin:top left;overflow:visible}
+
+  .centered-label{position:absolute;left:0;right:0;top:22px;text-align:center;z-index:5;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-faint);line-height:1.7}
+  .centered-label b{color:var(--ink-soft);font-weight:500}
+
+  /* ------- room objects on the field ------- */
+  .room{
+    position:absolute;z-index:2;border-radius:26px;padding:24px 26px;cursor:pointer;
+    background:linear-gradient(180deg,var(--paper),#f7f7f2);border:1px solid var(--line);
+    box-shadow:0 10px 30px rgba(38,38,31,.07),0 26px 70px rgba(38,38,31,.05);
+    transition:transform .7s cubic-bezier(.18,.82,.18,1),box-shadow .7s ease,opacity .7s ease,filter .6s ease;
+    will-change:transform;
+  }
+  .room:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(38,38,31,.10),0 34px 86px rgba(38,38,31,.08)}
+  .room .rk{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint)}
+  .room .lk{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 4px rgba(239,106,79,.14)}
+  .room h2{font-size:22px;font-weight:700;letter-spacing:-.03em;margin:14px 0 8px;line-height:1.05}
+  .room p{font-size:12px;line-height:1.5;color:var(--ink-soft);max-width:30ch}
+  .room .meta{margin-top:16px;font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:var(--ink-faint)}
+  .room.active{border-color:rgba(239,106,79,.4);box-shadow:0 0 0 1px rgba(239,106,79,.28),0 18px 50px rgba(38,38,31,.10),0 40px 100px rgba(38,38,31,.08)}
+  .room.quiet{opacity:.62;filter:saturate(.6)}
+  .room .count{display:inline-flex;align-items:center;gap:6px;margin-left:6px;font-family:var(--mono);font-size:9px;letter-spacing:.05em}
+
+  /* field room placements (world 1020x1040) */
+  #r-website{left:120px;top:140px;width:360px;height:250px}
+  #r-home{left:600px;top:120px;width:300px;height:210px}
+  #r-principles{left:150px;top:470px;width:300px;height:210px}
+  #r-showroom{left:560px;top:420px;width:280px;height:200px}
+  #r-inbox{left:72px;top:700px;width:250px;height:180px}
+
+  /* ------- thumb-friendly radial control cluster ------- */
+  .cluster{position:absolute;left:50%;transform:translateX(-50%);bottom:20px;width:520px;height:170px;z-index:5}
+  .ctl{position:absolute;border-radius:50%;display:grid;place-items:center;cursor:pointer;border:none;
+    transition:transform .5s cubic-bezier(.18,.82,.18,1),background .4s ease,box-shadow .5s ease;}
+  .ctl .dot{width:8px;height:8px;border-radius:50%;background:#fdfdfb;transition:background .3s}
+  .ctl.center{left:50%;top:-16px;transform:translateX(-50%);width:94px;height:94px;background:#8f8f88;box-shadow:0 0 0 9px rgba(143,143,136,.12),0 12px 30px rgba(38,38,31,.16);color:#fdfdfb;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;line-height:1.2}
+  .ctl.center:hover{transform:translateX(-50%) translateY(-2px);background:#7d7d76}
+  .ctl.flank{width:72px;height:72px;background:#c5c5be;box-shadow:0 8px 22px rgba(38,38,31,.10)}
+  .ctl.flank.l{left:138px;top:42px}
+  .ctl.flank.r{left:310px;top:42px}
+  .ctl.flank:hover{transform:translateY(-2px);background:#b4b4ad}
+  .ctl.flank .arr{width:0;height:0;border-left:8px solid #6b6a61;border-top:5px solid transparent;border-bottom:5px solid transparent}
+  .ctl.flank.r .arr{border-left:none;border-right:8px solid #6b6a61}
+  .pad{position:absolute;left:50%;bottom:-18px;transform:translateX(-50%);width:200px;height:140px;border-radius:999px;background:rgba(205,205,199,.5);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:11px;backdrop-filter:blur(6px);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 14px 40px rgba(38,38,31,.07);cursor:pointer}
+  .pad .lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(38,38,31,.44)}
+  .pad .dots{display:flex;gap:6px}
+  .pad .dots i{width:5px;height:5px;border-radius:50%;background:rgba(38,38,31,.24);transition:transform .3s,background .3s}
+  .pad .dots i.on{background:#2a2a24;transform:scale(1.3)}
+  .context-label{position:absolute;left:0;right:0;bottom:12px;text-align:center;z-index:5;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);opacity:.72}
+
+  /* ------- inside a room ------- */
+  .roomview{position:absolute;inset:0;z-index:4;opacity:0;pointer-events:none;transform:scale(.96);transition:opacity .6s ease,transform .7s cubic-bezier(.18,.82,.18,1)}
+  .roomview.on{opacity:1;pointer-events:auto;transform:scale(1)}
+  .roomview .curtain{position:absolute;inset:0;background:radial-gradient(110% 80% at 50% 0%, #fdfdfb 0%, var(--field) 55%, #ecece7 100%);pointer-events:none;opacity:0;transition:opacity .6s ease}
+  .roomview.on .curtain{opacity:1}
+  .roomhead{position:absolute;left:64px;top:74px;z-index:3;width:560px}
+  .roomhead .rk{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .roomhead h1{font-size:34px;font-weight:700;letter-spacing:-.035em;line-height:1;margin:0 0 12px}
+  .roomhead .ctx{font-size:13px;color:var(--ink-soft);line-height:1.5;max-width:52ch;font-family:var(--mono);font-size:11px;letter-spacing:.01em}
+  .roomhead .ctx b{color:var(--ink-soft);font-weight:500}
+
+  .cardgrid{position:absolute;left:64px;right:64px;top:250px;bottom:220px;z-index:3}
+  .cell{position:absolute;border-radius:22px;padding:20px 22px;background:linear-gradient(180deg,var(--paper),#f7f7f2);border:1px solid var(--line);box-shadow:0 8px 26px rgba(38,38,31,.06),0 22px 60px rgba(38,38,31,.05);cursor:pointer;transition:transform .55s cubic-bezier(.18,.82,.18,1),box-shadow .55s ease,opacity .5s ease;transform:scale(1);opacity:1}
+  .cell:hover{transform:translateY(-4px);box-shadow:0 14px 36px rgba(38,38,31,.10),0 30px 72px rgba(38,38,31,.08)}
+  .cell .kicker{font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint)}
+  .cell h3{font-size:16px;font-weight:650;letter-spacing:-.02em;margin:9px 0 6px;line-height:1.15}
+  .cell p{font-size:11.5px;line-height:1.5;color:var(--ink-soft)}
+  .cell .track{margin-top:14px;height:3px;border-radius:99px;background:var(--grey-2);overflow:hidden}
+  .cell .track i{display:block;height:100%;border-radius:99px;background:var(--coral);width:64%}
+  .cell .tagrow{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px}
+  .cell .tagrow span{font-family:var(--mono);font-size:8px;letter-spacing:.04em;color:var(--ink-faint);background:var(--grey-1);border-radius:99px;padding:3px 9px}
+  .cell .quote{font-family:var(--serif,var(--sans));font-size:14px;font-weight:500;line-height:1.3;letter-spacing:-.015em;margin:10px 0 8px}
+  .cell.conv{background:linear-gradient(180deg,#3a3b33,#2c2d26);color:#f4f4ef;border-color:transparent}
+  .cell.conv h3{color:#f4f4ef}.cell.conv p{color:rgba(244,244,239,.72)}.cell.conv .kicker{color:rgba(244,244,239,.5)}
+  .cell.conv .caretline{display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.12);font-family:var(--mono);font-size:9px;letter-spacing:.03em;color:rgba(244,244,239,.6)}
+  .cell.conv .caret{width:1px;height:11px;background:#ffe0d4;animation:caret 1.05s steps(1,end) infinite}
+  .cell .status{display:inline-flex;align-items:center;gap:7px;margin-top:12px;font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#a3472f}
+  .cell .status::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--coral)}
+  .cell.focused{position:absolute;z-index:6;transition:left .7s cubic-bezier(.18,.82,.18,1),top .7s cubic-bezier(.18,.82,.18,1),width .7s cubic-bezier(.18,.82,.18,1),height .7s cubic-bezier(.18,.82,.18,1),transform .7s cubic-bezier(.18,.82,.18,1),box-shadow .7s ease}
+  .cell.focused{box-shadow:0 24px 64px rgba(38,38,31,.12),0 50px 120px rgba(38,38,31,.10)}
+  .cell.idle-dim{opacity:.28;filter:saturate(.5)}
+
+  /* generated-ui card content (real: Homepage direction comparison) */
+  .scorerow{display:flex;gap:8px;margin-top:14px}
+  .score{flex:1;background:var(--grey-1);border-radius:14px;padding:12px 12px 10px;text-align:center}
+  .score b{display:block;font-size:22px;font-weight:700;letter-spacing:-.03em}
+  .score span{display:block;margin-top:2px;font-family:var(--mono);font-size:8px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint)}
+  .score.top{background:#f6e7e1}
+  .score.top b{color:var(--coral)}
+  .btn{margin-top:14px;display:inline-flex;align-items:center;gap:8px;padding:10px 15px;border-radius:99px;background:var(--coral);color:#fff;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:transform .4s,background .3s}
+  .btn:hover{transform:translateY(-2px);background:#e05a40}
+
+  @keyframes caret{0%,48%{opacity:1}49%,100%{opacity:0}}
+  @keyframes settle{from{opacity:0;transform:scale(.94) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+  .room,.roomview *{animation:settle .8s cubic-bezier(.16,.9,.25,1) both}
+  .room:nth-child(2){animation-delay:.04s}.room:nth-child(3){animation-delay:.08s}
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}}
+</style>
+</head>
+<body>
+<main class="viewport" aria-label="Orbit navigation study">
+  <div class="world" id="world">
+
+    <div class="centered-label" id="title">Orbit · <b>field</b></div>
+
+    <!-- field rooms -->
+    <section class="room active" id="r-website" data-room="website" tabindex="0" aria-label="Website redesign room">
+      <div class="rk"><span class="lk"></span>room · active</div>
+      <h2>Website redesign</h2>
+      <p>Evidence, references and decisions for the agency website redesign.</p>
+      <div class="meta">15 cards · hermes present</div>
+    </section>
+    <section class="room" id="r-home" data-room="home" tabindex="0" aria-label="Home room">
+      <div class="rk">room · home</div>
+      <h2>Home</h2>
+      <p>General chat with Hermes — your always-open home room.</p>
+      <div class="meta">always open</div>
+    </section>
+    <section class="room" id="r-principles" data-room="principles" tabindex="0" aria-label="Orbit principles room">
+      <div class="rk">room</div>
+      <h2>Orbit principles</h2>
+      <p>Product truths, unresolved questions and assumptions we have discarded.</p>
+      <div class="meta">9 cards</div>
+    </section>
+    <section class="room" id="r-showroom" data-room="showroom" tabindex="0" aria-label="Showroom room">
+      <div class="rk">room</div>
+      <h2>Showroom</h2>
+      <p>Every card type and spatial pattern on one bird's-eye stage.</p>
+      <div class="meta">type stage</div>
+    </section>
+    <section class="room quiet" id="r-inbox" data-room="inbox" tabindex="0" aria-label="Research inbox room">
+      <div class="rk">room · resting</div>
+      <h2>Research inbox</h2>
+      <p>Loose notes and sources waiting to earn structure.</p>
+      <div class="meta">6 loose</div>
+    </section>
+
+    <!-- thumb-friendly radial cluster -->
+    <div class="cluster" aria-label="Navigation">
+      <button class="ctl center" id="primary" tabindex="0" aria-label="Primary action"><span class="dot"></span></button>
+      <button class="ctl flank l" id="prev" tabindex="0" aria-label="Previous"><span class="arr"></span></button>
+      <button class="ctl flank r" id="next" tabindex="0" aria-label="Next"><span class="arr"></span></button>
+      <div class="pad" id="home" aria-label="Back to field">
+        <span class="lbl">home · field</span>
+        <div class="dots" id="dots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </div>
+    <div class="context-label" id="ctxLabel">field · enter a room</div>
+  </div>
+
+  <!-- inside a room -->
+  <div class="roomview" id="roomview">
+    <div class="curtain"></div>
+    <div class="roomhead">
+      <div class="rk"><span class="lk"></span>room · active</div>
+      <h1 id="roomTitle">Website redesign</h1>
+      <div class="ctx"><b>context</b> · Evidence, references and decisions for the agency website redesign.</div>
+    </div>
+    <div class="cardgrid" id="cardgrid"></div>
+  </div>
+</main>
+
+<script>
+  const ROOMS = {
+    website: { title:'Website redesign', desc:'Evidence, references and decisions for the agency website redesign.' },
+    home: { title:'Home', desc:'General chat with Hermes — your always-open home room.' },
+    principles: { title:'Orbit principles', desc:'Product truths, unresolved questions and assumptions we have discarded.' },
+    showroom: { title:'Showroom', desc:'Every card type and spatial pattern on one bird\u2019s-eye stage.' },
+    inbox: { title:'Research inbox', desc:'Loose notes and sources waiting to earn structure.' },
+  };
+  const WEBSITE_CARDS = [
+    { id:'brief', type:'thought', title:'Project brief', body:'Make the redesign explain what changed, prove the work quickly and give prospective clients a clear next step.', tags:['brief','decision'], kind:'thought', x:20, y:20, w:260, h:120 },
+    { id:'existing', type:'source', title:'Existing-site observations', body:'The current site explains services before showing evidence.', tags:['evidence','audit'], kind:'quote', x:300, y:20, w:250, h:120 },
+    { id:'testreveal', type:'task', title:'Test the reveal', body:'Prototype the narrow-then-expand transition after navigation.', tags:['interaction','prototype'], kind:'task', x:570, y:20, w:250, h:130, progress:64 },
+    { id:'comparison', type:'generated-ui', title:'Homepage direction comparison', tags:['generated','decision'], kind:'score', x:20, y:160, w:320, h:180 },
+    { id:'review', type:'conversation', title:'Website review with Sylvain', body:'The hierarchy is clear. Next, compare the mobile reveal and make the proof arrive earlier.', tags:['conversation','review'], kind:'conv', x:360, y:170, w:260, h:190 },
+    { id:'dumbar', type:'source', title:'Reference · Studio Dumbar', body:'Strong pacing and editorial cropping. Useful for rhythm, not navigation density.', tags:['reference','visual'], kind:'quote', x:640, y:180, w:250, h:140 },
+  ];
+
+  const world=document.getElementById('world');
+  const title=document.getElementById('title');
+  const ctxLabel=document.getElementById('ctxLabel');
+  const roomview=document.getElementById('roomview');
+  const roomTitle=document.getElementById('roomTitle');
+  const cardgrid=document.getElementById('cardgrid');
+  const dots=document.getElementById('dots');
+  const centerBtn=document.getElementById('primary');
+  const prevBtn=document.getElementById('prev');
+  const nextBtn=document.getElementById('next');
+  const homeBtn=document.getElementById('home');
+
+  const BASE_W=1020, BASE_H=1040;
+  let state={view:'field', room:null, card:null};
+  const roomOrder=['website','home','principles','showroom','inbox'];
+
+  function fit(){const vw=Math.max(window.innerWidth,940);const vh=Math.max(window.innerHeight,700);const s=Math.min(vw/BASE_W,vh/BASE_H);const l=Math.max(0,(window.innerWidth-BASE_W*s)/2);const t=Math.max(0,(window.innerHeight-BASE_H*s)/2);world.style.transform=`translate(${l}px,${t}px) scale(${s})`;}
+  window.addEventListener('resize',fit,{passive:true});fit();
+
+  // lift persistent chrome (labels + thumb cluster) out of the scaled world so it
+  // stays on top of BOTH the field and the room view — chrome never scales, never hides.
+  (function mountChrome(){
+    const vp=document.querySelector('.viewport');
+    ['#title','.cluster','#ctxLabel'].forEach(sel=>{ const el=document.querySelector(sel); if(el) vp.appendChild(el); });
+    document.querySelector('#title').style.zIndex='5';
+    document.querySelector('#ctxLabel').style.zIndex='5';
+  })();
+
+  function setDots(n,on){dots.innerHTML='';for(let i=0;i<n;i++){const d=document.createElement('i');if(i===on)d.className='on';dots.appendChild(d);}}
+
+  function renderRoom(roomId){
+    state.room=roomId;
+    const r=ROOMS[roomId];
+    roomTitle.textContent=r.title;
+    roomview.querySelector('.roomhead .ctx').innerHTML='<b>context</b> · '+r.desc;
+    cardgrid.innerHTML='';
+    const cards = roomId==='website'?WEBSITE_CARDS:WEBSITE_CARDS.slice(0,3);
+    cards.forEach(c=>{ cardgrid.appendChild(makeCard(c)); });
+    setDots(roomOrder.length, roomOrder.indexOf(roomId));
+  }
+
+  function makeCard(c){
+    const el=document.createElement('article');
+    el.className='cell'+(c.kind==='conv'?' conv':''); el.dataset.card=c.id;
+    el.style.left=c.x+'px'; el.style.top=c.y+'px'; el.style.width=c.w+'px'; el.style.height=c.h+'px';
+    el.tabIndex=0;
+    let inner='<div class="kicker">'+c.type+'</div>';
+    if(c.kind==='task'){ inner+=`<h3>${c.title}</h3><p>${c.body}</p><div class="track"><i></i></div><span class="status">in review · thu</span>`; }
+    else if(c.kind==='score'){ inner+=`<h3>${c.title}</h3><div class="scorerow"><div class="score top"><b>86</b><span>evidence</span></div><div class="score"><b>72</b><span>editorial</span></div><div class="score"><b>64</b><span>index</span></div></div><button class="btn" data-action="stress">Stress-test this direction</button>`; }
+    else if(c.kind==='conv'){ inner+=`<h3>${c.title}</h3><p class="quote">${c.body}</p><div class="caretline"><span>hermes is composing</span><span class="caret" aria-hidden="true"></span></div>`; }
+    else if(c.kind==='quote'){ inner+=`<h3>${c.title}</h3><p class="quote">\u201C${c.body}\u201D</p><div class="tagrow">${c.tags.map(t=>'<span>'+t+'</span>').join('')}</div>`; }
+    else { inner+=`<h3>${c.title}</h3><p>${c.body}</p><div class="tagrow">${c.tags.map(t=>'<span>'+t+'</span>').join('')}</div>`; }
+    el.innerHTML=inner;
+    el.addEventListener('click',e=>{ e.stopPropagation(); if(e.target.closest('.btn')){focusCard(c.id,true);return;} focusCard(c.id,false); });
+    return el;
+  }
+
+  function focusCard(cardId, stress){
+    const cells=[...cardgrid.querySelectorAll('.cell')];
+    cells.forEach(c=>c.classList.add('idle-dim'));
+    const target=cells.find(c=>c.dataset.card===cardId);
+    if(target){ target.classList.add('focused'); target.classList.remove('idle-dim');
+      target.style.left='50%'; target.style.top='50%'; target.style.transform='translate(-50%,-50%)';
+      target.style.width='400px'; target.style.height='auto';
+      ctxLabel.textContent='attending · '+cardId+(stress?' · stress-test pending':'');
+    }
+    title.innerHTML='Orbit · <b>'+ (ROOMS[state.room].title) +' · attending</b>';
+  }
+
+  function enterRoom(id){ state.view='room'; state.card=null; roomview.classList.add('on'); roomview.style.pointerEvents='auto'; state.room=id; renderRoom(id); title.innerHTML='Orbit · <b>'+ROOMS[id].title+'</b>'; ctxLabel.textContent='room · focus a card or return'; }
+  function goField(){ state.view='field'; state.card=null; roomview.classList.remove('on'); roomview.style.pointerEvents='none'; title.innerHTML='Orbit · <b>field</b>'; ctxLabel.textContent='field · enter a room'; setDots(roomOrder.length,0); }
+
+  document.querySelectorAll('.room').forEach(r=>{ r.addEventListener('click',()=>enterRoom(r.dataset.room)); });
+  centerBtn.addEventListener('click',()=>{ if(state.view==='field'){enterRoom('website');} });
+  prevBtn.addEventListener('click',()=>{ if(state.view==='room'){const i=roomOrder.indexOf(state.room);enterRoom(roomOrder[(i-1+roomOrder.length)%roomOrder.length]);} });
+  nextBtn.addEventListener('click',()=>{ if(state.view==='room'){const i=roomOrder.indexOf(state.room);enterRoom(roomOrder[(i+1)%roomOrder.length]);} });
+  homeBtn.addEventListener('click',goField);
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape')goField(); });
+  // primary button label (static; hover shows intent) — reset focus on empty area
+  roomview.addEventListener('click',e=>{ if(e.target===roomview||e.target.classList.contains('curtain')){ resetFocus(); } });
+  function resetFocus(){ const cells=[...cardgrid.querySelectorAll('.cell')]; cells.forEach(c=>c.classList.remove('focused','idle-dim')); title.innerHTML='Orbit · <b>'+(ROOMS[state.room].title)+'</b>'; ctxLabel.textContent='room · focus a card or return'; }
+  // re-layout cells after focus reset
+  cardgrid.addEventListener('click',()=>{ if(![...cardgrid.querySelectorAll('.cell.focused')].length) resetFocus(); });
+</script>
+</body>
+</html>
