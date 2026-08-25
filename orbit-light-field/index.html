@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orbit — light, thumb-first field</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --field:#f6f6f3;
+    --paper:#fdfdfb;
+    --ink:#26261f;
+    --ink-soft:#55544a;
+    --ink-faint:#8b8a7f;
+    --grey-1:#efefec;
+    --grey-2:#dcdcd7;
+    --grey-3:#bdbdb6;
+    --grey-4:#8f8f88;
+    --night:#1e1f1a;
+    --coral:#ef6a4f;
+    --coral-soft:#f29a83;
+    --line:rgba(38,38,31,.12);
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;
+    --mono:'IBM Plex Mono',monospace;
+    --soft:linear-gradient(160deg,#fbfbf8 0%,#f2f2ee 100%);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--field);
+    overflow:hidden; -webkit-font-smoothing:antialiased;
+  }
+  .viewport{
+    position:relative; width:100vw; height:100svh; min-height:700px; overflow:hidden;
+    background:radial-gradient(120% 90% at 50% 0%, #fdfdfb 0%, var(--field) 50%, #eeeee9 100%);
+    isolation:isolate;
+  }
+  .viewport::after{
+    content:""; position:absolute; inset:0; pointer-events:none; z-index:6;
+    background:radial-gradient(100% 90% at 50% 36%, transparent 62%, rgba(38,38,31,.05) 100%);
+  }
+
+  .world{position:absolute;width:920px;height:1080px;left:0;top:0;transform-origin:top left;overflow:visible}
+
+  .centered-label{
+    position:absolute; left:0; right:0; top:26px; text-align:center; z-index:5;
+    font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--ink-faint); line-height:1.7;
+  }
+  .centered-label b{color:var(--ink-soft); font-weight:500}
+
+  /* media room circles — photo-forward, no card chrome */
+  .media{
+    position:absolute; border-radius:50%; overflow:hidden; z-index:2; cursor:pointer;
+    box-shadow:0 10px 30px rgba(38,38,31,.14), 0 30px 80px rgba(38,38,31,.10);
+    filter:saturate(.72) contrast(1.03); transition:transform .7s cubic-bezier(.18,.82,.18,1), box-shadow .7s ease, filter .5s ease;
+    will-change:transform;
+  }
+  .media img{width:100%;height:100%;object-fit:cover;display:block}
+  .media:hover{transform:translateY(-4px);box-shadow:0 16px 44px rgba(38,38,31,.18), 0 40px 100px rgba(38,38,31,.14)}
+  .media.hero{z-index:3}
+  .media .peek{position:absolute;inset:0}
+  .side.left{left:-88px;top:282px;width:264px;height:264px}
+  .side.right{right:-78px;top:356px;width:250px;height:250px}
+  .hero{left:300px;top:132px;width:320px;height:320px}
+
+  /* Explore pill on the hero */
+  .explore{
+    position:absolute; z-index:4; left:50%; top:236px; transform:translateX(-50%);
+    display:inline-flex; align-items:center; gap:9px; padding:11px 20px; border-radius:999px;
+    background:rgba(252,252,249,.72); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    box-shadow:0 6px 22px rgba(38,38,31,.10); border:1px solid rgba(38,38,31,.05);
+    font-size:14px; font-weight:600; letter-spacing:-.005em; color:#2a2a24; cursor:pointer;
+    transition:transform .5s cubic-bezier(.18,.82,.18,1), background .4s ease; white-space:nowrap;
+  }
+  .explore::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 4px rgba(239,106,79,.14)}
+  .explore:hover{transform:translateX(-50%) translateY(-2px);background:rgba(252,252,249,.9)}
+
+  /* small rotate/carousel arrow on the right media */
+  .rotate{
+    position:absolute; z-index:5; right:104px; top:370px; width:30px;height:30px;border-radius:50%;
+    display:grid;place-items:center; background:rgba(252,252,249,.72); backdrop-filter:blur(8px);
+    box-shadow:0 4px 14px rgba(38,38,31,.10); color:#6b6a61; cursor:pointer; transition:transform .5s;
+  }
+  .rotate:hover{transform:rotate(90deg)}
+
+  /* info cards — fit-for-purpose rounded forms (NOT circles) */
+  .card{
+    position:absolute; z-index:3; border-radius:22px; padding:22px 24px;
+    background:linear-gradient(180deg,var(--paper),#f7f7f2);
+    border:1px solid var(--line); box-shadow:0 8px 26px rgba(38,38,31,.06), 0 22px 60px rgba(38,38,31,.05);
+    transition:transform .55s cubic-bezier(.18,.82,.18,1), box-shadow .55s ease;
+  }
+  .card:hover{transform:translateY(-4px);box-shadow:0 14px 36px rgba(38,38,31,.10), 0 30px 72px rgba(38,38,31,.08)}
+  .card .kicker{font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint)}
+  .card h3{font-size:16px;font-weight:650;letter-spacing:-.02em;margin:9px 0 6px;line-height:1.15}
+  .card p{font-size:11.5px;line-height:1.5;color:var(--ink-soft)}
+  .card .status{display:inline-flex;align-items:center;gap:7px;margin-top:12px;font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#a3472f}
+  .card .status::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--coral)}
+  .card .track{margin-top:12px;height:3px;border-radius:99px;background:var(--grey-2);overflow:hidden}
+  .card .track i{display:block;height:100%;border-radius:99px;background:var(--coral);width:64%}
+  .card .citation{border-top:1px solid var(--line);margin-top:12px;padding-top:10px;font-family:var(--mono);font-size:8.5px;line-height:1.5;letter-spacing:.02em;color:var(--ink-faint)}
+  .card.conv{background:linear-gradient(180deg,#3a3b33,#2c2d26);color:#f4f4ef;border-color:transparent}
+  .card.conv h3{color:#f4f4ef}
+  .card.conv p{color:rgba(244,244,239,.72)}
+  .card.conv .kicker{color:rgba(244,244,239,.5)}
+  .card.conv .msg{font-size:11.5px;line-height:1.5;color:rgba(244,244,239,.74);margin-top:12px}
+  .card.conv .msg~.msg{margin-top:9px}
+  .card.conv .caretline{display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.12);font-family:var(--mono);font-size:9px;letter-spacing:.03em;color:rgba(244,244,239,.6)}
+  .card.conv .caret{width:1px;height:12px;background:#ffe0d4;animation:caret 1.05s steps(1,end) infinite}
+
+  .card-task{left:120px;top:712px;width:214px;height:158px}
+  .card-source{left:354px;top:742px;width:212px;height:172px}
+  .card-conv{left:588px;top:706px;width:212px;height:190px}
+
+  /* thumb-friendly radial control cluster */
+  .cluster{position:absolute;left:50%;transform:translateX(-50%);bottom:22px;width:560px;height:150px;z-index:5}
+  .ctl{position:absolute;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+    transition:transform .5s cubic-bezier(.18,.82,.18,1), background .4s ease, box-shadow .5s ease;}
+  .ctl .dot{width:8px;height:8px;border-radius:50%;background:#fdfdfb;box-shadow:0 0 0 0 rgba(38,38,31,.02)}
+  .ctl.center{left:50%;top:-18px;transform:translateX(-50%);width:96px;height:96px;background:#8f8f88;box-shadow:0 0 0 9px rgba(143,143,136,.12), 0 12px 30px rgba(38,38,31,.16)}
+  .ctl.center:hover{transform:translateX(-50%) translateY(-2px);background:#7d7d76}
+  .ctl.flank{width:74px;height:74px;background:#c5c5be;box-shadow:0 8px 22px rgba(38,38,31,.10)}
+  .ctl.flank.l{left:140px;top:44px}
+  .ctl.flank.r{left:346px;top:44px}
+  .ctl.flank:hover{transform:translateY(-2px);background:#b4b4ad}
+  .pad{
+    position:absolute; left:50%; bottom:-20px; transform:translateX(-50%);
+    width:210px;height:150px;border-radius:999px;background:rgba(205,205,199,.55);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+    backdrop-filter:blur(6px); box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 14px 40px rgba(38,38,31,.08);
+  }
+  .pad .lbl{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(38,38,31,.42)}
+  .pad .dots{display:flex;gap:6px}
+  .pad .dots i{width:5px;height:5px;border-radius:50%;background:rgba(38,38,31,.24)}
+  .pad .dots i.on{background:#2a2a24;transform:scale(1.25)}
+
+  .moon{position:absolute;right:26px;bottom:24px;z-index:6;width:46px;height:46px;border-radius:50%;
+    background:var(--night);display:grid;place-items:center;cursor:pointer;box-shadow:0 8px 24px rgba(38,38,31,.18)}
+  .moon svg{width:17px;height:17px;stroke:#f3f3ee;fill:#f3f3ee}
+
+  .focus-label{position:absolute;left:0;right:0;bottom:12px;text-align:center;z-index:5;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);opacity:.7}
+
+  @keyframes caret{0%,48%{opacity:1}49%,100%{opacity:0}}
+  @keyframes settle{from{opacity:0;transform:scale(.9);filter:blur(6px)}to{opacity:1;transform:scale(1);filter:blur(0)}}
+  .media,.card,.cluster,.moon{animation:settle .9s cubic-bezier(.16,.9,.25,1) both}
+  .card:nth-child(2){animation-delay:.06s}
+  .card:nth-child(3){animation-delay:.12s}
+
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}}
+</style>
+</head>
+<body>
+<main class="viewport" aria-label="Orbit field">
+  <div class="world" id="world">
+    <div class="centered-label">Orbit · field <b>home</b></div>
+
+    <button class="media hero" tabindex="0" aria-label="Canopy House — enter">
+      <img src="https://picsum.photos/id/1062/640/640" alt="" onerror="this.style.display='none';this.parentNode.style.background='linear-gradient(140deg,#cfc9af,#9aa184)'" />
+    </button>
+    <div class="media side left" tabindex="0" aria-label="Rain garden"><img src="https://picsum.photos/id/1072/520/520" alt="" onerror="this.style.display='none';this.parentNode.style.background='linear-gradient(160deg,#b9b7ae,#8b8b82)'" /></div>
+    <div class="media side right" tabindex="0" aria-label="Tree canopy"><img src="https://picsum.photos/id/1056/500/500" alt="" onerror="this.style.display='none';this.parentNode.style.background='linear-gradient(150deg,#cfd0c6,#a9aa9d)'" /></div>
+    <button class="explore" tabindex="0" aria-label="Enter and reveal">Explore</button>
+    <button class="rotate" tabindex="0" aria-label="Rotate fields">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#6b6a61" stroke-width="1.8" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M17 3v3.5h3.5"/></svg>
+    </button>
+
+    <article class="card card-task" tabindex="0">
+      <div class="kicker">task · active</div>
+      <h3>Resolve the overflow path</h3>
+      <div class="track"><i></i></div>
+      <span class="status">in review · thu</span>
+    </article>
+    <article class="card card-source" tabindex="0">
+      <div class="kicker">source</div>
+      <p>“Shade is the first, cheapest layer of climate adaptation.”</p>
+      <div class="citation">DELIVERING COOLER PLACES · DELWP, 2019</div>
+    </article>
+    <article class="card card-conv" tabindex="0">
+      <div class="kicker">live · hermes</div>
+      <p class="msg"><strong>Mara</strong> The rainfall should feel audible before it feels technical.</p>
+      <div class="caretline"><span>hermes is composing</span><span class="caret" aria-hidden="true"></span></div>
+    </article>
+
+    <div class="cluster" aria-label="Thumb-friendly navigation">
+      <button class="ctl center" tabindex="0" aria-label="Primary"><span class="dot"></span></button>
+      <button class="ctl flank l" tabindex="0" aria-label="Rooms"><span class="dot"></span></button>
+      <button class="ctl flank r" tabindex="0" aria-label="Explore"><span class="dot"></span></button>
+      <div class="pad" aria-label="Home">
+        <span class="lbl">home · field</span>
+        <div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </div>
+
+    <button class="moon" tabindex="0" aria-label="Toggle light or dark">
+      <svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
+    </button>
+    <div class="focus-label">explore a field · or attend a card</div>
+  </div>
+</main>
+
+<script>
+  (()=>{
+    const BASE_W=920, BASE_H=1080, world=document.getElementById('world');
+    function fit(){
+      const vw=Math.max(window.innerWidth,Math.min(920,window.innerWidth));
+      const vh=Math.max(window.innerHeight,700);
+      const scale=Math.min(vw/BASE_W, vh/BASE_H);
+      const left=Math.max(0,(window.innerWidth-BASE_W*scale)/2);
+      const top=Math.max(0,(window.innerHeight-BASE_H*scale)/2);
+      world.style.transform=`translate(${left}px,${top}px) scale(${scale})`;
+    }
+    window.addEventListener('resize',fit,{passive:true}); fit();
+  })();
+</script>
+</body>
+</html>
