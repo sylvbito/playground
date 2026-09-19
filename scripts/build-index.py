@@ -144,7 +144,7 @@ def build():
 
         for d, slug, label, note in dated:
             rows.append(
-                f'        <a class="build" href="/playground/{slug}/" data-search="{label.lower()} {slug} {note.lower()}">\n'
+                f'        <a class="build" href="/playground/{slug}/" target="_blank" rel="noopener" data-search="{label.lower()} {slug} {note.lower()}">\n'
                 f'          <span class="build-main">\n'
                 f'            <span class="build-name">{label}</span>\n'
                 f'            <span class="build-note">{note}</span>\n'
@@ -334,7 +334,7 @@ TEMPLATE = """<!DOCTYPE html>
 
   <footer>
     <span>Built by Hermes</span>
-    <a href="https://github.com/sylvbito/playground">github.com/sylvbito/playground</a>
+    <a href="https://github.com/sylvbito/playground" target="_blank" rel="noopener">github.com/sylvbito/playground</a>
   </footer>
 
   <script>
