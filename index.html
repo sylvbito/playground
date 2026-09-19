@@ -4,149 +4,533 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Playground — sylvbito</title>
+  <meta name="description" content="Nightly builds — practical web tooling, component patterns, and interactive design experiments.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0a0a0f;
+      --panel: #13131d;
+      --panel-hover: #1a1a28;
+      --line: #1e1e2e;
+      --line-hover: #34344e;
+      --text: #e4e4ed;
+      --muted: #8b8b9e;
+      --dim: #5c5c70;
+      --accent: #7c7cff;
+    }
     body {
       font-family: 'Inter', -apple-system, sans-serif;
-      background: #0a0a0f;
-      color: #e4e4ed;
-      padding: 3rem 1.5rem;
-      max-width: 720px;
+      background: var(--bg);
+      color: var(--text);
+      padding: 3rem 1.5rem 4rem;
+      max-width: 960px;
       margin: 0 auto;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
     }
+    header.top { margin-bottom: 2rem; }
     h1 { font-size: 1.8rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 0.5rem; }
-    p { color: #888; font-size: 0.95rem; line-height: 1.6; margin-bottom: 2.5rem; }
-    .builds { display: flex; flex-direction: column; gap: 0.75rem; flex: 1; }
-    .build {
-      background: #14141f;
-      border: 1px solid #1e1e2e;
+    .lede { color: var(--muted); font-size: 0.95rem; line-height: 1.6; max-width: 62ch; }
+    .lede strong { color: var(--text); font-weight: 500; }
+    .filter-wrap { position: relative; margin: 2rem 0 2.5rem; }
+    #filter {
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid var(--line);
       border-radius: 10px;
-      padding: 1rem 1.25rem;
+      color: var(--text);
+      font: inherit;
+      font-size: 0.95rem;
+      padding: 0.85rem 3.5rem 0.85rem 2.6rem;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235c5c70' stroke-width='1.6' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='4.5'/%3E%3Cpath d='M10.5 10.5L14 14'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: 1rem center;
+      background-size: 15px 15px;
+    }
+    #filter:focus { border-color: var(--accent); background-color: #16161f; }
+    #filter::placeholder { color: var(--dim); }
+    kbd {
+      position: absolute;
+      right: 0.9rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font: inherit;
+      font-size: 0.72rem;
+      color: var(--dim);
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 0.15rem 0.4rem;
+      pointer-events: none;
+    }
+    #filter:focus ~ kbd { opacity: 0; }
+    .group { margin-bottom: 2.75rem; }
+    .group[hidden] { display: none; }
+    .group-head {
+      display: flex;
+      align-items: baseline;
+      gap: 0.85rem;
+      flex-wrap: wrap;
+      padding-bottom: 0.7rem;
+      margin-bottom: 0.9rem;
+      border-bottom: 1px solid var(--line);
+    }
+    h2 {
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .group-blurb { font-size: 0.85rem; color: var(--dim); }
+    .builds { display: flex; flex-direction: column; gap: 0.5rem; }
+    .build {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.85rem 1.15rem;
       text-decoration: none;
-      color: #e4e4ed;
-      transition: all 0.2s;
+      color: var(--text);
+      transition: border-color 0.2s, background 0.2s, transform 0.2s;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 1.5rem;
     }
-    .build:hover { border-color: #3e3e5e; background: #1a1a2a; }
-    .build-name { font-weight: 500; font-size: 1rem; }
-    .build-date { font-size: 0.8rem; color: #666; }
-    .empty {
+    .build[hidden] { display: none; }
+    .build:hover { border-color: var(--line-hover); background: var(--panel-hover); }
+    .build-main { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+    .build-name { font-weight: 500; font-size: 0.98rem; }
+    .build-note { font-size: 0.82rem; color: var(--dim); }
+    .build-date {
+      font-size: 0.75rem;
+      color: var(--dim);
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+      padding-top: 0.15rem;
+    }
+    .no-results {
       text-align: center;
-      padding: 4rem 0;
-      color: #555;
+      padding: 3rem 0;
+      color: var(--dim);
       font-size: 0.9rem;
     }
-    footer { margin-top: 2rem; font-size: 0.8rem; color: #444; text-align: center; }
+    .no-results[hidden] { display: none; }
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--line);
+      font-size: 0.8rem;
+      color: var(--dim);
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+    @media (max-width: 560px) {
+      body { padding: 2rem 1.1rem 3rem; }
+      .build { align-items: flex-start; }
+      .build-date { display: none; }
+    }
   </style>
 </head>
 <body>
-  <h1>Playground</h1>
-  <p>Nightly builds — practical web tooling, component patterns, and interactive design experiments.</p>
-  <div class="builds">
-    <a class="build" href="/playground/orbit-spatial-lab/">
-      <span class="build-name">Orbit Spatial HTML Lab</span>
-      <span class="build-date">2026-07-23</span>
-    </a>
-    <a class="build" href="/playground/color-contrast-lab/">
-      <span class="build-name">Color Contrast Lab</span>
-      <span class="build-date">2026-07-12</span>
-    </a>
-    <a class="build" href="/playground/view-transition-lab/">
-      <span class="build-name">View Transition Lab</span>
-      <span class="build-date">2026-06-29</span>
-    </a>
-    <a class="build" href="/playground/form-foundry/">
-      <span class="build-name">Form Foundry</span>
-      <span class="build-date">2026-06-28</span>
-    </a>
-    <a class="build" href="/playground/modern-css-starter/">
-      <span class="build-name">Modern CSS Starter</span>
-      <span class="build-date">2026-06-27</span>
-    </a>
-    <a class="build" href="/playground/theme-engine/">
-      <span class="build-name">Theme Engine</span>
-      <span class="build-date">2026-06-26</span>
-    </a>
-    <a class="build" href="/playground/relative/">
-      <span class="build-name">Relative</span>
-      <span class="build-date">2026-06-25</span>
-    </a>
-    <a class="build" href="/playground/concept-forge/">
-      <span class="build-name">Concept Forge</span>
-      <span class="build-date">2026-06-24</span>
-    </a>
-    <a class="build" href="/playground/text-box-trim/">
-      <span class="build-name">Text Box Trim</span>
-      <span class="build-date">2026-06-24</span>
-    </a>
-    <a class="build" href="/playground/transition-kit/">
-      <span class="build-name">Transition Kit</span>
-      <span class="build-date">2026-06-23</span>
-    </a>
-    <a class="build" href="/playground/token-lab/">
-      <span class="build-name">Token Lab</span>
-      <span class="build-date">2026-06-22</span>
-    </a>
-    <a class="build" href="/playground/css-native-ui/">
-      <span class="build-name">CSS Native UI</span>
-      <span class="build-date">2026-06-21</span>
-    </a>
-    <a class="build" href="/playground/anchor-positioning-playground/">
-      <span class="build-name">CSS Anchor Positioning Playground</span>
-      <span class="build-date">2026-06-20</span>
-    </a>
-    <a class="build" href="/playground/spectral-veil/">
-      <span class="build-name">Spectral Veil</span>
-      <span class="build-date">2026-06-19</span>
-    </a>
-    <a class="build" href="/playground/warp-mesh/">
-      <span class="build-name">Warp Mesh</span>
-      <span class="build-date">2026-06-19</span>
-    </a>
-    <a class="build" href="/playground/anchor-glass/">
-      <span class="build-name">Anchor Glass</span>
-      <span class="build-date">2026-06-17</span>
-    </a>
-    <a class="build" href="/playground/boiling-geometry/">
-      <span class="build-name">Boiling Geometry</span>
-      <span class="build-date">2026-06-16</span>
-    </a>
-    <a class="build" href="/playground/depth-strata/">
-      <span class="build-name">Depth Strata</span>
-      <span class="build-date">2026-06-15</span>
-    </a>
-    <a class="build" href="/playground/chromatic-drift/">
-      <span class="build-name">Chromatic Drift</span>
-      <span class="build-date">2026-06-13</span>
-    </a>
-    <a class="build" href="/playground/auroral-lenses/">
-      <span class="build-name">Auroral Lenses</span>
-      <span class="build-date">2026-06-13</span>
-    </a>
-    <a class="build" href="/playground/stratum/">
-      <span class="build-name">Stratum</span>
-      <span class="build-date">2026-06-10</span>
-    </a>
-    <a class="build" href="/playground/cascade-glass/">
-      <span class="build-name">Cascade</span>
-      <span class="build-date">2026-06-14</span>
-    </a>
-    <a class="build" href="/playground/aave-glass-demo/">
-      <span class="build-name">Aave Glass Demo</span>
-      <span class="build-date">2026-06-14</span>
-    </a>
-    <a class="build" href="/playground/organic-tether/">
-      <span class="build-name">Organic Tether</span>
-      <span class="build-date">2026-06-18</span>
-    </a>
+  <header class="top">
+    <h1>Playground</h1>
+    <p class="lede"><strong>44 builds.</strong> Practical web tooling, component patterns, and interactive design experiments — built nightly-ish by Hermes.</p>
+  </header>
+
+  <div class="filter-wrap">
+    <input id="filter" type="search" placeholder="Filter builds…" autocomplete="off" aria-label="Filter builds">
+    <kbd>/</kbd>
   </div>
-  <footer>Built nightly by Hermes</footer>
+
+  <main>
+          <section class="group" data-count="10">
+        <header class="group-head">
+          <h2>Card studies</h2>
+          <span class="group-blurb">One idea per card — centred square format, no chrome.</span>
+        </header>
+        <div class="builds">
+        <a class="build" href="/playground/scroll-clip-card/" data-search="scroll clip card scroll-clip-card scroll-driven clip reveal">
+          <span class="build-main">
+            <span class="build-name">Scroll Clip Card</span>
+            <span class="build-note">scroll-driven clip reveal</span>
+          </span>
+          <span class="build-date">2026-07-31</span>
+        </a>
+        <a class="build" href="/playground/css-interaction-primitives-card/" data-search="css interaction primitives card css-interaction-primitives-card :has(), popover, dialog, focus-within">
+          <span class="build-main">
+            <span class="build-name">CSS Interaction Primitives Card</span>
+            <span class="build-note">:has(), popover, dialog, focus-within</span>
+          </span>
+          <span class="build-date">2026-07-30</span>
+        </a>
+        <a class="build" href="/playground/css-state-visibility-primitives-card/" data-search="css state primitives card css-state-visibility-primitives-card state and visibility primitives">
+          <span class="build-main">
+            <span class="build-name">CSS State Primitives Card</span>
+            <span class="build-note">state and visibility primitives</span>
+          </span>
+          <span class="build-date">2026-07-29</span>
+        </a>
+        <a class="build" href="/playground/css-progressive-primitives-card/" data-search="css progressive primitives card css-progressive-primitives-card progressive enhancement primitives">
+          <span class="build-main">
+            <span class="build-name">CSS Progressive Primitives Card</span>
+            <span class="build-note">progressive enhancement primitives</span>
+          </span>
+          <span class="build-date">2026-07-29</span>
+        </a>
+        <a class="build" href="/playground/css-new-primitives-card/" data-search="css new primitives card css-new-primitives-card newly shipped css primitives">
+          <span class="build-main">
+            <span class="build-name">CSS New Primitives Card</span>
+            <span class="build-note">newly shipped CSS primitives</span>
+          </span>
+          <span class="build-date">2026-07-29</span>
+        </a>
+        <a class="build" href="/playground/css-layout-primitives-card/" data-search="css layout primitives card css-layout-primitives-card grid, subgrid, container queries">
+          <span class="build-main">
+            <span class="build-name">CSS Layout Primitives Card</span>
+            <span class="build-note">grid, subgrid, container queries</span>
+          </span>
+          <span class="build-date">2026-07-29</span>
+        </a>
+        <a class="build" href="/playground/css-geometry-card/" data-search="css geometry card css-geometry-card shapes, aspect-ratio, clip-path geometry">
+          <span class="build-main">
+            <span class="build-name">CSS Geometry Card</span>
+            <span class="build-note">shapes, aspect-ratio, clip-path geometry</span>
+          </span>
+          <span class="build-date">2026-07-29</span>
+        </a>
+        <a class="build" href="/playground/css-component-primitives-card/" data-search="css component primitives card css-component-primitives-card modern css component primitives">
+          <span class="build-main">
+            <span class="build-name">CSS Component Primitives Card</span>
+            <span class="build-note">modern CSS component primitives</span>
+          </span>
+          <span class="build-date">2026-07-29</span>
+        </a>
+        <a class="build" href="/playground/contrast-axis-card/" data-search="contrast axis card contrast-axis-card contrast as a single adjustable axis">
+          <span class="build-main">
+            <span class="build-name">Contrast Axis Card</span>
+            <span class="build-note">contrast as a single adjustable axis</span>
+          </span>
+          <span class="build-date">2026-07-28</span>
+        </a>
+        <a class="build" href="/playground/colour-system-card/" data-search="colour system card colour-system-card one colour, a full system">
+          <span class="build-main">
+            <span class="build-name">Colour System Card</span>
+            <span class="build-note">one colour, a full system</span>
+          </span>
+          <span class="build-date">2026-07-16</span>
+        </a>
+        </div>
+      </section>
+      <section class="group" data-count="13">
+        <header class="group-head">
+          <h2>Labs & tools</h2>
+          <span class="group-blurb">Interactive CSS tooling — generators, debuggers, reference labs.</span>
+        </header>
+        <div class="builds">
+        <a class="build" href="/playground/color-contrast-lab/" data-search="colour contrast lab color-contrast-lab relative colours × contrast-color()">
+          <span class="build-main">
+            <span class="build-name">Colour Contrast Lab</span>
+            <span class="build-note">relative colours × contrast-color()</span>
+          </span>
+          <span class="build-date">2026-07-12</span>
+        </a>
+        <a class="build" href="/playground/view-transition-repro/" data-search="view transition repro view-transition-repro minimal cross-document repro">
+          <span class="build-main">
+            <span class="build-name">View Transition Repro</span>
+            <span class="build-note">minimal cross-document repro</span>
+          </span>
+          <span class="build-date">2026-07-03</span>
+        </a>
+        <a class="build" href="/playground/view-transition-lab/" data-search="view transition lab view-transition-lab cross-document mpa view transitions">
+          <span class="build-main">
+            <span class="build-name">View Transition Lab</span>
+            <span class="build-note">cross-document MPA view transitions</span>
+          </span>
+          <span class="build-date">2026-06-29</span>
+        </a>
+        <a class="build" href="/playground/form-foundry/" data-search="form foundry form-foundry modern css form components">
+          <span class="build-main">
+            <span class="build-name">Form Foundry</span>
+            <span class="build-note">modern CSS form components</span>
+          </span>
+          <span class="build-date">2026-06-28</span>
+        </a>
+        <a class="build" href="/playground/modern-css-starter/" data-search="modern css starter modern-css-starter build-your-own reset configurator">
+          <span class="build-main">
+            <span class="build-name">Modern CSS Starter</span>
+            <span class="build-note">build-your-own reset configurator</span>
+          </span>
+          <span class="build-date">2026-06-27</span>
+        </a>
+        <a class="build" href="/playground/theme-engine/" data-search="theme engine theme-engine self-correcting wcag-safe theme generator">
+          <span class="build-main">
+            <span class="build-name">Theme Engine</span>
+            <span class="build-note">self-correcting WCAG-safe theme generator</span>
+          </span>
+          <span class="build-date">2026-06-26</span>
+        </a>
+        <a class="build" href="/playground/relative/" data-search="relative relative relative colour palette builder">
+          <span class="build-main">
+            <span class="build-name">Relative</span>
+            <span class="build-note">relative colour palette builder</span>
+          </span>
+          <span class="build-date">2026-06-25</span>
+        </a>
+        <a class="build" href="/playground/text-box-trim/" data-search="text-box-trim text-box-trim typography alignment debugger">
+          <span class="build-main">
+            <span class="build-name">text-box-trim</span>
+            <span class="build-note">typography alignment debugger</span>
+          </span>
+          <span class="build-date">2026-06-24</span>
+        </a>
+        <a class="build" href="/playground/concept-forge/" data-search="concept forge concept-forge brand extraction & concept comparison">
+          <span class="build-main">
+            <span class="build-name">Concept Forge</span>
+            <span class="build-note">brand extraction & concept comparison</span>
+          </span>
+          <span class="build-date">2026-06-24</span>
+        </a>
+        <a class="build" href="/playground/transition-kit/" data-search="transition kit transition-kit spa-like page transitions for mpas">
+          <span class="build-main">
+            <span class="build-name">Transition Kit</span>
+            <span class="build-note">SPA-like page transitions for MPAs</span>
+          </span>
+          <span class="build-date">2026-06-23</span>
+        </a>
+        <a class="build" href="/playground/token-lab/" data-search="token lab token-lab design token playground">
+          <span class="build-main">
+            <span class="build-name">Token Lab</span>
+            <span class="build-note">design token playground</span>
+          </span>
+          <span class="build-date">2026-06-22</span>
+        </a>
+        <a class="build" href="/playground/css-native-ui/" data-search="css native ui css-native-ui js-free component patterns">
+          <span class="build-main">
+            <span class="build-name">CSS Native UI</span>
+            <span class="build-note">JS-free component patterns</span>
+          </span>
+          <span class="build-date">2026-06-21</span>
+        </a>
+        <a class="build" href="/playground/anchor-positioning-playground/" data-search="css anchor positioning playground anchor-positioning-playground anchored popovers, live-editable">
+          <span class="build-main">
+            <span class="build-name">CSS Anchor Positioning Playground</span>
+            <span class="build-note">anchored popovers, live-editable</span>
+          </span>
+          <span class="build-date">2026-06-20</span>
+        </a>
+        </div>
+      </section>
+      <section class="group" data-count="10">
+        <header class="group-head">
+          <h2>Orbit</h2>
+          <span class="group-blurb">Spatial workspace exploration — concept mock through to implementation.</span>
+        </header>
+        <div class="builds">
+        <a class="build" href="/playground/orbit-nav/" data-search="orbit navigation study orbit-nav thumb-first radial navigation">
+          <span class="build-main">
+            <span class="build-name">Orbit Navigation Study</span>
+            <span class="build-note">thumb-first radial navigation</span>
+          </span>
+          <span class="build-date">2026-08-25</span>
+        </a>
+        <a class="build" href="/playground/orbit-living-fragment/" data-search="orbit living fragment orbit-living-fragment a living workspace, fragment">
+          <span class="build-main">
+            <span class="build-name">Orbit Living Fragment</span>
+            <span class="build-note">a living workspace, fragment</span>
+          </span>
+          <span class="build-date">2026-08-25</span>
+        </a>
+        <a class="build" href="/playground/orbit-light-field/" data-search="orbit light field orbit-light-field light, thumb-first field">
+          <span class="build-main">
+            <span class="build-name">Orbit Light Field</span>
+            <span class="build-note">light, thumb-first field</span>
+          </span>
+          <span class="build-date">2026-08-25</span>
+        </a>
+        <a class="build" href="/playground/orbit-spatial-canvas/" data-search="orbit spatial canvas orbit-spatial-canvas spatial canvas concept">
+          <span class="build-main">
+            <span class="build-name">Orbit Spatial Canvas</span>
+            <span class="build-note">spatial canvas concept</span>
+          </span>
+          <span class="build-date">2026-08-03</span>
+        </a>
+        <a class="build" href="/playground/astryx-orbit-lab/" data-search="astryx orbit lab astryx-orbit-lab orbit internals on astryx components">
+          <span class="build-main">
+            <span class="build-name">Astryx Orbit Lab</span>
+            <span class="build-note">Orbit internals on Astryx components</span>
+          </span>
+          <span class="build-date">2026-07-25</span>
+        </a>
+        <a class="build" href="/playground/orbit-dom-workspace/" data-search="orbit dom workspace orbit-dom-workspace the live workspace ui">
+          <span class="build-main">
+            <span class="build-name">Orbit DOM Workspace</span>
+            <span class="build-note">the live workspace UI</span>
+          </span>
+          <span class="build-date">2026-07-24</span>
+        </a>
+        <a class="build" href="/playground/codex-theme-compiler/" data-search="codex theme compiler codex-theme-compiler two palettes, direct inputs">
+          <span class="build-main">
+            <span class="build-name">Codex Theme Compiler</span>
+            <span class="build-note">two palettes, direct inputs</span>
+          </span>
+          <span class="build-date">2026-07-24</span>
+        </a>
+        <a class="build" href="/playground/orbit-spatial-lab/" data-search="orbit spatial html lab orbit-spatial-lab spatial html study">
+          <span class="build-main">
+            <span class="build-name">Orbit Spatial HTML Lab</span>
+            <span class="build-note">spatial HTML study</span>
+          </span>
+          <span class="build-date">2026-07-23</span>
+        </a>
+        <a class="build" href="/playground/chrome-theme-compiler/" data-search="chrome theme compiler chrome-theme-compiler one palette, two browser-target mappings">
+          <span class="build-main">
+            <span class="build-name">Chrome Theme Compiler</span>
+            <span class="build-note">one palette, two browser-target mappings</span>
+          </span>
+          <span class="build-date">2026-07-23</span>
+        </a>
+        <a class="build" href="/playground/orbit-proof-of-practice/" data-search="workbench orbit-proof-of-practice interfaces with taste, systems with teeth">
+          <span class="build-main">
+            <span class="build-name">Workbench</span>
+            <span class="build-note">interfaces with taste, systems with teeth</span>
+          </span>
+          <span class="build-date">2026-07-15</span>
+        </a>
+        </div>
+      </section>
+      <section class="group" data-count="11">
+        <header class="group-head">
+          <h2>Visual studies</h2>
+          <span class="group-blurb">Motion, glass, and geometry — pure visual experiments.</span>
+        </header>
+        <div class="builds">
+        <a class="build" href="/playground/warp-mesh/" data-search="warp mesh warp-mesh warped mesh field">
+          <span class="build-main">
+            <span class="build-name">Warp Mesh</span>
+            <span class="build-note">warped mesh field</span>
+          </span>
+          <span class="build-date">2026-06-19</span>
+        </a>
+        <a class="build" href="/playground/spectral-veil/" data-search="spectral veil spectral-veil spectral veil composite">
+          <span class="build-main">
+            <span class="build-name">Spectral Veil</span>
+            <span class="build-note">spectral veil composite</span>
+          </span>
+          <span class="build-date">2026-06-19</span>
+        </a>
+        <a class="build" href="/playground/organic-tether/" data-search="organic tether organic-tether organic connector study">
+          <span class="build-main">
+            <span class="build-name">Organic Tether</span>
+            <span class="build-note">organic connector study</span>
+          </span>
+          <span class="build-date">2026-06-18</span>
+        </a>
+        <a class="build" href="/playground/anchor-glass/" data-search="anchor glass anchor-glass anchor positioning × liquid glass">
+          <span class="build-main">
+            <span class="build-name">Anchor Glass</span>
+            <span class="build-note">anchor positioning × liquid glass</span>
+          </span>
+          <span class="build-date">2026-06-17</span>
+        </a>
+        <a class="build" href="/playground/boiling-geometry/" data-search="boiling geometry boiling-geometry svg hand-drawn line boiling">
+          <span class="build-main">
+            <span class="build-name">Boiling Geometry</span>
+            <span class="build-note">SVG hand-drawn line boiling</span>
+          </span>
+          <span class="build-date">2026-06-16</span>
+        </a>
+        <a class="build" href="/playground/depth-strata/" data-search="depth strata depth-strata cascade-layer glass depth">
+          <span class="build-main">
+            <span class="build-name">Depth Strata</span>
+            <span class="build-note">cascade-layer glass depth</span>
+          </span>
+          <span class="build-date">2026-06-15</span>
+        </a>
+        <a class="build" href="/playground/cascade-glass/" data-search="cascade glass cascade-glass cascade layers × glass">
+          <span class="build-main">
+            <span class="build-name">Cascade Glass</span>
+            <span class="build-note">cascade layers × glass</span>
+          </span>
+          <span class="build-date">2026-06-14</span>
+        </a>
+        <a class="build" href="/playground/aave-glass-demo/" data-search="aave liquid glass aave-glass-demo fedisplacementmap lens">
+          <span class="build-main">
+            <span class="build-name">Aave Liquid Glass</span>
+            <span class="build-note">feDisplacementMap lens</span>
+          </span>
+          <span class="build-date">2026-06-14</span>
+        </a>
+        <a class="build" href="/playground/stratum/" data-search="stratum stratum layered depth study">
+          <span class="build-main">
+            <span class="build-name">Stratum</span>
+            <span class="build-note">layered depth study</span>
+          </span>
+          <span class="build-date">2026-06-13</span>
+        </a>
+        <a class="build" href="/playground/chromatic-drift/" data-search="chromatic drift chromatic-drift chromatic drift motion study">
+          <span class="build-main">
+            <span class="build-name">Chromatic Drift</span>
+            <span class="build-note">chromatic drift motion study</span>
+          </span>
+          <span class="build-date">2026-06-13</span>
+        </a>
+        <a class="build" href="/playground/auroral-lenses/" data-search="auroral lenses auroral-lenses layered aurora gradient fields">
+          <span class="build-main">
+            <span class="build-name">Auroral Lenses</span>
+            <span class="build-note">layered aurora gradient fields</span>
+          </span>
+          <span class="build-date">2026-06-13</span>
+        </a>
+        </div>
+      </section>
+    <p class="no-results" hidden>Nothing matches that.</p>
+  </main>
+
+  <footer>
+    <span>Built by Hermes</span>
+    <a href="https://github.com/sylvbito/playground">github.com/sylvbito/playground</a>
+  </footer>
+
+  <script>
+    const input = document.getElementById('filter');
+    const groups = [...document.querySelectorAll('.group')];
+    const builds = [...document.querySelectorAll('.build')];
+    const empty = document.querySelector('.no-results');
+
+    function apply() {
+      const q = input.value.trim().toLowerCase();
+      let hits = 0;
+      for (const b of builds) {
+        const match = !q || b.dataset.search.includes(q);
+        b.hidden = !match;
+        if (match) hits++;
+      }
+      for (const g of groups) {
+        g.hidden = !g.querySelector('.build:not([hidden])');
+      }
+      empty.hidden = hits > 0;
+    }
+
+    input.addEventListener('input', apply);
+    addEventListener('keydown', e => {
+      if (e.key === '/' && document.activeElement !== input) {
+        e.preventDefault();
+        input.focus();
+      } else if (e.key === 'Escape' && document.activeElement === input) {
+        input.value = '';
+        apply();
+        input.blur();
+      }
+    });
+  </script>
 </body>
 </html>
