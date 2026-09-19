@@ -124,8 +124,6 @@
     }
 
     .style-card {
-      container-type: inline-size;
-      container-name: variant-card;
       width: 238px;
       padding: 20px 18px;
       display: grid;
@@ -134,6 +132,15 @@
       border-radius: 18px;
       background: #292927;
       transition: background 200ms ease, box-shadow 200ms ease;
+    }
+
+    /* The container has to be an ancestor of the elements it styles — a
+       container query never matches the container itself. So the wrapper
+       carries container-type, and the card is its descendant. */
+    .style-wrap {
+      width: 238px;
+      container-type: inline-size;
+      container-name: variant-card;
     }
 
     .style-card h3 {
@@ -215,6 +222,9 @@
     .spy-nav {
       display: flex;
       gap: 4px;
+      /* The scroll marker group container is the element holding the <a>s,
+         not the links themselves. Each fragment link inside becomes a marker. */
+      scroll-target-group: auto;
     }
 
     .spy-nav a {
@@ -228,7 +238,6 @@
       font-weight: 600;
       text-align: center;
       text-decoration: none;
-      scroll-target-group: auto;
       transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
     }
 
@@ -258,35 +267,59 @@
     .spy-section:nth-child(2) { background: #292927; color: var(--ink); }
     .spy-section:nth-child(3) { background: #25252a; color: #8ab4f8; }
 
-    .polyfill-spy .spy-nav a { scroll-target-group: none; }
+    .polyfill-spy .spy-nav { scroll-target-group: none; }
     .polyfill-spy .spy-nav a.active {
       color: var(--accent-ink);
       background: var(--accent);
       border-color: var(--accent);
     }
 
-    .spy-auto-btn {
-      margin-top: 6px;
-      padding: 6px 10px;
-      border: 1px solid rgb(255 255 255 / 12%);
+    .scene-btn {
+      padding: 6px 11px;
+      border: 1px solid rgb(255 255 255 / 14%);
       border-radius: 7px;
-      color: var(--muted);
+      color: var(--ink);
       background: #292927;
-      font-size: 9px;
+      font-size: 9.5px;
+      font-weight: 600;
       cursor: pointer;
+      transition: border-color 160ms ease, color 160ms ease;
+    }
+
+    .scene-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+
+    .scene-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .scene-btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
     }
 
     /* ── 03 · column-wrap ── */
     .wrap-scene {
       display: grid;
       place-items: center;
+      align-content: center;
+      gap: 12px;
     }
 
     .wrap-container {
       width: 268px;
-      columns: 2;
+      height: 84px;
+      column-width: 118px;
       column-gap: 10px;
-      column-wrap: auto;
+      /* Pre-145 behaviour: columns that don't fit run off the inline edge. */
+      column-wrap: nowrap;
+      transition: height 240ms ease;
+    }
+
+    /* What column-wrap: wrap unlocks — the overflow columns start a new row. */
+    .wrap-container.is-wrapped {
+      height: 136px;
+      column-wrap: wrap;
     }
 
     .wrap-chip {
@@ -301,11 +334,16 @@
       font-weight: 580;
     }
 
-    .polyfill-wrap .wrap-container { column-wrap: initial; }
+    .polyfill-wrap .wrap-container { column-wrap: nowrap; }
+    .polyfill-wrap .wrap-container.is-wrapped { height: 84px; column-wrap: nowrap; }
 
     /* ── 04 · position-visibility ── */
+    /* No position:relative here — that would override .scene-group's
+       position:absolute and let the scene grow to its content height, which
+       gives the inner track nothing to scroll. An absolutely positioned
+       .scene-group already anchors the tooltip. */
     .visibility-scene {
-      position: relative;
+      display: block;
     }
 
     .vis-scroll {
@@ -332,17 +370,22 @@
       font-weight: 600;
     }
 
-    .vis-spacer-bottom { height: 160px; }
+    .vis-spacer-bottom { height: 320px; }
 
     .vis-tooltip {
       position: absolute;
+      /* Fallback position, used when the browser has no anchor positioning. */
       left: 50%;
       top: 0;
       translate: -50% 0;
       width: 164px;
       padding: 10px 14px;
       position-anchor: --vis-target;
-      position-area: top;
+      /* 'top' alone resolves to 'top span-all' and defaults to the start of that
+         region, which parks the tooltip at the top of the containing block.
+         Naming the column and aligning to its end makes it hug the anchor. */
+      position-area: top center;
+      align-self: end;
       position-visibility: anchors-visible;
       margin-bottom: 10px;
       border-radius: 12px;
@@ -368,7 +411,7 @@
     .polyfill-vis .vis-tooltip {
       position-anchor: auto;
       position-area: none;
-      position-visibility: visible;
+      position-visibility: always;   /* 'visible' is not a valid keyword here */
     }
 
     .polyfill-vis .vis-tooltip.hidden { opacity: 0; pointer-events: none; }
@@ -399,14 +442,14 @@
 
     .mode-switcher {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 3px;
       padding: 3px;
       border-radius: 11px;
       background: #e8e8e4;
     }
 
-    .mode-button, .action-button {
+    .mode-button {
       min-height: 32px;
       border: 0;
       border-radius: 8px;
@@ -423,25 +466,64 @@
       box-shadow: 0 1px 4px rgb(22 22 20 / 10%);
     }
 
-    .mode-button:focus-visible,
-    .action-button:focus-visible {
+    .mode-button:focus-visible {
       outline: 2px solid #6d941f;
       outline-offset: 2px;
     }
 
-    .control-grid {
+    /* ── per-mode explainer ── */
+    .explainer {
       display: grid;
-      padding: 2px 4px 3px;
+      gap: 7px;
+      padding: 2px 6px 4px;
     }
 
-    .action-button {
-      min-height: 34px;
-      border: 1px solid #d8d8d4;
-      color: #292927;
-      background: #f1f1ee;
+    .explainer-title {
+      margin: 0;
+      color: #191918;
+      font: 650 11px/1.3 ui-monospace, "SFMono-Regular", Menlo, monospace;
+      letter-spacing: 0.005em;
     }
 
-    .action-button[hidden], .variant-chooser[hidden] { display: none; }
+    .explainer-what {
+      margin: 0;
+      color: #63635d;
+      font-size: 11.5px;
+      line-height: 1.5;
+    }
+
+    .explainer-what code {
+      padding: 1px 4px;
+      border-radius: 4px;
+      background: #e8e8e4;
+      color: #3f3f3a;
+      font: 600 10.5px ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+
+    .explainer-try {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 7px;
+      margin: 0;
+      color: #4a4a45;
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+
+    .explainer-try::before {
+      content: '▸';
+      color: #6d941f;
+      font-size: 10px;
+      line-height: 1.6;
+    }
+
+    .explainer-support {
+      margin: 0;
+      padding-top: 6px;
+      border-top: 1px solid #e4e4df;
+      color: #8a8a83;
+      font: 500 9.5px/1.45 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
 
     @media (max-width: 430px) {
       body { padding: 18px; }
@@ -472,14 +554,16 @@
 
       <div class="scene">
         <div class="scene-group style-scene" aria-hidden="false">
-          <div class="style-card" id="styleCard" style="--variant: default">
-            <h3>Component card</h3>
-            <p>Style changes are driven by --variant property, not class names. The container query reads the computed value.</p>
-            <button class="cta" type="button">Call to action</button>
-            <div class="variant-chooser" id="variantChooser">
-              <button class="variant-btn active" data-variant="default">Default</button>
-              <button class="variant-btn" data-variant="primary">Primary</button>
-              <button class="variant-btn" data-variant="featured">Featured</button>
+          <div class="style-wrap" id="styleWrap" style="--variant: default">
+            <div class="style-card" id="styleCard">
+              <h3>Component card</h3>
+              <p>Style changes are driven by --variant property, not class names. The container query reads the computed value.</p>
+              <button class="cta" type="button">Call to action</button>
+              <div class="variant-chooser" id="variantChooser">
+                <button class="variant-btn active" data-variant="default">Default</button>
+                <button class="variant-btn" data-variant="primary">Primary</button>
+                <button class="variant-btn" data-variant="featured">Featured</button>
+              </div>
             </div>
           </div>
         </div>
@@ -495,7 +579,7 @@
             <div class="spy-section" id="s2">B</div>
             <div class="spy-section" id="s3">C</div>
           </div>
-          <button class="spy-auto-btn" id="spyAutoBtn">Auto-scroll to B</button>
+          <button class="scene-btn" id="spyAutoBtn">Auto-scroll to B</button>
         </div>
 
         <div class="scene-group wrap-scene" aria-hidden="true">
@@ -505,8 +589,9 @@
             <div class="wrap-chip">Layout: auto grid</div>
             <div class="wrap-chip">Type: Inter 400</div>
             <div class="wrap-chip">Motion: ease-out</div>
+            <div class="wrap-chip">Colour: oklch()</div>
           </div>
-          <button class="spy-auto-btn" id="wrapBtn" style="margin-top:8px">Toggle column-wrap</button>
+          <button class="scene-btn" id="wrapBtn">Enable column-wrap</button>
         </div>
 
         <div class="scene-group visibility-scene" aria-hidden="true">
@@ -531,12 +616,17 @@
 
     <section class="controls" aria-label="Primitive controls">
       <div class="mode-switcher" aria-label="Demo mode">
-        <button class="mode-button" type="button" data-mode-button="style" aria-pressed="true">Style</button>
-        <button class="mode-button" type="button" data-mode-button="spy" aria-pressed="false">Spy</button>
-        <button class="mode-button" type="button" data-mode-button="wrap" aria-pressed="false">Wrap</button>
-        <button class="mode-button" type="button" data-mode-button="visibility" aria-pressed="false">Vis</button>
+        <button class="mode-button" type="button" data-mode-button="style" aria-pressed="true">01 · style()</button>
+        <button class="mode-button" type="button" data-mode-button="spy" aria-pressed="false">02 · :target-current</button>
+        <button class="mode-button" type="button" data-mode-button="wrap" aria-pressed="false">03 · column-wrap</button>
+        <button class="mode-button" type="button" data-mode-button="visibility" aria-pressed="false">04 · position-visibility</button>
       </div>
-      <div class="control-grid" id="controlGrid"></div>
+      <div class="explainer" aria-live="polite">
+        <h2 class="explainer-title" id="explainerTitle"></h2>
+        <p class="explainer-what" id="explainerWhat"></p>
+        <p class="explainer-try" id="explainerTry"></p>
+        <p class="explainer-support" id="explainerSupport"></p>
+      </div>
     </section>
   </main>
 
@@ -547,12 +637,15 @@
     const hint = document.querySelector('#hint');
     const readout = document.querySelector('#readout');
     const sourceBadge = document.querySelector('#sourceBadge');
-    const controlGrid = document.querySelector('#controlGrid');
+    const explainerTitle = document.querySelector('#explainerTitle');
+    const explainerWhat = document.querySelector('#explainerWhat');
+    const explainerTry = document.querySelector('#explainerTry');
+    const explainerSupport = document.querySelector('#explainerSupport');
     const modeButtons = [...document.querySelectorAll('[data-mode-button]')];
     const scenes = [...document.querySelectorAll('.scene-group')];
 
+    const styleWrap = document.querySelector('#styleWrap');
     const styleCard = document.querySelector('#styleCard');
-    const variantChooser = document.querySelector('#variantChooser');
     const variantBtns = [...document.querySelectorAll('.variant-btn')];
     const spyNav = document.querySelector('#spyNav');
     const spyTrack = document.querySelector('#spyTrack');
@@ -565,22 +658,87 @@
     const visScrollBtn = document.querySelector('#visScrollBtn');
 
     const forceFallback = new URLSearchParams(location.search).has('force-fallback');
-    const support = {
-      style: !forceFallback && CSS.supports('container-type', 'inline-size'),
-      spy: !forceFallback && CSS.supports('selector(:target-current)'),
-      wrap: !forceFallback && CSS.supports('column-wrap', 'auto'),
-      vis: !forceFallback && CSS.supports('position-visibility', 'anchors-visible')
+    const parsedSupports = {
+      style: CSS.supports('container-type', 'inline-size'),
+      spy: CSS.supports('selector(:target-current)'),
+      wrap: CSS.supports('column-wrap', 'auto'),
+      vis: CSS.supports('position-visibility', 'anchors-visible')
     };
+    const support = forceFallback
+      ? { style: false, spy: false, wrap: false, vis: false }
+      : { ...parsedSupports };
+
+    // An engine can parse position-visibility and still do nothing with it, in
+    // which case CSS.supports() reports support that doesn't exist. Probe the
+    // actual behaviour once, with this scene on screen, and trust that instead.
+    let visEnacted = null;
+
+    function probeVisEnacted() {
+      if (visEnacted !== null) return visEnacted;
+      const restoreTop = visScroll.scrollTop;
+      const restoreBehaviour = visScroll.style.scrollBehavior;
+      visScroll.style.scrollBehavior = 'auto';
+      visScroll.scrollTop = visScroll.scrollHeight;        // push the anchor out of the scrollport
+      visEnacted = getComputedStyle(visTooltip).visibility === 'hidden';
+      visScroll.scrollTop = restoreTop;
+      visScroll.style.scrollBehavior = restoreBehaviour;
+      return visEnacted;
+    }
 
     root.classList.toggle('polyfill-style', !support.style);
     root.classList.toggle('polyfill-spy', !support.spy);
     root.classList.toggle('polyfill-wrap', !support.wrap);
     root.classList.toggle('polyfill-vis', !support.vis);
 
+    // Mode names and support-flag names don't match 1:1 — map them explicitly so
+    // the badge can't report the wrong thing.
+    const SUPPORT_KEY = { style: 'style', spy: 'spy', wrap: 'wrap', visibility: 'vis' };
+
     const state = {
       mode: 'style',
       variant: 'default',
-      wrapEnabled: true
+      wrapEnabled: false
+    };
+
+    // Everything each mode needs to explain itself: the stage kicker and hint,
+    // the code readout, and the three-part explainer under the switcher.
+    const MODES = {
+      style: {
+        kicker: '01 · style() queries',
+        hint: 'Variants as data, not class names',
+        readout: '@container style(--variant: primary) { … }',
+        title: '@container style(--variant: primary)',
+        what: 'A container query that tests a custom property\u2019s <em>value</em> rather than the container\u2019s size. The card declares itself a container, then reads its own <code>--variant</code> to decide how it looks. Variants become data you set once on a parent, instead of classes you add to every child.',
+        try: 'Pick Primary or Featured. The background, shadow and heading size change — while the card\u2019s class list stays untouched.',
+        support: 'Chrome 111+ · Safari 18+. Engines without it get equivalent classes.'
+      },
+      spy: {
+        kicker: '02 · :target-current',
+        hint: 'Scroll the track and watch the nav',
+        readout: '.spy-nav { scroll-target-group: auto; }\na:target-current { … }',
+        title: ':target-current with scroll-target-group',
+        what: '<code>scroll-target-group: auto</code> on a container makes it a scroll marker group: every fragment link inside becomes a marker. The browser then tracks which marker\u2019s target is in view, and <code>a:target-current</code> matches it. That is a table of contents that highlights itself.',
+        try: 'Scroll the A/B/C track, or press Auto-scroll to B. The matching chip lights up on its own — no scroll listener, no JavaScript.',
+        support: 'Chrome 140+. Where it is missing an IntersectionObserver mirrors the result.'
+      },
+      wrap: {
+        kicker: '03 · column-wrap',
+        hint: 'Toggle it and watch the last chip',
+        readout: 'column-width: 118px;\ncolumn-wrap: wrap;',
+        title: 'column-wrap: wrap',
+        what: 'A multicol container with a fixed block size used to push whatever didn\u2019t fit into <em>overflow columns</em> that ran off the inline edge — off-screen and unreachable. <code>column-wrap: wrap</code> sends those columns onto a new row instead, so the content stays in view.',
+        try: 'Press Enable column-wrap. With nowrap the last chips spill past the right edge; with wrap they start a second row and the container grows to fit.',
+        support: 'Chrome 145+ (with column-height). Elsewhere the toggle is disabled.'
+      },
+      visibility: {
+        kicker: '04 · position-visibility',
+        hint: 'Scroll the anchor out of view',
+        readout: 'position-anchor: --vis-target;\nposition-visibility: anchors-visible;',
+        title: 'position-visibility: anchors-visible',
+        what: 'Anchor positioning places an element relative to an anchor but never ties their lifetimes together. <code>position-visibility: anchors-visible</code> is the declaration that should hide it the moment the anchor scrolls out of view, so a tooltip cannot outlive the thing it belongs to. The tracking here is anchor positioning doing its job — no JavaScript involved.',
+        try: 'Scroll the track. The tooltip stays pinned to the anchor as it moves. Whether it also disappears with the anchor depends on whether your browser enacts the property — the badge below reports what this one actually does.',
+        support: 'Chrome 125+. Beware: CSS.supports() answers for the parser, not the behaviour — this card probes what the browser really does.'
+      }
     };
 
     function setSceneA11y(m) {
@@ -588,51 +746,51 @@
       scenes.forEach(s => s.setAttribute('aria-hidden', String(!s.matches(map[m]))));
     }
 
-    function setBadge() { sourceBadge.textContent = support[state.mode] ? 'Native' : 'Fallback'; }
-
-    function buildControls(mode) {
-      controlGrid.innerHTML = '';
-      const modeButtonsEl = modeButtons.map(b => b.cloneNode(true));
-      const container = document.createElement('div');
-      container.style.cssText = 'display:contents';
-
-      if (mode === 'style') {
-        const chooser = variantChooser.cloneNode(true);
-        container.appendChild(chooser);
-        const btns = [...container.querySelectorAll('.variant-btn')];
-        btns.forEach(b => b.addEventListener('click', () => {
-          const v = b.dataset.variant;
-          state.variant = v;
-          btns.forEach(x => x.classList.toggle('active', x.dataset.variant === v));
-          if (support.style) {
-            styleCard.style.setProperty('--variant', v);
-          } else {
-            styleCard.classList.toggle('is-primary', v === 'primary');
-            styleCard.classList.toggle('is-featured', v === 'featured');
-          }
-        }));
-      } else if (mode === 'spy') {
-        // No extra controls; the interaction is scrolling
-      } else if (mode === 'wrap') {
-        const btn = document.createElement('button');
-        btn.className = 'action-button';
-        btn.textContent = 'Toggle column-wrap';
-        btn.addEventListener('click', () => {
-          state.wrapEnabled = !state.wrapEnabled;
-          wrapContainer.style.columnWrap = state.wrapEnabled ? 'auto' : 'initial';
-          btn.textContent = state.wrapEnabled ? 'Disable column-wrap' : 'Enable column-wrap';
-        });
-        container.appendChild(btn);
-      } else if (mode === 'visibility') {
-        // No extra controls; scroll interaction
+    function setBadge() {
+      // For mode 04 the useful answer isn't "does the parser know this property"
+      // but "does this browser actually hide anything" — that's the probe.
+      if (state.mode === 'visibility') {
+        if (!parsedSupports.vis || forceFallback) { sourceBadge.textContent = 'Fallback'; return; }
+        sourceBadge.textContent = visEnacted ? 'Native' : 'Parsed, not enacted';
+        return;
       }
+      sourceBadge.textContent = support[SUPPORT_KEY[state.mode]] ? 'Native' : 'Fallback';
+    }
 
-      controlGrid.appendChild(container);
-      return container;
+    // ── 01 · variant chooser (lives in the card, wired directly) ──
+    function setVariant(v) {
+      state.variant = v;
+      variantBtns.forEach(x => x.classList.toggle('active', x.dataset.variant === v));
+      if (support.style) {
+        styleWrap.style.setProperty('--variant', v);   // on the container, not the card
+      } else {
+        styleCard.classList.toggle('is-primary', v === 'primary');
+        styleCard.classList.toggle('is-featured', v === 'featured');
+      }
+    }
+
+    variantBtns.forEach(b => b.addEventListener('click', () => setVariant(b.dataset.variant)));
+
+    // ── 03 · column-wrap toggle (lives in the scene, wired directly) ──
+    function setWrap(enabled) {
+      state.wrapEnabled = enabled;
+      wrapContainer.classList.toggle('is-wrapped', enabled);
+      wrapBtn.textContent = enabled ? 'Disable column-wrap' : 'Enable column-wrap';
+    }
+
+    wrapBtn.addEventListener('click', () => setWrap(!state.wrapEnabled));
+
+    if (!support.wrap) {
+      wrapBtn.disabled = true;
+      wrapBtn.textContent = 'column-wrap unsupported in this browser';
+      wrapBtn.style.whiteSpace = 'normal';
+      wrapBtn.style.textAlign = 'center';
     }
 
     function updateSpyFallback() {
-      // Always use IntersectionObserver — :target-current needs scroll-target-group: nearest (not yet in Chrome 150)
+      // Native :target-current only reports when scroll-target-group is honoured.
+      // Where it isn't, mirror the same result with an IntersectionObserver.
+      if (support.spy) return;
       const links = [...spyNav.querySelectorAll('a')];
       const sections = links.map(a => document.querySelector(a.getAttribute('href')));
       const track = spyTrack;
@@ -657,49 +815,52 @@
 
     function updateVisFallback() {
       if (support.vis) return;
-      const track = visScroll;
-      function check() {
-        const rect = visAnchor.getBoundingClientRect();
-        const trackRect = track.getBoundingClientRect();
-        const visible = rect.bottom > trackRect.top && rect.top < trackRect.bottom;
-        visTooltip.classList.toggle('hidden', !visible);
-      }
-      track.addEventListener('scroll', check, { passive: true });
-      check();
+      const rect = visAnchor.getBoundingClientRect();
+      const trackRect = visScroll.getBoundingClientRect();
+      const visible = rect.bottom > trackRect.top && rect.top < trackRect.bottom;
+      visTooltip.classList.toggle('hidden', !visible);
     }
+
+    // Bind the scroll mirror once, not on every entry into the mode.
+    let visFallbackBound = false;
+    function bindVisFallback() {
+      if (visFallbackBound) return;
+      visFallbackBound = true;
+      visScroll.addEventListener('scroll', updateVisFallback, { passive: true });
+    }
+
+    if (!support.vis) bindVisFallback();
 
     function setMode(mode) {
       state.mode = mode;
       body.dataset.mode = mode;
       setSceneA11y(mode);
       modeButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.modeButton === mode)));
-      setBadge();
 
-      if (mode === 'style') {
-        modeTitle.textContent = 'style() queries';
-        hint.textContent = 'Query custom properties';
-        readout.textContent = '@container style(--variant: primary) { … }';
-        buildControls(mode);
-      } else if (mode === 'spy') {
-        modeTitle.textContent = ':target-current';
-        hint.textContent = 'CSS-native scroll spy';
-        readout.textContent = 'scroll-target-group: auto;\na:target-current { … }';
-        buildControls(mode);
+      const copy = MODES[mode];
+      modeTitle.textContent = copy.kicker;
+      hint.textContent = copy.hint;
+      readout.textContent = copy.readout;
+      explainerTitle.textContent = copy.title;
+      explainerWhat.innerHTML = copy.what;
+      explainerTry.textContent = copy.try;
+      explainerSupport.textContent = copy.support;
+
+      // Keep each scene showing what the user last chose.
+      if (mode === 'style') setVariant(state.variant);
+      if (mode === 'wrap') setWrap(state.wrapEnabled);
+
+      if (mode === 'spy') {
         requestAnimationFrame(updateSpyFallback);
-      } else if (mode === 'wrap') {
-        modeTitle.textContent = 'column-wrap';
-        hint.textContent = 'Balanced multicolumn';
-        readout.textContent = 'columns: 2;\ncolumn-wrap: auto;';
-        buildControls(mode);
       } else if (mode === 'visibility') {
-        modeTitle.textContent = 'position-visibility';
-        hint.textContent = 'Hide when anchor is offscreen';
-        readout.textContent = 'position-visibility: anchors-visible;';
-        buildControls(mode);
+        // The behaviour probe needs the scene on screen to read a real computed
+        // visibility, so it can only run once this mode is displayed.
+        if (visEnacted === null && !forceFallback) probeVisEnacted();
         requestAnimationFrame(updateVisFallback);
-        // scroll to show anchor
-        visScroll.scrollTop = 60;
+        visScroll.scrollTop = 60;   // put the anchor where the tooltip is visible
       }
+
+      setBadge();
     }
 
     modeButtons.forEach(b => b.addEventListener('click', () => setMode(b.dataset.modeButton)));
