@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fluid Scale Studio — exact fluid type &amp; space scales</title>
+<meta name="description" content="Generate fluid clamp() type and space scales that hit exact sizes at two viewports — with a live curve and a viewport scrub.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0f;
+    --panel: #13131d;
+    --panel-2: #16161f;
+    --line: #1e1e2e;
+    --line-2: #34344e;
+    --text: #e4e4ed;
+    --muted: #8b8b9e;
+    --dim: #5c5c70;
+    --accent: #7c7cff;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2.75rem 1.5rem 4rem;
+    max-width: 1180px;
+    margin: 0 auto;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
+  }
+  header.top { margin-bottom: 1.75rem; }
+  .eyebrow {
+    font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin-bottom: 0.6rem;
+  }
+  h1 { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 0.5rem; }
+  .lede { color: var(--muted); font-size: 0.92rem; line-height: 1.6; max-width: 68ch; }
+  .lede strong { color: var(--text); font-weight: 500; }
+  .lede code {
+    font-family: var(--mono); font-size: 0.85em; color: var(--text);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 0.05rem 0.3rem;
+  }
+
+  .wrap { display: grid; grid-template-columns: 348px minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+  @media (max-width: 920px) { .wrap { grid-template-columns: 1fr; } }
+
+  .stack { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 1.15rem 1.25rem;
+  }
+  .card > h2 {
+    font-size: 0.7rem; letter-spacing: 0.11em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin-bottom: 0.95rem;
+    display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  }
+  .card > h2 .hint { color: var(--dim); letter-spacing: 0; text-transform: none; font-weight: 400; font-size: 0.72rem; }
+
+  /* ---- controls ---- */
+  .ctl { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.8rem; }
+  .ctl:last-child { margin-bottom: 0; }
+  .ctl[hidden] { display: none; }
+  .ctl label { font-size: 0.84rem; color: var(--muted); }
+  .ctl .sub { display: block; font-size: 0.7rem; color: var(--dim); margin-top: 0.15rem; }
+  input[type=number], select {
+    background: #0e0e16; border: 1px solid var(--line); color: var(--text);
+    font-family: var(--mono); font-size: 0.82rem; border-radius: 7px;
+    padding: 0.4rem 0.5rem; text-align: right; width: 92px; -moz-appearance: textfield;
+  }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  select { text-align: left; width: 172px; cursor: pointer; }
+  input[type=range] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+  .range-row { margin-bottom: 0.9rem; }
+  .range-row:last-child { margin-bottom: 0; }
+  .range-row .rl { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.35rem; }
+  .range-row .rv { font-family: var(--mono); color: var(--text); font-size: 0.78rem; }
+
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button {
+    background: transparent; border: 0; color: var(--muted); font: inherit;
+    font-size: 0.78rem; padding: 0.42rem 0.75rem; cursor: pointer; transition: background 0.15s, color 0.15s;
+  }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #0a0a0f; font-weight: 500; }
+  .seg button:hover:not([aria-pressed="true"]) { color: var(--text); }
+  .seg.unit button { padding: 0.35rem 0.6rem; font-family: var(--mono); font-size: 0.74rem; }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+  .divider { height: 1px; background: var(--line); margin: 1rem 0; }
+
+  /* ---- chart ---- */
+  .chart-wrap { position: relative; }
+  #chart { width: 100%; height: auto; display: block; touch-action: none; cursor: crosshair; }
+  .grid { stroke: var(--line); stroke-width: 1; }
+  .vgrid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 4; }
+  .xtick { fill: var(--dim); font: 10px var(--mono); text-anchor: middle; }
+  .xtick.bp { fill: var(--muted); }
+  .ytick { fill: var(--dim); font: 10px var(--mono); text-anchor: end; }
+  .scrubline { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 4; }
+  .chart-tip {
+    position: absolute; pointer-events: none; transform: translate(-50%, 0);
+    background: #0e0e16; border: 1px solid var(--line-2); border-radius: 8px;
+    padding: 0.4rem 0.55rem; font-family: var(--mono); font-size: 0.7rem; line-height: 1.45;
+    color: var(--muted); white-space: nowrap; opacity: 0; transition: opacity 0.12s; z-index: 3;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+  }
+  .chart-tip.on { opacity: 1; }
+  .chart-tip b { color: var(--text); font-weight: 500; }
+  .chart-tip .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 0.4rem; vertical-align: -1px; }
+
+  /* ---- readout ---- */
+  .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.9rem; }
+  .chip {
+    font-family: var(--mono); font-size: 0.68rem; border: 1px solid var(--line);
+    border-radius: 6px; padding: 0.22rem 0.45rem; color: var(--dim);
+    display: inline-flex; align-items: center; gap: 0.4rem;
+  }
+  .chip i { width: 7px; height: 7px; border-radius: 2px; display: inline-block; }
+  .chip b { color: var(--text); font-weight: 500; }
+
+  /* ---- output ---- */
+  .out-list { display: flex; flex-direction: column; }
+  .out-row { padding: 0.6rem 0; border-bottom: 1px solid var(--line); }
+  .out-row:last-child { border-bottom: 0; }
+  .out-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.35rem; }
+  .tok { font-family: var(--mono); font-size: 0.78rem; color: var(--accent); }
+  .px-range { font-family: var(--mono); font-size: 0.7rem; color: var(--dim); }
+  .clamp {
+    font-family: var(--mono); font-size: 0.71rem; color: var(--muted);
+    word-break: break-all; line-height: 1.5;
+  }
+  .btn {
+    background: var(--panel-2); border: 1px solid var(--line-2); color: var(--text);
+    font: inherit; font-size: 0.76rem; padding: 0.42rem 0.8rem; border-radius: 8px;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s;
+  }
+  .btn:hover { background: #1a1a28; }
+  .btn.primary { background: var(--accent); color: #0a0a0f; border-color: var(--accent); font-weight: 500; }
+  .btn.primary:hover { background: #8f8fff; }
+  .note { font-size: 0.76rem; color: var(--dim); line-height: 1.6; }
+  .note b { color: var(--muted); font-weight: 500; }
+  .note code { font-family: var(--mono); color: var(--muted); }
+
+  /* ---- preview ---- */
+  .spec-frame {
+    border: 1px solid var(--line); border-radius: 8px; padding: 1.1rem 1.15rem;
+    background: #0e0e16;
+  }
+  .spec-meta {
+    display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;
+    font-family: var(--mono); font-size: 0.7rem; color: var(--dim);
+  }
+  .spec-meta .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .spec-line { margin-bottom: 0.85rem; }
+  .spec-line:last-child { margin-bottom: 0; }
+  .spec-tag {
+    font-family: var(--mono); font-size: 0.64rem; color: var(--dim);
+    display: block; margin-bottom: 0.15rem; letter-spacing: 0.02em;
+  }
+  .spec-text { color: var(--text); line-height: 1.15; font-weight: 500; }
+  .spec-text.body { font-weight: 400; line-height: 1.55; color: var(--muted); max-width: 54ch; }
+
+  .space-stack { display: flex; flex-direction: column; gap: 0.5rem; }
+  .space-row { display: flex; align-items: center; gap: 0.7rem; }
+  .space-tag { font-family: var(--mono); font-size: 0.66rem; color: var(--dim); width: 76px; flex-shrink: 0; }
+  .space-bar { height: 12px; border-radius: 3px; background: linear-gradient(90deg, var(--accent), #4ec5d8); }
+
+  .exact {
+    display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 1rem;
+    font-family: var(--mono); font-size: 0.68rem;
+  }
+  .exact span { border: 1px solid var(--line); border-radius: 6px; padding: 0.25rem 0.5rem; color: var(--muted); }
+  .exact b { color: var(--accent); font-weight: 500; }
+
+  footer { margin-top: 2.5rem; font-size: 0.75rem; color: var(--dim); }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+  <header class="top">
+    <p class="eyebrow">Playground · Labs &amp; tools</p>
+    <h1>Fluid Scale Studio</h1>
+    <p class="lede">
+      A modular type and space scale where every step is <strong>exactly</strong> its minimum at the
+      small viewport and <strong>exactly</strong> its maximum at the large one — no eyeballing
+      <code>vw</code> numbers. Scrub the viewport to see the real rendered sizes move.
+    </p>
+  </header>
+
+  <div class="wrap">
+    <div class="stack">
+      <section class="card">
+        <h2>Scale <span class="hint">live</span></h2>
+
+        <div class="ctl">
+          <label for="baseMin">Base at min viewport <span class="sub">smallest step 0</span></label>
+          <input id="baseMin" type="number" min="6" max="40" step="0.5" value="16">
+        </div>
+        <div class="ctl">
+          <label for="baseMax">Base at max viewport <span class="sub">largest step 0</span></label>
+          <input id="baseMax" type="number" min="6" max="72" step="0.5" value="20">
+        </div>
+        <div class="ctl">
+          <label for="ratioPreset">Ratio</label>
+          <select id="ratioPreset">
+            <option value="1.067">1.067 · Minor Second</option>
+            <option value="1.125">1.125 · Major Second</option>
+            <option value="1.2">1.2 · Minor Third</option>
+            <option value="1.25" selected>1.25 · Major Third</option>
+            <option value="1.333">1.333 · Perfect Fourth</option>
+            <option value="1.414">1.414 · Aug. Fourth</option>
+            <option value="1.5">1.5 · Perfect Fifth</option>
+            <option value="1.618">1.618 · Golden</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div class="ctl" id="ratioCustomRow" hidden>
+          <label for="ratio">Custom ratio</label>
+          <input id="ratio" type="number" min="1.01" max="2.5" step="0.001" value="1.25">
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="ctl">
+          <label for="minVp">Min viewport</label>
+          <input id="minVp" type="number" min="200" max="2000" step="1" value="375">
+        </div>
+        <div class="ctl">
+          <label for="maxVp">Max viewport</label>
+          <input id="maxVp" type="number" min="320" max="3000" step="1" value="1440">
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="range-row">
+          <div class="rl"><label for="below">Steps below base</label><span class="rv" id="belowV">2</span></div>
+          <input id="below" type="range" min="0" max="3" step="1" value="2">
+        </div>
+        <div class="range-row">
+          <div class="rl"><label for="above">Steps above base</label><span class="rv" id="aboveV">5</span></div>
+          <input id="above" type="range" min="1" max="8" step="1" value="5">
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="ctl">
+          <label>Scale</label>
+          <div class="seg" id="modeSeg" role="group" aria-label="Scale kind">
+            <button type="button" data-mode="type" aria-pressed="true">Type</button>
+            <button type="button" data-mode="space" aria-pressed="false">Space</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <label>Output unit</label>
+          <div class="seg unit" id="unitSeg" role="group" aria-label="Output unit">
+            <button type="button" data-unit="rem" aria-pressed="true">rem</button>
+            <button type="button" data-unit="px" aria-pressed="false">px</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Output <button class="btn primary" id="copy" type="button">Copy CSS</button></h2>
+        <div class="out-list" id="outList"></div>
+        <div class="divider"></div>
+        <p class="note">
+          <b>In Webflow:</b> paste the block into <b>Project settings → Custom code → Head</b>, then in the
+          style panel set the property to <b>Custom</b> and enter <code>var(--step-2)</code>.
+          In rem mode values assume a <code>16px</code> root.
+        </p>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="card">
+        <h2>Curve <span class="hint">drag or scrub to move the viewport</span></h2>
+        <div class="chart-wrap">
+          <svg id="chart" viewBox="0 0 720 400" preserveAspectRatio="xMidYMid meet" role="img"
+               aria-label="Fluid scale curve — size against viewport width"></svg>
+          <div class="chart-tip" id="tip"></div>
+        </div>
+        <div class="chips" id="chips"></div>
+      </section>
+
+      <section class="card">
+        <h2>Specimen <span class="hint" id="specHint"></span></h2>
+        <div class="range-row">
+          <div class="rl"><label for="scrub">Viewport</label><span class="rv" id="scrubV">768px</span></div>
+          <input id="scrub" type="range" min="320" max="1640" step="1" value="768" aria-describedby="readout-live">
+        </div>
+        <div class="spec-frame">
+          <div class="spec-meta"><span class="dot"></span><span id="specMeta">rendered at 768px viewport</span></div>
+          <div id="specBody"></div>
+        </div>
+        <div class="exact" id="exact"></div>
+        <p class="sr-only" id="readout-live" aria-live="polite"></p>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    <span>Fluid Scale Studio · Hermes nightly build · <a href="https://github.com/sylvbito/playground">playground</a></span>
+  </footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var BREAKPOINTS = [478, 767, 991, 1280];
+  var ROOT_PX = 16;
+
+  var state = {
+    baseMin: 16, baseMax: 20, ratio: 1.25,
+    minVp: 375, maxVp: 1440,
+    below: 2, above: 5,
+    mode: "type", unit: "rem", scrub: 768
+  };
+
+  function $(sel) { return document.querySelector(sel); }
+
+  function fmt(n, d) {
+    if (typeof d === "undefined") d = 3;
+    if (!isFinite(n)) return "0";
+    var p = Math.pow(10, d);
+    var r = Math.round(n * p) / p;
+    if (Object.is(r, -0)) r = 0;
+    return String(r);
+  }
+
+  function steps() {
+    var arr = [];
+    for (var n = -state.below; n <= state.above; n++) {
+      arr.push({
+        n: n,
+        minSize: state.baseMin * Math.pow(state.ratio, n),
+        maxSize: state.baseMax * Math.pow(state.ratio, n)
+      });
+    }
+    return arr;
+  }
+
+  function tokenName(s) {
+    if (state.mode === "space") return "--space-" + (s.n + state.below);
+    return "--step-" + s.n;
+  }
+
+  function geom(s) {
+    var dv = Math.max(1, state.maxVp - state.minVp);
+    var slope = (s.maxSize - s.minSize) / dv;
+    return { slope: slope, slopeVw: slope * 100, interceptPx: s.minSize - slope * state.minVp };
+  }
+
+  function valAt(s, vp) {
+    var g = geom(s);
+    var v = g.interceptPx + g.slope * vp;
+    return Math.min(s.maxSize, Math.max(s.minSize, v));
+  }
+
+  function clampStr(s) {
+    var g = geom(s);
+    if (state.unit === "px") {
+      return "clamp(" + fmt(s.minSize) + "px, calc(" + fmt(g.interceptPx) + "px + " +
+        fmt(g.slopeVw) + "vw), " + fmt(s.maxSize) + "px)";
+    }
+    return "clamp(" + fmt(s.minSize / ROOT_PX) + "rem, calc(" + fmt(g.interceptPx / ROOT_PX) +
+      "rem + " + fmt(g.slopeVw) + "vw), " + fmt(s.maxSize / ROOT_PX) + "rem)";
+  }
+
+  function cssBlock() {
+    var lines = steps().map(function (s) {
+      return "  " + tokenName(s) + ": " + clampStr(s) + "; /* " +
+        fmt(s.minSize, 1) + "px \u2192 " + fmt(s.maxSize, 1) + "px */";
+    });
+    return ":root {\n" + lines.join("\n") + "\n}";
+  }
+
+  function hueFor(i, count) {
+    var t = count > 1 ? i / (count - 1) : 0;
+    return 262 - t * 72;
+  }
+  function colourFor(i, count) {
+    return "hsl(" + fmt(hueFor(i, count), 1) + " 72% 68%)";
+  }
+
+  /* ---------------------------------------------------------------- chart */
+  var W = 720, H = 400, padL = 46, padR = 18, padT = 16, padB = 30;
+  var plotW = W - padL - padR, plotH = H - padT - padB;
+
+  function chartDomain() {
+    var span = Math.max(1, state.maxVp - state.minVp);
+    return { xMin: state.minVp - span * 0.12, xMax: state.maxVp + span * 0.12, yMax: 1 };
+  }
+
+  function xOf(vp, dom) { return padL + ((vp - dom.xMin) / (dom.xMax - dom.xMin)) * plotW; }
+  function yOf(v, dom) { return padT + (1 - v / dom.yMax) * plotH; }
+
+  function renderChart() {
+    var svg = $("#chart");
+    var list = steps();
+    var dom = chartDomain();
+    dom.yMax = Math.max.apply(null, list.map(function (s) { return s.maxSize; })) * 1.1;
+    if (!isFinite(dom.yMax) || dom.yMax <= 0) dom.yMax = 1;
+
+    var parts = [];
+
+    // horizontal grid + y ticks
+    var NT = 5;
+    for (var i = 0; i <= NT; i++) {
+      var v = dom.yMax * i / NT;
+      var y = yOf(v, dom);
+      parts.push('<line class="grid" x1="' + padL + '" y1="' + fmt(y, 1) + '" x2="' + (padL + plotW) + '" y2="' + fmt(y, 1) + '"/>');
+      parts.push('<text class="ytick" x="' + (padL - 8) + '" y="' + fmt(y + 3.5, 1) + '">' + fmt(v, v >= 10 ? 0 : 1) + '</text>');
+    }
+
+    // x ticks: min, max, and breakpoints inside the range
+    var marks = [{ v: state.minVp, bp: false }];
+    BREAKPOINTS.forEach(function (b) {
+      if (b > state.minVp && b < state.maxVp) marks.push({ v: b, bp: true });
+    });
+    marks.push({ v: state.maxVp, bp: false });
+
+    marks.forEach(function (m, idx) {
+      var x = xOf(m.v, dom);
+      var cls = m.bp ? "vgrid" : "vgrid";
+      parts.push('<line class="' + cls + '" x1="' + fmt(x, 1) + '" y1="' + padT + '" x2="' + fmt(x, 1) + '" y2="' + (padT + plotH) + '"/>');
+      var anchor = idx === 0 ? "start" : (idx === marks.length - 1 ? "end" : "middle");
+      var tx = idx === 0 ? x : (idx === marks.length - 1 ? x : x);
+      parts.push('<text class="xtick' + (m.bp ? ' bp' : '') + '" x="' + fmt(tx, 1) + '" y="' + (padT + plotH + 18) + '" style="text-anchor:' + anchor + '">' + m.v + '</text>');
+    });
+
+    // one polyline per step (flattens outside the clamp range)
+    list.forEach(function (s, idx) {
+      var pts = [
+        [dom.xMin, valAt(s, dom.xMin)],
+        [state.minVp, s.minSize],
+        [state.maxVp, s.maxSize],
+        [dom.xMax, valAt(s, dom.xMax)]
+      ].map(function (p) { return fmt(xOf(p[0], dom), 1) + "," + fmt(yOf(p[1], dom), 1); }).join(" ");
+      parts.push('<polyline points="' + pts + '" fill="none" stroke="' + colourFor(idx, list.length) +
+        '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>');
+    });
+
+    // scrub line
+    var scrubVp = Math.min(state.maxVp, Math.max(state.minVp, state.scrub));
+    var sx = xOf(scrubVp, dom);
+    parts.push('<line class="scrubline" x1="' + fmt(sx, 1) + '" y1="' + padT + '" x2="' + fmt(sx, 1) + '" y2="' + (padT + plotH) + '"/>');
+
+    svg.innerHTML = parts.join("");
+    window.__dom = dom;
+  }
+
+  /* ---------------------------------------------------------------- chips */
+  function renderChips() {
+    var box = $("#chips");
+    var list = steps();
+    var vp = state.scrub;
+    var html = list.map(function (s, i) {
+      return '<span class="chip"><i style="background:' + colourFor(i, list.length) + '"></i>' +
+        tokenName(s) + ' <b>' + fmt(valAt(s, vp), 2) + 'px</b></span>';
+    });
+    box.innerHTML = html.join("");
+  }
+
+  /* --------------------------------------------------------------- output */
+  function renderOutput() {
+    var box = $("#outList");
+    var list = steps();
+    box.innerHTML = list.map(function (s) {
+      return '<div class="out-row">' +
+        '<div class="out-head"><span class="tok">' + tokenName(s) + '</span>' +
+        '<span class="px-range">' + fmt(s.minSize, 1) + "px \u2192 " + fmt(s.maxSize, 1) + 'px</span></div>' +
+        '<div class="clamp">' + clampStr(s) + '</div>' +
+        '</div>';
+    }).join("");
+  }
+
+  /* -------------------------------------------------------------- specimen */
+  function specimenPlan() {
+    var list = steps();
+    var n = list.length;
+    function fromTop(o) { return list[Math.max(0, n - 1 - o)]; }
+    function byN(k) {
+      for (var i = 0; i < list.length; i++) if (list[i].n === k) return list[i];
+      return null;
+    }
+    return [
+      { label: "Display", s: fromTop(0), role: "display" },
+      { label: "H1", s: fromTop(1), role: "head" },
+      { label: "H2", s: fromTop(2), role: "head" },
+      { label: "H3", s: fromTop(3), role: "head" },
+      { label: "Body", s: byN(0) || fromTop(0), role: "body" },
+      { label: "Small", s: byN(-1) || list[0], role: "body" }
+    ];
+  }
+
+  var SAMPLE = {
+    display: "Precise scales, quietly",
+    head: "Design systems reward exactness",
+    body: "Type and space that land on their intended size at the breakpoints you actually ship — and interpolate honestly in between."
+  };
+
+  function renderSpecimen() {
+    var vp = state.scrub;
+    var body = $("#specBody");
+    $("#specHint").textContent = state.mode === "type" ? "type ramp" : "spacing stack";
+    $("#specMeta").textContent = "rendered at " + Math.round(vp) + "px viewport";
+    $("#scrubV").textContent = Math.round(vp) + "px";
+
+    if (state.mode === "type") {
+      body.innerHTML = specimenPlan().map(function (row) {
+        var size = valAt(row.s, vp);
+        var text = SAMPLE[row.role] || SAMPLE.body;
+        return '<div class="spec-line">' +
+          '<span class="spec-tag">' + row.label + ' \u00b7 ' + tokenName(row.s) + ' \u00b7 ' + fmt(size, 2) + 'px</span>' +
+          '<div class="spec-text' + (row.role === "body" ? " body" : "") + '" style="font-size:' + fmt(size, 2) + 'px">' + text + '</div>' +
+          '</div>';
+      }).join("");
+    } else {
+      var maxS = Math.max.apply(null, steps().map(function (s) { return s.maxSize; }));
+      body.innerHTML = '<div class="space-stack">' + steps().map(function (s, i) {
+        var v = valAt(s, vp);
+        var w = Math.max(2, (v / maxS) * 100);
+        return '<div class="space-row">' +
+          '<span class="space-tag">' + tokenName(s) + '</span>' +
+          '<span class="space-bar" style="width:' + fmt(w, 2) + '%;background:linear-gradient(90deg,' + colourFor(i, steps().length) + ', #4ec5d8)"></span>' +
+          '<span class="space-tag" style="width:auto">' + fmt(v, 2) + 'px</span>' +
+          '</div>';
+      }).join("") + '</div>';
+    }
+
+    // exactness badge — the whole point
+    var base = null;
+    steps().forEach(function (s) { if (s.n === 0) base = s; });
+    if (!base) base = steps()[0];
+    $("#exact").innerHTML =
+      '<span><b>exact</b> ' + tokenName(base) + ' = ' + fmt(base.minSize, 2) + 'px at ' + state.minVp + 'px</span>' +
+      '<span><b>exact</b> ' + tokenName(base) + ' = ' + fmt(base.maxSize, 2) + 'px at ' + state.maxVp + 'px</span>' +
+      '<span>' + (state.unit === "rem" ? "rem output \u00b7 16px root" : "px output") + '</span>';
+
+    $("#readout-live").textContent = "Viewport " + Math.round(vp) + " pixels. " +
+      tokenName(base) + " is " + fmt(valAt(base, vp), 2) + " pixels.";
+  }
+
+  /* --------------------------------------------------------------- render */
+  var frame = 0;
+  function scheduleRender() {
+    if (frame) return;
+    frame = requestAnimationFrame(function () {
+      frame = 0;
+      renderChart();
+      renderChips();
+      renderOutput();
+      renderSpecimen();
+    });
+  }
+
+  /* ---------------------------------------------------------------- input */
+  function clampInt(v, lo, hi) { v = Math.round(v); return Math.min(hi, Math.max(lo, v)); }
+
+  function readControls() {
+    state.baseMin = Math.max(6, Math.min(40, parseFloat($("#baseMin").value) || 16));
+    state.baseMax = Math.max(6, Math.min(72, parseFloat($("#baseMax").value) || 20));
+    state.ratio = Math.max(1.01, Math.min(2.5, parseFloat($("#ratio").value) || 1.25));
+    state.minVp = clampInt(parseFloat($("#minVp").value) || 375, 200, 2000);
+    var maxVp = clampInt(parseFloat($("#maxVp").value) || 1440, 320, 3000);
+    state.maxVp = Math.max(state.minVp + 120, maxVp);
+    state.below = clampInt(parseFloat($("#below").value), 0, 3);
+    state.above = clampInt(parseFloat($("#above").value), 1, 8);
+    $("#belowV").textContent = state.below;
+    $("#aboveV").textContent = state.above;
+
+    var scrub = $("#scrub");
+    scrub.min = String(Math.max(320, state.minVp - 100));
+    scrub.max = String(state.maxVp + 200);
+    state.scrub = clampInt(parseFloat(scrub.value), parseFloat(scrub.min), parseFloat(scrub.max));
+  }
+
+  function wire() {
+    ["baseMin", "baseMax", "minVp", "maxVp", "below", "above"].forEach(function (id) {
+      $("#" + id).addEventListener("input", function () { readControls(); scheduleRender(); });
+    });
+
+    $("#ratio").addEventListener("input", function () {
+      $("#ratioPreset").value = "custom";
+      readControls(); scheduleRender();
+    });
+    $("#ratioPreset").addEventListener("change", function () {
+      var v = this.value;
+      var custom = v === "custom";
+      $("#ratioCustomRow").hidden = !custom;
+      if (!custom) { $("#ratio").value = v; }
+      readControls(); scheduleRender();
+    });
+
+    document.querySelectorAll("#modeSeg button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        state.mode = b.dataset.mode;
+        document.querySelectorAll("#modeSeg button").forEach(function (x) {
+          x.setAttribute("aria-pressed", x === b ? "true" : "false");
+        });
+        scheduleRender();
+      });
+    });
+    document.querySelectorAll("#unitSeg button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        state.unit = b.dataset.unit;
+        document.querySelectorAll("#unitSeg button").forEach(function (x) {
+          x.setAttribute("aria-pressed", x === b ? "true" : "false");
+        });
+        scheduleRender();
+      });
+    });
+
+    $("#scrub").addEventListener("input", function () {
+      state.scrub = parseFloat(this.value);
+      scheduleRender();
+    });
+
+    $("#copy").addEventListener("click", function () {
+      var btn = this;
+      copyText(cssBlock(), function (ok) {
+        btn.textContent = ok ? "Copied" : "Select & copy";
+        setTimeout(function () { btn.textContent = "Copy CSS"; }, 1400);
+      });
+    });
+
+    wireChartDrag();
+  }
+
+  function copyText(text, done) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      try {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        var ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        done(!!ok);
+      } catch (e) { done(false); }
+    }
+  }
+
+  /* ------------------------------------------------------------ chart drag */
+  function wireChartDrag() {
+    var svg = $("#chart");
+    var tip = $("#tip");
+    var dragging = false;
+
+    function vpFromEvent(ev) {
+      var rect = svg.getBoundingClientRect();
+      if (!rect.width) return state.scrub;
+      var dom = window.__dom;
+      var xUser = (ev.clientX - rect.left) / rect.width * W;
+      var frac = (xUser - padL) / plotW;
+      var vp = dom.xMin + frac * (dom.xMax - dom.xMin);
+      return vp;
+    }
+
+    function setScrubFromEvent(ev, applyToSlider) {
+      var vp = Math.min(state.maxVp, Math.max(state.minVp, vpFromEvent(ev)));
+      state.scrub = vp;
+      if (applyToSlider) {
+        var scrub = $("#scrub");
+        scrub.value = String(Math.round(Math.min(parseFloat(scrub.max), Math.max(parseFloat(scrub.min), vp))));
+      }
+      scheduleRender();
+    }
+
+    function showTip(ev) {
+      var dom = window.__dom;
+      if (!dom) return;
+      var rect = svg.getBoundingClientRect();
+      var vp = Math.min(state.maxVp, Math.max(state.minVp, vpFromEvent(ev)));
+      var xUser = ((xOf(vp, dom)) / W) * rect.width;
+      var yUser = (ev.clientY - rect.top);
+
+      // nearest line by vertical distance
+      var list = steps();
+      var best = null, bestD = Infinity, bestI = 0;
+      list.forEach(function (s, i) {
+        var y = (yOf(valAt(s, vp), dom) / H) * rect.height;
+        var d = Math.abs(y - yUser);
+        if (d < bestD) { bestD = d; best = s; bestI = i; }
+      });
+      if (!best) return;
+      var colour = colourFor(bestI, list.length);
+      tip.innerHTML = '<b>' + Math.round(vp) + 'px</b> viewport<br>' +
+        '<span class="sw" style="background:' + colour + '"></span>' + tokenName(best) + ' <b>' + fmt(valAt(best, vp), 2) + 'px</b>';
+      tip.style.left = xUser + "px";
+      tip.style.top = Math.max(2, (yOf(valAt(best, vp), dom) / H) * rect.height - 52) + "px";
+      tip.classList.add("on");
+    }
+
+    svg.addEventListener("pointerdown", function (ev) {
+      dragging = true;
+      svg.setPointerCapture(ev.pointerId);
+      setScrubFromEvent(ev, true);
+      showTip(ev);
+    });
+    svg.addEventListener("pointermove", function (ev) {
+      if (dragging) setScrubFromEvent(ev, true);
+      showTip(ev);
+    });
+    svg.addEventListener("pointerup", function (ev) {
+      dragging = false;
+      try { svg.releasePointerCapture(ev.pointerId); } catch (e) {}
+      scheduleRender();
+    });
+    svg.addEventListener("pointerleave", function () {
+      if (!dragging) tip.classList.remove("on");
+    });
+  }
+
+  /* ------------------------------------------------------------------ init */
+  wire();
+  readControls();
+  state.scrub = Math.round((state.minVp + state.maxVp) / 2) < 320 ? 320 : Math.round((state.minVp + state.maxVp) / 2);
+  $("#scrub").value = String(state.scrub);
+  scheduleRender();
+})();
+</script>
+</body>
+</html>
