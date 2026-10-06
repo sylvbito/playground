@@ -1,0 +1,1076 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seedscape — a seeded particle-hillscape generator</title>
+<meta name="description" content="Type a word, get a landscape: a deterministic generator that grows layered hills filled with pointillist dabs under a gradient sky. Same seed, same art at any size — export PNG, share the URL.">
+<meta name="theme-color" content="#0b0c14">
+<style>
+  :root{
+    --bg:#0b0c14;
+    --panel:#12141f;
+    --panel-2:#171a27;
+    --line:#252a3b;
+    --ink:#e9ecf6;
+    --dim:#8f97b0;
+    --accent:#7de08a;
+    --accent-ink:#0b1c10;
+    --radius:12px;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  html,body{margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:15px;line-height:1.5;overflow-x:hidden;
+    padding:0 0 env(safe-area-inset-bottom);
+  }
+  a{color:var(--accent)}
+  .wrap{max-width:1240px;margin:0 auto;padding:22px 16px 64px}
+
+  header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 14px;margin-bottom:18px}
+  header.top h1{font-size:19px;letter-spacing:-.01em;margin:0;font-weight:650}
+  header.top p{margin:0;color:var(--dim);font-size:13.5px;max-width:62ch}
+  .badge{
+    font:11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;
+    color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:5px 9px;
+  }
+
+  .studio{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start}
+  @media (max-width:940px){ .studio{grid-template-columns:minmax(0,1fr)} }
+
+  .stage{min-width:0}
+  .canvas-wrap{
+    position:relative;background:#08090f;border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.45);
+  }
+  canvas#art{display:block;width:100%;height:auto;touch-action:manipulation}
+
+  .stagebar{
+    display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;
+  }
+  .stagebar .spacer{flex:1 1 auto}
+  .chip{
+    font:12px/1 var(--mono);color:var(--dim);background:var(--panel);
+    border:1px solid var(--line);border-radius:999px;padding:7px 10px;max-width:100%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  button{
+    font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel-2);
+    border:1px solid var(--line);border-radius:9px;padding:9px 12px;cursor:pointer;
+    transition:background .12s ease,border-color .12s ease,transform .06s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  button:hover{background:#1e2231;border-color:#333a52}
+  button:active{transform:translateY(1px)}
+  button.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:620}
+  button.primary:hover{background:#95ec9f}
+  button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+
+  .panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px;min-width:0;
+  }
+  @media (max-width:940px){ .panel{margin-top:16px} }
+  .panel h2{
+    font:11px/1 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--dim);
+    margin:0 0 10px;font-weight:600;
+  }
+  .group{padding:12px 0;border-top:1px solid var(--line)}
+  .group:first-of-type{border-top:0;padding-top:2px}
+
+  label.field{display:block;margin-bottom:9px}
+  label.field > span.lbl{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--dim);margin-bottom:5px}
+  label.field > span.lbl b{color:var(--ink);font:12px var(--mono);font-weight:500}
+  input[type=text],select{
+    width:100%;font:14px var(--mono);color:var(--ink);background:#0c0e17;
+    border:1px solid var(--line);border-radius:9px;padding:10px 11px;outline:none;
+  }
+  input[type=text]:focus,select:focus{border-color:var(--accent)}
+  select{font-family:var(--sans);font-size:13.5px}
+  input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0}
+  input[type=color]{
+    width:100%;height:34px;background:#0c0e17;border:1px solid var(--line);
+    border-radius:9px;padding:3px;cursor:pointer;
+  }
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .seg{display:flex;flex-wrap:wrap;gap:6px}
+  .seg button{padding:7px 10px;font-size:12.5px}
+  .hint{color:var(--dim);font-size:12px;margin:8px 0 0}
+
+  .variants{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:16px}
+  @media (max-width:620px){ .variants{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  .variants button.pv{
+    padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#08090f;
+    position:relative;cursor:pointer;
+  }
+  .variants button.pv canvas{display:block;width:100%;height:auto}
+  .variants button.pv span{
+    position:absolute;left:0;right:0;bottom:0;font:10px var(--mono);color:#dfe4f2;
+    background:linear-gradient(transparent,rgba(0,0,0,.72));padding:12px 6px 4px;
+    text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+
+  .notes{margin-top:34px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+  .note{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+  .note h3{margin:0 0 6px;font-size:14px;letter-spacing:-.005em}
+  .note p{margin:0 0 8px;color:#c3c9dd;font-size:13.5px}
+  .note p:last-child{margin-bottom:0}
+  .note .try{color:var(--ink)}
+  .note .try b{color:var(--accent);font-weight:600}
+  .note .sup{font:11.5px var(--mono);color:var(--dim);display:block;margin-top:8px}
+  .note code{font:12.5px var(--mono);background:#0c0e17;border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+  footer{margin-top:26px;color:var(--dim);font-size:12.5px}
+  .toast{
+    position:fixed;left:50%;bottom:22px;transform:translate(-50%,14px);
+    background:#e9ecf6;color:#0b0c14;font:13px var(--sans);font-weight:600;
+    padding:9px 14px;border-radius:999px;opacity:0;pointer-events:none;
+    transition:opacity .18s ease,transform .18s ease;z-index:50;max-width:90vw;
+  }
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>Seedscape</h1>
+    <p>Type a word → a landscape. Every shape, dab and colour is drawn from that word, so the same seed always grows the same hills — at any resolution.</p>
+    <span class="badge">Canvas 2D · no deps</span>
+  </header>
+
+  <div class="studio">
+    <section class="stage">
+      <div class="canvas-wrap"><canvas id="art" width="1280" height="720"></canvas></div>
+      <div class="stagebar">
+        <span class="chip" id="seedChip">seed: default</span>
+        <span class="spacer"></span>
+        <button id="btnShuffle" title="New seed from the RNG">Shuffle</button>
+        <button id="btnLink">Copy link</button>
+        <button id="btnSave" class="primary">Save PNG <kbd style="font:11px var(--mono);opacity:.6">S</kbd></button>
+      </div>
+    </section>
+
+    <aside class="panel" aria-label="Controls">
+      <div class="group">
+        <h2>Seed</h2>
+        <label class="field">
+          <span class="lbl">Text seed <b id="seedEcho">—</b></span>
+          <input type="text" id="seed" value="melbourne" spellcheck="false" autocomplete="off">
+        </label>
+        <div class="row2">
+          <button id="btnReset">Reset all</button>
+          <button id="btnRandomWord">Random word</button>
+        </div>
+        <p class="hint">Case- and space-sensitive: <code>Hills</code> ≠ <code>hills</code>.</p>
+      </div>
+
+      <div class="group">
+        <h2>Palette</h2>
+        <label class="field">
+          <span class="lbl">Preset</span>
+          <select id="preset">
+            <option value="hills">Particle hills</option>
+            <option value="riso">Risograph</option>
+            <option value="dusk">Dusk ridge</option>
+            <option value="ultramarine">Ultramarine</option>
+            <option value="mono">Mono print</option>
+            <option value="custom">Custom base…</option>
+          </select>
+        </label>
+        <label class="field" id="baseWrap" hidden>
+          <span class="lbl">Base colour <b id="baseEcho">#7de08a</b></span>
+          <input type="color" id="base" value="#3b6ef0">
+        </label>
+      </div>
+
+      <div class="group">
+        <h2>Terrain</h2>
+        <label class="field">
+          <span class="lbl">Ridge layers <b id="layersVal">5</b></span>
+          <input type="range" id="layers" min="2" max="8" step="1" value="5">
+        </label>
+        <label class="field">
+          <span class="lbl">Ridge roughness <b id="roughVal">55</b></span>
+          <input type="range" id="rough" min="0" max="100" step="1" value="55">
+        </label>
+        <label class="field">
+          <span class="lbl">Horizon height <b id="horizonVal">42</b></span>
+          <input type="range" id="horizon" min="18" max="70" step="1" value="42">
+        </label>
+      </div>
+
+      <div class="group">
+        <h2>Texture</h2>
+        <label class="field">
+          <span class="lbl">Particle density <b id="densityVal">62</b></span>
+          <input type="range" id="density" min="5" max="100" step="1" value="62">
+        </label>
+        <label class="field">
+          <span class="lbl">Dab size <b id="dabVal">1.6</b></span>
+          <input type="range" id="dab" min="5" max="40" step="1" value="16">
+        </label>
+        <label class="field">
+          <span class="lbl">Sky dust <b id="dustVal">45</b></span>
+          <input type="range" id="dust" min="0" max="100" step="1" value="45">
+        </label>
+        <label class="field">
+          <span class="lbl">Paper grain <b id="grainVal">30</b></span>
+          <input type="range" id="grain" min="0" max="100" step="1" value="30">
+        </label>
+      </div>
+
+      <div class="group">
+        <h2>Figure &amp; frame</h2>
+        <label class="field">
+          <span class="lbl">Walkers</span>
+          <select id="figures">
+            <option value="0">None</option>
+            <option value="1" selected>One</option>
+            <option value="2">Two</option>
+            <option value="3">Three</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="lbl">Walking loop <b id="loopVal">on</b></span>
+          <input type="range" id="loop" min="0" max="1" step="1" value="1">
+        </label>
+        <label class="field">
+          <span class="lbl">Frame</span>
+          <select id="aspect">
+            <option value="16:9" selected>16 : 9 landscape</option>
+            <option value="3:2">3 : 2 photo</option>
+            <option value="1:1">1 : 1 square</option>
+            <option value="4:5">4 : 5 portrait</option>
+            <option value="9:16">9 : 16 story</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="lbl">Export scale</span>
+          <select id="scale">
+            <option value="1">1× (1280)</option>
+            <option value="2" selected>2× (2560)</option>
+            <option value="3">3× (3840)</option>
+          </select>
+        </label>
+      </div>
+    </aside>
+  </div>
+
+  <div>
+    <h2 style="font:11px/1 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin:24px 0 0;font-weight:600">Same seed, eight crops of the family</h2>
+    <div class="variants" id="variants"></div>
+  </div>
+
+  <section class="notes">
+
+    <article class="note">
+      <h3>01 · The seed is the whole input</h3>
+      <p>Your text is hashed (<code>xmur3</code>) into a 32-bit integer, which seeds a <code>mulberry32</code> generator. Every ridge phase, dab colour, clump centre and walker position comes out of that single stream — nothing is drawn from <code>Math.random()</code>.</p>
+      <p class="try">Type <b>melbourne</b>, then change one letter. Whole new range. Type the original back and you get the identical image, byte for byte — so a 3× export matches the preview you approved.</p>
+      <span class="sup">Canvas 2D · Path2D · xmur3 + mulberry32 — every current browser</span>
+    </article>
+
+    <article class="note">
+      <h3>02 · Ridgelines from summed sines</h3>
+      <p>Each layer is a 1-D profile built from four sine octaves with seeded frequency, amplitude and phase, plus one broad gaussian massif. Roughness scales the octave amplitudes, so 0 gives soft dunes and 100 gives a broken highland.</p>
+      <p class="try">Push <b>Ridge layers</b> to 8 and <b>Roughness</b> to 90 — the sky shrinks to a slot and the hills stack into a collaged horizon.</p>
+      <span class="sup">Pure Canvas 2D paths — no GPU, no WebGL</span>
+    </article>
+
+    <article class="note">
+      <h3>03 · Pointillist fill, batched by colour</h3>
+      <p>Each layer fills its polygon with thousands of dabs sampled by rejection, plus a handful of lighter clumps that read as rock and snow. Dabs are grouped into one <code>Path2D</code> per colour and filled in a single pass — 20k dabs cost a handful of draw calls.</p>
+      <p class="try">Drop <b>Dab size</b> to 5 and raise <b>Particle density</b> to 100 for a dense stipple; go the other way for confetti.</p>
+      <span class="sup">Dab geometry is normalised, so density looks identical at 1× and 3×</span>
+    </article>
+
+    <article class="note">
+      <h3>04 · Export and share</h3>
+      <p>Every control writes into the URL hash. Copy the link and the recipient opens the exact same landscape — seed, palette, terrain, frame and all. <b>Save PNG</b> (or press <b>S</b>) re-renders at the chosen scale off-screen so the export is clean at 3840px.</p>
+      <p class="try">Use it as a hero or OG image: type the client's name, keep the palette on their brand, export, and you can regenerate the identical art next month at a different crop.</p>
+      <span class="sup">toDataURL('image/png') · location.hash state — every current browser</span>
+    </article>
+
+  </section>
+
+  <footer>
+    Seedscape · a playground build. Landscape language borrowed from a generative particle-hill loop by cem hasimi; the generator, the seed model and the export are new.
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ---------------------------------------------------------------- PRNG */
+  const WORDS = ["melbourne","bibeau","inspora","ultramarine","risograph","orbit","ari","cobalt","hillside","tramline","brunswick","saltbush","kinfolk","marigold","petrichor","wattle","seachange","laneway","sunbake","fitzroy","creekside","dusklight","paperbark","quarry","signalbox"];
+
+  function xmur3(str){
+    let h = 1779033703 ^ str.length;
+    for (let i = 0; i < str.length; i++){
+      h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    return function(){
+      h = Math.imul(h ^ (h >>> 16), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      return (h ^= h >>> 16) >>> 0;
+    };
+  }
+  function mulberry32(a){
+    return function(){
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const rngFor = (seed, salt) => mulberry32(xmur3(seed + "\u0000" + (salt || ""))());
+
+  /* -------------------------------------------------------------- colour */
+  function hex2rgb(h){
+    h = h.replace("#","");
+    if (h.length === 3) h = h.split("").map(c => c + c).join("");
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  }
+  const clamp255 = v => Math.max(0, Math.min(255, Math.round(v)));
+  const rgb2hex = c => "#" + c.map(v => clamp255(v).toString(16).padStart(2,"0")).join("");
+  function mix(a, b, t){
+    const A = hex2rgb(a), B = hex2rgb(b);
+    return rgb2hex([A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t, A[2]+(B[2]-A[2])*t]);
+  }
+  function rgb2hsl(rgb){
+    const r = rgb[0]/255, g = rgb[1]/255, b = rgb[2]/255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b), l = (max+min)/2;
+    let h = 0, s = 0;
+    if (max !== min){
+      const d = max - min;
+      s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+      if (max === r) h = (g-b)/d + (g < b ? 6 : 0);
+      else if (max === g) h = (b-r)/d + 2;
+      else h = (r-g)/d + 4;
+      h /= 6;
+    }
+    return [h*360, s*100, l*100];
+  }
+  function hsl2rgb(h, s, l){
+    h = ((h % 360) + 360) % 360 / 360; s = Math.max(0,Math.min(100,s))/100; l = Math.max(0,Math.min(100,l))/100;
+    if (s === 0){ const v = l*255; return [v,v,v]; }
+    const q = l < 0.5 ? l*(1+s) : l + s - l*s;
+    const p = 2*l - q;
+    const hue = t => {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q-p)*6*t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q-p)*(2/3 - t)*6;
+      return p;
+    };
+    return [hue(h+1/3)*255, hue(h)*255, hue(h-1/3)*255];
+  }
+  const hsl = (h,s,l) => rgb2hex(hsl2rgb(h,s,l));
+
+  /* ------------------------------------------------------------- presets */
+  // Layer spec: { base: fill colour, dabs: [dab colours], clump: light clump colour }
+  const PRESETS = {
+    hills: {
+      sky: ["#14139e", "#4a53e8"],
+      dust: ["#ffffff", "#ffd0ea", "#9fe6ae"],
+      figure: "#ffffff",
+      // ordered far → near; the UI samples this list evenly, so the front
+      // entries carry the saturated foreground colours.
+      layers: [
+        { base:"#0e0f22", dabs:["#ff9ed2","#6ed07f","#f6ee9a","#ffffff"], clump:"#e9f0ff" },
+        { base:"#1d2a4d", dabs:["#7de08a","#ffd9ec","#b9c4ff","#ffffff"], clump:"#ffffff" },
+        { base:"#1b3a2a", dabs:["#7de08a","#ffd0ea","#0d2118","#ffffff"], clump:"#eafff0" },
+        { base:"#365f2e", dabs:["#c9ffd6","#ffe6f2","#1e6b38","#ffffff"], clump:"#f2fff5" },
+        { base:"#2f8f4e", dabs:["#c9ffd6","#ffd0ea","#1e6b38","#ffffff"], clump:"#f2fff5" },
+        { base:"#8a6a1f", dabs:["#e6d38a","#ffe3c2","#5c440f","#ffffff"], clump:"#fff4d0" },
+        { base:"#c2452e", dabs:["#ffb3a0","#ff9ed2","#7a1f12","#ffffff"], clump:"#fff0e6" },
+        { base:"#7b3fa0", dabs:["#e9c7ff","#ff9ed2","#4a1f6b","#ffffff"], clump:"#ffe9ff" }
+      ]
+    },
+    riso: {
+      sky: ["#f2ece0", "#ded4bf"],
+      dust: ["#1a1a1a", "#ff4f8b", "#0f6ecf"],
+      figure: "#1a1a1a",
+      layers: [
+        { base:"#1a1a1a", dabs:["#ff4f8b","#ffc72c","#f2ece0"], clump:"#ffc72c" },
+        { base:"#0f6ecf", dabs:["#f2ece0","#ff4f8b","#1a1a1a"], clump:"#f2ece0" },
+        { base:"#ff4f8b", dabs:["#f2ece0","#ffc72c","#1a1a1a"], clump:"#ffd9e6" },
+        { base:"#17a35f", dabs:["#f2ece0","#ffc72c","#1a1a1a"], clump:"#dcffea" },
+        { base:"#ffc72c", dabs:["#1a1a1a","#ff4f8b","#f2ece0"], clump:"#fff3cf" },
+        { base:"#1a1a1a", dabs:["#0f6ecf","#ffc72c","#f2ece0"], clump:"#ff4f8b" },
+        { base:"#0f6ecf", dabs:["#ffc72c","#f2ece0","#1a1a1a"], clump:"#cfe4ff" },
+        { base:"#ff4f8b", dabs:["#1a1a1a","#f2ece0","#ffc72c"], clump:"#ffe0ec" }
+      ]
+    },
+    dusk: {
+      sky: ["#241a4d", "#e0603f"],
+      dust: ["#ffd9a8", "#ff9ecf", "#ffffff"],
+      figure: "#fff6ec",
+      layers: [
+        { base:"#1b1436", dabs:["#ff9ecf","#ffd9a8","#8f7bff"], clump:"#ffd9a8" },
+        { base:"#2c1f52", dabs:["#ffb9a0","#ffffff","#9b86ff"], clump:"#ffcfae" },
+        { base:"#4a2a63", dabs:["#ffd0ea","#ffb27a","#ffffff"], clump:"#ffe0c2" },
+        { base:"#131024", dabs:["#ff9ecf","#6f8cff","#ffffff"], clump:"#ffc9e6" },
+        { base:"#3b2c22", dabs:["#e0a86a","#ffffff","#ff9ecf"], clump:"#ffe6c0" },
+        { base:"#0f0b1c", dabs:["#8f7bff","#ff9ecf","#ffffff"], clump:"#ffd9a8" },
+        { base:"#6a3a52", dabs:["#ffd0ea","#ffffff","#3a1c34"], clump:"#ffe9f4" },
+        { base:"#1b1436", dabs:["#ffd9a8","#ffffff","#6f8cff"], clump:"#fff0d8" }
+      ]
+    },
+    ultramarine: {
+      sky: ["#0d0c86", "#2f36d6"],
+      dust: ["#ffffff", "#b9c4ff", "#ffd0ea"],
+      figure: "#ffffff",
+      layers: [
+        { base:"#0b0b22", dabs:["#ffffff","#6f8cff","#b9c4ff"], clump:"#dfe6ff" },
+        { base:"#131a52", dabs:["#ffffff","#8fa6ff","#dfe6ff"], clump:"#ffffff" },
+        { base:"#20307f", dabs:["#b9c4ff","#ffffff","#0b0b22"], clump:"#e8eeff" },
+        { base:"#080a18", dabs:["#ffffff","#6f8cff","#ffd0ea"], clump:"#cdd8ff" },
+        { base:"#2a2f7a", dabs:["#ffffff","#dfe6ff","#8fa6ff"], clump:"#ffffff" },
+        { base:"#101438", dabs:["#b9c4ff","#ffffff","#5b6ce0"], clump:"#e8eeff" },
+        { base:"#3a3fb0", dabs:["#ffffff","#dfe6ff","#b9c4ff"], clump:"#ffffff" },
+        { base:"#0b0b22", dabs:["#8fa6ff","#ffffff","#ffd0ea"], clump:"#cdd8ff" }
+      ]
+    },
+    mono: {
+      sky: ["#f4f4f1", "#d6d6d2"],
+      dust: ["#2b2b2b", "#8a8a8a", "#ffffff"],
+      figure: "#111111",
+      layers: [
+        { base:"#e8e8e4", dabs:["#2b2b2b","#ffffff","#9a9a97"], clump:"#ffffff" },
+        { base:"#c9c9c5", dabs:["#1a1a1a","#ffffff","#87878a"], clump:"#ffffff" },
+        { base:"#a4a4a1", dabs:["#1a1a1a","#ffffff","#5f5f5f"], clump:"#ffffff" },
+        { base:"#7c7c7a", dabs:["#ffffff","#1a1a1a","#b9b9b6"], clump:"#ffffff" },
+        { base:"#565655", dabs:["#ffffff","#1a1a1a","#c9c9c5"], clump:"#ffffff" },
+        { base:"#333332", dabs:["#ffffff","#c9c9c5","#111111"], clump:"#ffffff" },
+        { base:"#1a1a1a", dabs:["#ffffff","#a4a4a1","#5f5f5f"], clump:"#ffffff" },
+        { base:"#0d0d0d", dabs:["#ffffff","#c9c9c5","#7c7c7a"], clump:"#ffffff" }
+      ]
+    }
+  };
+
+  function customPreset(baseHex, seed){
+    const r = rngFor(seed, "custom");
+    const [h, s] = rgb2hsl(hex2rgb(baseHex));
+    const S = Math.max(38, Math.min(88, s || 62));
+    const sky = [hsl(h + 4, S * 0.9, 16), hsl(h + 26, S * 0.85, 52)];
+    const layerHues = [h + 2, h + 24, h - 18, h + 48, h - 34, h + 12, h - 52, h + 36];
+    const layers = layerHues.map((lh, i) => ({
+      base: hsl(lh, S * (0.55 + 0.2 * ((i % 3) / 2)), 10 + ((i * 7) % 34)),
+      dabs: [hsl(lh + 18, S, 74), "#ffffff", hsl(lh - 24, S, 58), hsl(lh + 40, S * 0.9, 86)],
+      clump: hsl(lh + 8, S * 0.8, 92)
+    }));
+    return { sky, dust: ["#ffffff", hsl(h + 40, S, 82), hsl(h - 30, S, 78)], figure: "#ffffff", layers };
+  }
+
+  /* --------------------------------------------------------------- figure */
+  // Polylines in figure-local space: x right, y down, head-top at -1, ground at 0.
+  const POSES = [
+    [ // contact — front leg reaching, arms counter-swung low
+      [[0.01,-0.86],[0.01,-0.54]],
+      [[0.01,-0.60],[-0.14,-0.46],[-0.24,-0.50]],
+      [[0.01,-0.60],[0.15,-0.48],[0.26,-0.40]],
+      [[0.01,-0.54],[0.18,-0.40],[0.32,-0.28]],
+      [[0.01,-0.54],[-0.13,-0.36],[-0.25,-0.16]]
+    ],
+    [ // push — legs gathering
+      [[0.01,-0.88],[0.01,-0.56]],
+      [[0.01,-0.62],[0.14,-0.50],[0.24,-0.44]],
+      [[0.01,-0.62],[-0.14,-0.52],[-0.24,-0.44]],
+      [[0.01,-0.56],[0.11,-0.34],[0.18,-0.14]],
+      [[0.01,-0.56],[-0.15,-0.38],[-0.24,-0.22]]
+    ]
+  ];
+
+  /* ------------------------------------------------------------ generators */
+  function makeProfile(rng, rough, horizon, index, count){
+    const weight = index / Math.max(1, count - 1);            // 0 = back, 1 = front
+    const baseTop = horizon * 0.86 + (1 - horizon) * (0.04 + 0.56 * weight);
+    const amp = (0.030 + 0.085 * rough) * (0.6 + 1.05 * weight) * (1 - horizon);
+    const oct = 4;
+    const waves = [];
+    for (let o = 0; o < oct; o++){
+      waves.push({
+        f: (1.1 + rng() * 2.6) * Math.pow(1.95, o),
+        a: amp * Math.pow(0.52, o) * (0.5 + rng()),
+        p: rng() * Math.PI * 2
+      });
+    }
+    // two broad massifs so ridges read as hills, not noise
+    const mass = { x: 0.15 + rng() * 0.7, w: 0.18 + rng() * 0.34, a: amp * (1.4 + rng() * 2.1) };
+    const mass2 = { x: rng(), w: 0.12 + rng() * 0.4, a: amp * (0.8 + rng() * 1.8) };
+    const tilt = (rng() - 0.5) * amp * 1.4;
+    return function(x){
+      let y = baseTop;
+      for (const w of waves) y += w.a * Math.sin(x * w.f * Math.PI * 2 + w.p);
+      y -= mass.a  * Math.exp(-Math.pow((x - mass.x) / mass.w, 2));
+      y -= mass2.a * Math.exp(-Math.pow((x - mass2.x) / mass2.w, 2));
+      y += tilt * (x - 0.5);
+      return Math.min(0.995, Math.max(horizon * 0.72, y));
+    };
+  }
+
+  function renderScene(ctx, W, H, s){
+    const rng = rngFor(s.seed, s.presetKey + "|" + Math.round(s.rough * 100) + "|" + s.layers + "|" + Math.round(s.horizon * 100));
+    const pal = s.pal;
+
+    // ---- sky
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+    skyGrad.addColorStop(0, pal.sky[0]);
+    skyGrad.addColorStop(1, pal.sky[1]);
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // broad atmospheric haze just above the horizon
+    const haze = ctx.createLinearGradient(0, 0, 0, H);
+    haze.addColorStop(Math.max(0, s.horizon - 0.28), "rgba(255,255,255,0)");
+    haze.addColorStop(s.horizon, "rgba(255,255,255,.16)");
+    haze.addColorStop(Math.min(1, s.horizon + 0.08), "rgba(255,255,255,0)");
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, 0, W, H);
+
+    // ---- sky dust (points that thicken toward the horizon)
+    const dustN = Math.round(s.dust * 26 * (0.4 + s.horizon));
+    if (dustN > 0){
+      const paths = new Map();
+      for (let i = 0; i < dustN; i++){
+        const x = rng(), t = rng();
+        const y = Math.pow(t, 1.7) * (s.horizon + 0.02);
+        const col = pal.dust[Math.floor(rng() * pal.dust.length)];
+        const r = (0.2 + rng() * 0.9) * (0.35 + t) * Math.min(W, H) * 0.0016;
+        p(paths, col).moveTo(x * W, y * H); p(paths, col).arc(x * W, y * H, r, 0, Math.PI * 2);
+      }
+      fillPaths(ctx, paths, 0.85);
+    }
+
+    // ---- layer profiles
+    const profiles = [];
+    const specs = [];
+    for (let i = 0; i < s.layers; i++){
+      const idx = Math.min(pal.layers.length - 1, Math.round(i * (pal.layers.length - 1) / Math.max(1, s.layers - 1)));
+      specs.push(pal.layers[idx]);
+    }
+    for (let i = 0; i < s.layers; i++){
+      const src = specs[i];
+      const f = makeProfile(rng, s.rough, s.horizon, i, s.layers);
+      const xs = [];
+      const steps = 260;
+      for (let k = 0; k <= steps; k++) xs.push(f(k / steps));
+      const avgTop = xs.reduce((a, b) => a + b, 0) / xs.length;
+      profiles.push({ f, xs, spec: src, i, avgTop });
+    }
+
+    // ---- paint back to front
+    const minDim = Math.min(W, H);
+    const baseDab = 0.0017 * minDim * s.dab;
+    const totalDabs = Math.round(500 + s.density * 900);
+    // dice are spent in proportion to each band's visible area, so particle
+    // density reads the same whether a band is a sliver or half the frame.
+    const sumDrop = profiles.reduce((a, l) => a + (1 - l.avgTop), 0) || 1;
+
+    for (const layer of profiles){
+      const { f, xs, spec, avgTop } = layer;
+      // polygon fill
+      const poly = new Path2D();
+      const ridge = new Path2D();
+      poly.moveTo(0, H + 2);
+      ridge.moveTo(0, xs[0] * H);
+      for (let k = 0; k < xs.length; k++){
+        const px = (k / (xs.length - 1)) * W;
+        poly.lineTo(px, xs[k] * H);
+        ridge.lineTo(px, xs[k] * H);
+      }
+      poly.lineTo(W, H + 2);
+      poly.closePath();
+      ctx.fillStyle = spec.base;
+      ctx.fill(poly);
+
+      // light at the ridge, shade at the base — stops each layer reading as a flat band
+      const grad = ctx.createLinearGradient(0, avgTop * H, 0, H);
+      grad.addColorStop(0, "rgba(255,255,255,.13)");
+      grad.addColorStop(0.30, "rgba(255,255,255,0)");
+      grad.addColorStop(1, "rgba(0,0,0,.30)");
+      ctx.fillStyle = grad;
+      ctx.fill(poly);
+
+      // dabs inside the polygon
+      const meanDrop = 1 - avgTop;                              // visible share of canvas
+      const count = Math.max(120, Math.round(totalDabs * 0.72 * meanDrop / sumDrop));
+      const neighbour = specs[Math.min(specs.length - 1, layer.i + 1)].dabs;
+      const paths = new Map();
+      ctx.save();
+      ctx.clip(poly);
+      for (let i = 0; i < count; i++){
+        const x = rng(), yTop = f(x), y = yTop + rng() * (1 - yTop);
+        const pool = rng() < 0.28 ? neighbour : spec.dabs;
+        const col = pool[Math.floor(Math.pow(rng(), 1.7) * pool.length)];
+        const r = Math.max(0.5, baseDab * (0.26 + rng() * 0.95));
+        const px = x * W, py = y * H;
+        const pth = p(paths, col);
+        pth.moveTo(px + r, py);
+        pth.arc(px, py, r, 0, Math.PI * 2);
+      }
+      // clumps: lighter rock/snow patches gathered on the ridge line
+      const clumps = 4 + Math.floor(rng() * 6);
+      for (let c = 0; c < clumps; c++){
+        const cx = rng(), cy = f(cx) + rng() * 0.13;
+        if (cy > 0.98) continue;
+        const spread = (0.014 + rng() * 0.055);
+        const n = Math.round(180 + rng() * 340);
+        const pth = p(paths, rng() < 0.75 ? spec.clump : spec.dabs[0]);
+        for (let i = 0; i < n; i++){
+          const ang = rng() * Math.PI * 2, rad = Math.pow(rng(), 1.7) * spread;
+          const px = (cx + Math.cos(ang) * rad * 1.6) * W;
+          const py = (cy + Math.sin(ang) * rad * 0.75) * H;
+          const r = Math.max(0.5, baseDab * (0.3 + rng() * 0.85));
+          pth.moveTo(px + r, py);
+          pth.arc(px, py, r, 0, Math.PI * 2);
+        }
+      }
+      ctx.restore();
+      fillPaths(ctx, paths, 0.95);
+
+      // crisp hill edge, like cut paper
+      ctx.save();
+      ctx.strokeStyle = "rgba(0,0,0,.22)";
+      ctx.lineWidth = Math.max(1, minDim * 0.0022);
+      ctx.stroke(ridge);
+      ctx.restore();
+
+      // inner mound — a lower ridge inside the band so large fields aren't flat
+      if (layer.i > 0){
+        const a1 = 0.018 + rng() * 0.040, f1 = 1.4 + rng() * 3.0, p1 = rng() * 6.283;
+        const a2 = 0.008 + rng() * 0.026, f2 = 3.0 + rng() * 6.0, p2 = rng() * 6.283;
+        const inner = x => Math.min(0.975, f(x) + 0.085 + Math.abs(a1 * Math.sin(x * f1 * 6.283 + p1) + a2 * Math.sin(x * f2 * 6.283 + p2)));
+        const other = specs[Math.max(0, layer.i - 1)];
+        const moundBase = mix(mix(other.base, spec.base, 0.45), "#000000", 0.12);
+        const mp = new Path2D();
+        mp.moveTo(0, H + 2);
+        for (let k = 0; k <= 140; k++) mp.lineTo((k / 140) * W, inner(k / 140) * H);
+        mp.lineTo(W, H + 2);
+        mp.closePath();
+        ctx.fillStyle = moundBase;
+        ctx.fill(mp);
+        const mPaths = new Map();
+        ctx.save();
+        ctx.clip(mp);
+        const mCount = Math.max(200, Math.round(totalDabs * 0.28 * (1 - inner(0.5)) / sumDrop));
+        for (let i = 0; i < mCount; i++){
+          const x = rng(), y = inner(x) + rng() * (1 - inner(x));
+          const pool = rng() < 0.35 ? other.dabs : spec.dabs;
+          const col = pool[Math.floor(Math.pow(rng(), 1.6) * pool.length)];
+          const r = Math.max(0.5, baseDab * (0.24 + rng() * 0.85));
+          const pth = p(mPaths, col), px = x * W, py = y * H;
+          pth.moveTo(px + r, py);
+          pth.arc(px, py, r, 0, Math.PI * 2);
+        }
+        ctx.restore();
+        fillPaths(ctx, mPaths, 0.9);
+      }
+    }
+
+    // ---- paper grain
+    if (s.grain > 0){
+      const n = Math.round(s.grain * (W * H) / 9000);
+      const paths = new Map();
+      const dark = new Map();
+      for (let i = 0; i < n; i++){
+        const x = rng() * W, y = rng() * H, r = 0.35 + rng() * 0.7;
+        const bucket = rng() < 0.5 ? paths : dark;
+        const pth = p(bucket, "k");
+        pth.moveTo(x + r, y);
+        pth.arc(x, y, r, 0, Math.PI * 2);
+      }
+      fillPaths(ctx, paths, 0.05, "#ffffff");
+      fillPaths(ctx, dark, 0.06, "#000000");
+    }
+
+    return profiles;
+  }
+
+  const p = (map, key) => {
+    let v = map.get(key);
+    if (!v){ v = new Path2D(); map.set(key, v); }
+    return v;
+  };
+  function fillPaths(ctx, map, alpha, override){
+    ctx.globalAlpha = alpha;
+    for (const [col, path] of map){ ctx.fillStyle = override || col; ctx.fill(path); }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawFigure(ctx, W, H, x, groundY, height, poseIndex, colour){
+    const fh = height;
+    const sx = fh * 0.62;
+    const x0 = x * W, y0 = groundY * H;
+    const pose = POSES[((poseIndex % POSES.length) + POSES.length) % POSES.length];
+    // ground the pose: shift so its lowest point sits exactly on the ridge
+    let maxY = -Infinity;
+    for (const line of pose) for (const pt of line) if (pt[1] > maxY) maxY = pt[1];
+    const py = v => y0 + (v - maxY) * fh;
+    ctx.save();
+    ctx.strokeStyle = colour;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = Math.max(1.3, fh * 0.028);
+    ctx.beginPath();
+    for (const line of pose){
+      for (let i = 0; i < line.length; i++){
+        const px = x0 + line[i][0] * sx;
+        if (i === 0) ctx.moveTo(px, py(line[i][1])); else ctx.lineTo(px, py(line[i][1]));
+      }
+    }
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x0, py(-0.92), fh * 0.078, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function figureSlots(s){
+    const rng = rngFor(s.seed, "figures");
+    const out = [];
+    for (let i = 0; i < Math.max(0, s.figures); i++){
+      out.push({
+        x: i === 0 ? 0.34 + rng() * 0.3 : rng(),
+        layer: Math.min(s.layers - 1, Math.floor((0.35 + rng() * 0.65) * s.layers)),
+        h: 0.11 + rng() * 0.07,
+        phase: rng() < 0.5 ? 0 : 1
+      });
+    }
+    return out;
+  }
+
+  /* ------------------------------------------------------------ app state */
+  const DEFAULTS = Object.freeze({
+    seed: "melbourne", preset: "hills", base: "#3b6ef0",
+    layers: 5, rough: 0.55, horizon: 0.42, density: 62, dab: 1.6,
+    dust: 45, grain: 30, figures: 1, loop: true, aspect: "16:9", scale: 2
+  });
+  const ASPECTS = { "16:9": [16,9], "3:2": [3,2], "1:1": [1,1], "4:5": [4,5], "9:16": [9,16] };
+
+  let S = Object.assign({}, DEFAULTS);
+  const $ = id => document.getElementById(id);
+  const canvas = $("art");
+  const ctx = canvas.getContext("2d");
+  let baseCanvas = document.createElement("canvas");
+  let profiles = [];
+  let slots = [];
+  let raf = null, frame = 0, animTimer = null;
+
+  function palette(){
+    const preset = S.preset === "custom" ? customPreset(S.base, S.seed) : PRESETS[S.preset];
+    return Object.assign({}, preset);
+  }
+
+  function sizeFor(aspect, base){
+    const [aw, ah] = ASPECTS[aspect];
+    return aw >= ah ? [base, Math.round(base * ah / aw)] : [Math.round(base * aw / ah), base];
+  }
+
+  function paint(scaleForExport){
+    const pal = palette();
+    const st = {
+      seed: S.seed, presetKey: S.preset, pal,
+      layers: S.layers, rough: S.rough, horizon: S.horizon,
+      density: S.density, dab: S.dab, dust: S.dust, grain: S.grain
+    };
+    if (scaleForExport){
+      const [W, H] = sizeFor(S.aspect, 1280 * S.scale);
+      const off = document.createElement("canvas");
+      off.width = W; off.height = H;
+      const octx = off.getContext("2d");
+      const prof = renderScene(octx, W, H, st);
+      drawFigures(octx, W, H, prof, st, 0, false);
+      return off;
+    }
+    // on-screen: retina-aware, capped at 1600 on the long edge
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const cssW = Math.min(canvas.parentElement.clientWidth || 960, 1600);
+    const [W, H] = sizeFor(S.aspect, Math.round(cssW * dpr));
+    canvas.width = W; canvas.height = H;
+    canvas.style.aspectRatio = W + " / " + H;
+    baseCanvas.width = W; baseCanvas.height = H;
+    profiles = renderScene(baseCanvas.getContext("2d"), W, H, st);
+    slots = figureSlots(S);
+    drawFigures(ctx, W, H, profiles, st, frame, true);
+    return canvas;
+  }
+
+  function drawFigures(target, W, H, prof, st, f, drawBase){
+    if (!st || !S.figures) return;
+    if (drawBase && baseCanvas.width) target.drawImage(baseCanvas, 0, 0, W, H);
+    const poseBase = S.loop ? (((f | 0) % 2) + 2) % 2 : 0;
+    for (const s of slots){
+      const layer = prof[Math.min(prof.length - 1, s.layer)];
+      if (!layer) continue;
+      drawFigure(target, W, H, s.x, layer.f(s.x), s.h * H, poseBase + s.phase, st.pal.figure);
+    }
+  }
+
+  function compositeFrame(){
+    if (!S.figures || !S.loop) return;
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(baseCanvas, 0, 0);
+    for (const s of slots){
+      const layer = profiles[Math.min(profiles.length - 1, s.layer)];
+      if (!layer) continue;
+      drawFigure(ctx, W, H, s.x, layer.f(s.x), s.h * H, (frame % 2) + s.phase, palette().figure);
+    }
+  }
+
+  /* ------------------------------------------------------------------ UI */
+  function readUI(){
+    S.seed = $("seed").value || "seed";
+    S.preset = $("preset").value;
+    S.base = $("base").value;
+    S.layers = +$("layers").value;
+    S.rough = +$("rough").value / 100;
+    S.horizon = +$("horizon").value / 100;
+    S.density = +$("density").value;
+    S.dab = +$("dab").value / 10;
+    S.dust = +$("dust").value;
+    S.grain = +$("grain").value;
+    S.figures = +$("figures").value;
+    S.loop = +$("loop").value === 1;
+    S.aspect = $("aspect").value;
+    S.scale = +$("scale").value;
+    echo();
+  }
+  function echo(){
+    $("layersVal").textContent = S.layers;
+    $("roughVal").textContent = Math.round(S.rough * 100);
+    $("horizonVal").textContent = Math.round(S.horizon * 100);
+    $("densityVal").textContent = S.density;
+    $("dabVal").textContent = S.dab.toFixed(1);
+    $("dustVal").textContent = S.dust;
+    $("grainVal").textContent = S.grain;
+    $("loopVal").textContent = S.loop ? "on" : "off";
+    $("seedEcho").textContent = S.seed.length > 22 ? S.seed.slice(0, 22) + "…" : S.seed;
+    $("seedChip").textContent = "seed: " + S.seed;
+    $("baseEcho").textContent = S.base.toUpperCase();
+    $("baseWrap").hidden = S.preset !== "custom";
+  }
+
+  function refresh(opts){
+    readUI();
+    if (animTimer){ clearInterval(animTimer); animTimer = null; }
+    paint(false);
+    if (S.loop && S.figures){
+      animTimer = setInterval(() => { frame = (frame + 1) % 2; compositeFrame(); }, 190);
+    }
+    scheduleVariants();
+    if (!opts || opts.url !== false) writeHash();
+  }
+
+  /* the strip is eight full renders, so it only redraws when something that
+     actually changes the family does — not on every dab-size tick. */
+  let lastVarSig = null, varTimer = null;
+  const variantSig = () => [S.seed, S.preset, S.base, S.layers, S.rough.toFixed(2),
+                            S.horizon.toFixed(2), S.aspect, S.figures, S.dust].join("|");
+  function scheduleVariants(){
+    if (variantSig() === lastVarSig) return;
+    clearTimeout(varTimer);
+    varTimer = setTimeout(() => { const s = variantSig(); if (s === lastVarSig) return; lastVarSig = s; renderVariants(); }, 260);
+  }
+
+  function writeHash(){
+    const parts = [
+      "s=" + encodeURIComponent(S.seed), "p=" + S.preset,
+      "l=" + S.layers, "r=" + Math.round(S.rough * 100), "h=" + Math.round(S.horizon * 100),
+      "d=" + S.density, "b=" + S.dab.toFixed(1), "u=" + S.dust, "g=" + S.grain,
+      "f=" + S.figures, "a=" + S.aspect, "z=" + S.scale
+    ];
+    if (S.preset === "custom") parts.push("c=" + S.base.replace("#", ""));
+    history.replaceState(null, "", "#" + parts.join("&"));
+  }
+
+  function readHash(){
+    if (!location.hash || location.hash.length < 4) return false;
+    const q = {};
+    location.hash.slice(1).split("&").forEach(kv => {
+      const [k, v] = kv.split("="); if (k) q[k] = decodeURIComponent(v || "");
+    });
+    S.seed = q.s || S.seed;
+    if (q.p && (PRESETS[q.p] || q.p === "custom")) S.preset = q.p;
+    if (q.l) S.layers = Math.max(2, Math.min(8, +q.l));
+    if (q.r) S.rough = +q.r / 100;
+    if (q.h) S.horizon = +q.h / 100;
+    if (q.d) S.density = +q.d;
+    if (q.b) S.dab = +q.b;
+    if (q.u) S.dust = +q.u;
+    if (q.g) S.grain = +q.g;
+    if (q.f) S.figures = +q.f;
+    if (q.a && ASPECTS[q.a]) S.aspect = q.a;
+    if (q.z) S.scale = +q.z;
+    if (q.c) S.base = "#" + q.c;
+    return true;
+  }
+
+  function syncUI(){
+    $("seed").value = S.seed;
+    $("preset").value = S.preset;
+    $("base").value = S.base;
+    $("layers").value = S.layers;
+    $("rough").value = Math.round(S.rough * 100);
+    $("horizon").value = Math.round(S.horizon * 100);
+    $("density").value = S.density;
+    $("dab").value = Math.round(S.dab * 10);
+    $("dust").value = S.dust;
+    $("grain").value = S.grain;
+    $("figures").value = String(S.figures);
+    $("loop").value = S.loop ? 1 : 0;
+    $("aspect").value = S.aspect;
+    $("scale").value = String(S.scale);
+  }
+
+  /* ------------------------------------------------------------ variants */
+  function renderVariants(){
+    const host = $("variants");
+    host.textContent = "";
+    const pal = palette();
+    for (let i = 0; i < 8; i++){
+      const vSeed = S.seed + " " + (i + 1);
+      const btn = document.createElement("button");
+      btn.className = "pv";
+      btn.type = "button";
+      const c = document.createElement("canvas");
+      const W = 320, H = Math.round(320 * ASPECTS[S.aspect][1] / ASPECTS[S.aspect][0]);
+      c.width = W; c.height = H;
+      const octx = c.getContext("2d");
+      const prof = renderScene(octx, W, H, {
+        seed: vSeed, presetKey: S.preset, pal,
+        layers: S.layers, rough: S.rough, horizon: S.horizon,
+        density: Math.round(S.density * 0.5), dab: S.dab * 0.9,
+        dust: Math.round(S.dust * 0.6), grain: 0
+      });
+      if (S.figures){
+        const rng = rngFor(vSeed, "figures");
+        const x = 0.34 + rng() * 0.3;
+        const layer = prof[Math.min(prof.length - 1, Math.floor((0.35 + rng() * 0.65) * S.layers))];
+        if (layer) drawFigure(octx, W, H, x, layer.f(x), (0.11 + rng() * 0.07) * H, 0, pal.figure);
+      }
+      const label = document.createElement("span");
+      label.textContent = vSeed;
+      btn.appendChild(c); btn.appendChild(label);
+      btn.addEventListener("click", () => {
+        S.seed = vSeed; $("seed").value = vSeed; refresh();
+        toast("Seed → " + vSeed);
+      });
+      host.appendChild(btn);
+    }
+  }
+
+  /* --------------------------------------------------------------- export */
+  function savePNG(){
+    const off = paint(true);
+    off.toBlob(blob => {
+      const a = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      const slug = S.seed.replace(/[^a-z0-9]+/gi, "-").toLowerCase().replace(/^-|-$/g, "") || "seedscape";
+      a.href = url;
+      a.download = "seedscape-" + slug + "-" + off.width + "x" + off.height + ".png";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      toast("Saved " + off.width + "×" + off.height);
+    }, "image/png");
+  }
+
+  let toastTimer = null;
+  function toast(msg){
+    const t = $("toast");
+    t.textContent = msg; t.classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("on"), 1700);
+  }
+
+  /* ----------------------------------------------------------------- wiring */
+  const soft = ["seed"];
+  let debounce = null;
+  document.querySelectorAll("input,select").forEach(el => {
+    const ev = el.tagName === "SELECT" ? "change" : (soft.includes(el.id) ? "input" : "input");
+    el.addEventListener(ev, () => {
+      if (el.id === "loop") frame = 0;
+      clearTimeout(debounce);
+      debounce = setTimeout(() => refresh(), soft.includes(el.id) ? 220 : 40);
+    });
+  });
+
+  $("btnShuffle").addEventListener("click", () => {
+    const r = rngFor(S.seed + Date.now(), "shuffle");
+    S.seed = WORDS[Math.floor(r() * WORDS.length)] + "-" + Math.floor(r() * 900 + 100);
+    $("seed").value = S.seed;
+    refresh(); toast("Seed → " + S.seed);
+  });
+  $("btnRandomWord").addEventListener("click", () => {
+    const r = rngFor(String(Date.now()), "word");
+    S.seed = WORDS[Math.floor(r() * WORDS.length)];
+    $("seed").value = S.seed; refresh(); toast("Seed → " + S.seed);
+  });
+  $("btnReset").addEventListener("click", () => {
+    S = Object.assign({}, DEFAULTS);
+    syncUI(); frame = 0; refresh({ url: true });
+    toast("Reset to defaults");
+  });
+  $("btnSave").addEventListener("click", savePNG);
+  $("btnLink").addEventListener("click", async () => {
+    writeHash();
+    const url = location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast("Link copied");
+    } catch (e){
+      const ta = document.createElement("textarea");
+      ta.value = url; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); toast("Link copied"); }
+      catch (e2){ toast("Copy failed — URL is in the address bar"); }
+      ta.remove();
+    }
+  });
+
+  document.addEventListener("keydown", e => {
+    const t = e.target;
+    if (t && t.matches && t.matches("input,select,textarea")) return;
+    if (e.key === "s" || e.key === "S"){ e.preventDefault(); savePNG(); }
+    if (e.key === "r" || e.key === "R"){ e.preventDefault(); $("btnShuffle").click(); }
+    if (e.key === "Escape"){ S = Object.assign({}, DEFAULTS); syncUI(); frame = 0; refresh(); toast("Reset to defaults"); }
+  });
+
+  let rAF = null;
+  window.addEventListener("resize", () => {
+    if (rAF) cancelAnimationFrame(rAF);
+    rAF = requestAnimationFrame(() => paint(false));
+  });
+
+  readHash();
+  syncUI();
+  refresh();
+  lastVarSig = variantSig();
+  renderVariants();
+
+  // deterministic-render hook for verification
+  window.__seedscape = {
+    get state(){ return S; },
+    paint, canvas,
+    apply(){ readUI(); paint(false); return canvas; },
+    set(seed, extra){
+      S = Object.assign({}, S, { seed }, extra || {});
+      syncUI(); refresh({ url: false });
+      return canvas.toDataURL();
+    }
+  };
+})();
+</script>
+</body>
+</html>
