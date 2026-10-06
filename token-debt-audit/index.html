@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Debt Audit — what your stylesheet really contains</title>
+<meta name="description" content="Paste a stylesheet and get its real token debt: perceptually-clustered colours (OKLab ΔE), off-grid spacing, near-duplicate type sizes, and a consolidated :root token sheet you can copy.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="top">
+  <p class="eyebrow">Playground · Labs &amp; tools</p>
+  <h1>Token Debt Audit</h1>
+  <p class="lede">
+    Paste a stylesheet — a Webflow export, an inherited client site, your own legacy CSS — and it tells you what is
+    actually in there: <b>how many colours you really have once perceptually identical ones are merged</b>,
+    which spacing values fall off the grid, which type sizes are 1px apart, and a consolidated
+    <code>:root</code> block built only from values you already use. Everything runs locally in the browser.
+  </p>
+</header>
+
+<section id="input-panel">
+  <div class="panel-head">
+    <h2>Source CSS</h2>
+    <span class="spacer"></span>
+    <button id="btn-edit" class="btn ghost small">Hide input</button>
+  </div>
+  <div class="panel-body">
+    <div id="drop">
+      <textarea id="css-input" spellcheck="false" placeholder="Paste CSS here — or a whole .html file, and any &lt;style&gt; blocks and style=&quot;&quot; attributes get pulled out for you. You can also drop .css / .html files onto this box. ⌘↵ to run."></textarea>
+    </div>
+    <div class="ctrl-row">
+      <label class="slider">
+        Merge ΔE
+        <input type="range" id="threshold" min="0.5" max="8" step="0.5" value="2">
+        <b id="threshold-val" class="mono">2.0</b>
+      </label>
+      <span id="threshold-cap" class="lab"></span>
+      <label class="lab">root <input type="number" id="rootpx" value="16" min="4" max="40"> px</label>
+      <span class="spacer"></span>
+      <input type="file" id="file" accept=".css,.html,.htm,.scss,.txt" multiple hidden>
+      <button class="btn ghost" onclick="document.getElementById('file').click()">Load file</button>
+      <button id="btn-sample" class="btn ghost">Sample stylesheet</button>
+      <button id="btn-clear" class="btn ghost">Clear</button>
+      <button id="btn-run" class="btn">Audit</button>
+    </div>
+    <div class="bm-row">
+      Pull CSS straight off a live page:
+      <a id="bookmarklet" href="#" title="Drag this to your bookmarks bar">Audit this page →</a>
+      <button id="copy-bm" class="btn ghost small">Copy bookmarklet</button>
+      <span>— drag it to your bookmarks bar, then click it on any site. It copies every same-origin CSS rule to your clipboard.</span>
+    </div>
+  </div>
+</section>
+
+<section id="empty">
+  <h2>Nothing audited yet</h2>
+  <p>Hit <b>Sample stylesheet</b> to see the tool work on a deliberately messy client sheet, or paste your own and press <b>Audit</b>.</p>
+  <p>The sample is a realistic inherited site: 60-odd colour literals, nine border radii, a type scale that was never a scale, and two z-index values in the thousands.</p>
+</section>
+
+<main id="report" hidden></main>
+
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

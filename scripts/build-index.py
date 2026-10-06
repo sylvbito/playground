@@ -55,6 +55,7 @@ FAMILIES = [
             ("css-native-ui", "CSS Native UI", "copy-paste patterns built on native CSS APIs"),
             ("anchor-positioning-playground", "CSS Anchor Positioning Playground", "declarative tooltips, popovers, dropdowns"),
             ("fluid-scale-studio", "Fluid Scale Studio", "exact fluid type & space scales · live viewport scrub"),
+            ("token-debt-audit", "Token Debt Audit", "paste a stylesheet → OKLab colour clustering · off-grid space · token sheet"),
         ],
     ),
     (
