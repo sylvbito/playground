@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morph Covers — seeded brand cover art with a continuous pattern morph</title>
+<meta name="description" content="Type a brand hex and a seed, then scrub one slider to morph concentric rings into diamonds, squares, chevrons and bands. A deterministic cover-art generator for OG images, blog headers and case-study cards — export PNG at any size, copy a CSS data-URI, or share the URL.">
+<style>
+  :root{
+    --bg:#0e0f12; --panel:#16181d; --panel2:#1d2026; --line:#282c34;
+    --ink:#eef1f5; --dim:#9aa4b2; --dim2:#6f7885; --accent:#ff8a4c;
+    --radius:14px; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:radial-gradient(1200px 700px at 15% -10%,#1b1e26 0%,var(--bg) 60%) no-repeat,var(--bg);
+    color:var(--ink);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  a{color:var(--accent)}
+  header{padding:26px 22px 10px;max-width:1240px;margin:0 auto}
+  .kicker{font:600 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim2)}
+  h1{margin:.35em 0 .15em;font-size:clamp(23px,3.4vw,34px);letter-spacing:-.02em;font-weight:640}
+  header p.lede{margin:0;color:var(--dim);max-width:70ch;font-size:15px}
+  .wrap{max-width:1240px;margin:0 auto;padding:18px 22px 70px}
+  .grid{display:grid;grid-template-columns:minmax(300px,360px) 1fr;gap:22px;align-items:start}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+
+  .panel{background:linear-gradient(180deg,var(--panel) 0%,var(--panel2) 100%);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .panel + .panel{margin-top:16px}
+  .panel h2{margin:0 0 12px;font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim2);font-weight:700}
+
+  .field{margin-bottom:14px}
+  .field:last-child{margin-bottom:0}
+  label.lb{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--dim);margin-bottom:6px;font-weight:500}
+  label.lb b{font:600 12px/1 var(--mono);color:var(--ink)}
+  input[type=text],input[type=number]{
+    width:100%;background:#0c0d10;border:1px solid var(--line);color:var(--ink);
+    border-radius:9px;padding:9px 10px;font:14px/1.2 var(--mono);outline:none;min-height:40px;
+  }
+  input[type=text]:focus,input[type=number]:focus{border-color:var(--accent)}
+  .row{display:flex;gap:8px;align-items:center}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:26px;background:transparent;margin:0}
+  input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:4px;background:linear-gradient(90deg,#3a3f4a,#4a505d)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:19px;height:19px;margin-top:-7px;border-radius:50%;background:var(--accent);border:2px solid #12141a;box-shadow:0 1px 5px rgba(0,0,0,.5)}
+  input[type=range]::-moz-range-track{height:5px;border-radius:4px;background:#3a3f4a}
+  input[type=range]::-moz-range-thumb{width:19px;height:19px;border:2px solid #12141a;border-radius:50%;background:var(--accent)}
+  input[type=color]{-webkit-appearance:none;appearance:none;border:1px solid var(--line);border-radius:9px;width:46px;height:40px;background:#0c0d10;padding:3px;cursor:pointer;flex:0 0 auto}
+  input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+  input[type=color]::-webkit-color-swatch{border:none;border-radius:6px}
+
+  button{font:inherit;cursor:pointer;border-radius:9px;border:1px solid var(--line);background:#191c22;color:var(--ink);padding:9px 11px;min-height:40px;transition:background .15s,border-color .15s,transform .05s}
+  button:hover{background:#22262e;border-color:#3a4150}
+  button:active{transform:translateY(1px)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#1a0f06;font-weight:650}
+  button.primary:hover{background:#ff9d66}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btns.three{grid-template-columns:1fr 1fr 1fr}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font:12px/1 var(--mono);padding:8px 10px;min-height:0;border-radius:8px;background:#14171c;color:var(--dim);border:1px solid var(--line)}
+  .chip[aria-pressed=true]{background:var(--accent);color:#1a0f06;border-color:var(--accent);font-weight:700}
+
+  /* preview */
+  .view{position:relative}
+  .perspective{perspective:1400px}
+  .card{position:relative;width:100%;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.2,.75,.25,1)}
+  .card.flipped{transform:rotateY(180deg)}
+  .face{position:relative;width:100%;border-radius:16px;overflow:hidden;border:1px solid var(--line);backface-visibility:hidden;-webkit-backface-visibility:hidden;box-shadow:0 22px 60px -22px rgba(0,0,0,.85)}
+  .face.front{aspect-ratio:1200/630;background:#0c0d10}
+  .face.front canvas{display:block;width:100%;height:100%}
+  .face.back{position:absolute;inset:0;transform:rotateY(180deg);background:#101216;aspect-ratio:1200/630;display:flex;flex-direction:column;justify-content:space-between;padding:20px}
+  .face.back .bk-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .face.back .mark{font:700 12px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim2)}
+  .face.back .name{font-size:clamp(20px,3vw,30px);font-weight:640;letter-spacing:-.02em;margin-top:6px;word-break:break-word}
+  .swatches{display:flex;gap:0;border-radius:8px;overflow:hidden;height:34px;border:1px solid var(--line)}
+  .swatches i{flex:1}
+  .meta{display:flex;gap:18px;flex-wrap:wrap;font:11px/1.5 var(--mono);color:var(--dim2)}
+  .meta b{color:var(--dim);font-weight:600}
+
+  .strip{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:16px}
+  @media (max-width:560px){.strip{grid-template-columns:repeat(3,1fr)}}
+  .thumb{position:relative;padding:0;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#0c0d10;aspect-ratio:1200/630;min-height:0}
+  .thumb canvas{display:block;width:100%;height:100%}
+  .thumb span{position:absolute;left:6px;bottom:4px;font:600 10px/1 var(--mono);color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.9);letter-spacing:.05em}
+  .thumb[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .bar{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;color:var(--dim2);font-size:12px}
+  .bar .dims{font:12px/1 var(--mono)}
+
+  .notes{margin-top:26px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+  .note{background:#131519;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .note h3{margin:0 0 7px;font-size:13px;letter-spacing:.02em}
+  .note p{margin:0 0 6px;font-size:13px;color:var(--dim)}
+  .note p:last-child{margin:0}
+  .note .tag{display:inline-block;font:10px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--dim2);border:1px solid var(--line);border-radius:999px;padding:4px 7px;margin-top:4px}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:#eef1f5;color:#12141a;font:600 13px/1 var(--mono);padding:11px 15px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<header>
+  <div class="kicker">Playground · Labs &amp; tools</div>
+  <h1>Morph Covers</h1>
+  <p class="lede">A brand hex and a seed become cover art. One slider morphs the artwork between five pattern families — and because the morph interpolates the <em>field</em> rather than cross-fading two images, every ring edge genuinely moves. Built for OG cards, blog headers and case-study covers.</p>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+
+    <div>
+      <div class="panel">
+        <h2>Source</h2>
+        <div class="field">
+          <label class="lb" for="seed">Seed <b id="seedv">morph</b></label>
+          <div class="row">
+            <input type="text" id="seed" value="morph" spellcheck="false" autocomplete="off">
+            <button id="dice" title="Randomise seed (R)">🎲</button>
+          </div>
+        </div>
+        <div class="field">
+          <label class="lb" for="brand">Brand colour <b id="brandv">#E8623A</b></label>
+          <div class="row">
+            <input type="color" id="brand" value="#E8623A">
+            <input type="text" id="brandhex" value="#E8623A" spellcheck="false" autocomplete="off">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>The morph</h2>
+        <div class="field">
+          <label class="lb" for="morph">Field morph <b id="morphv">01 · Rings</b></label>
+          <input type="range" id="morph" min="0" max="4" step="0.001" value="0">
+          <div class="chips" id="variants" style="margin-top:8px"></div>
+        </div>
+        <div class="field">
+          <label class="lb" for="freq">Frequency <b id="freqv">4.0</b></label>
+          <input type="range" id="freq" min="1" max="14" step="0.1" value="4">
+        </div>
+        <div class="field">
+          <label class="lb" for="angle">Rotation <b id="anglev">0°</b></label>
+          <input type="range" id="angle" min="0" max="360" step="1" value="0">
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Palette</h2>
+        <div class="field">
+          <label class="lb" for="chroma">Chroma <b id="chromav">0.15</b></label>
+          <input type="range" id="chroma" min="0.02" max="0.3" step="0.005" value="0.15">
+        </div>
+        <div class="field">
+          <label class="lb" for="hueRange">Hue range <b id="hueRangev">120°</b></label>
+          <input type="range" id="hueRange" min="0" max="360" step="5" value="120">
+        </div>
+        <div class="field">
+          <label class="lb" for="contrast">Contrast <b id="contrastv">0.22</b></label>
+          <input type="range" id="contrast" min="0.04" max="0.4" step="0.01" value="0.22">
+        </div>
+        <div class="field">
+          <label class="lb" for="phase">Phase <b id="phasev">0.00</b></label>
+          <input type="range" id="phase" min="0" max="1" step="0.01" value="0">
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Size</h2>
+        <div class="chips" id="aspects"></div>
+        <div class="row" style="margin-top:10px">
+          <input type="number" id="cw" value="1200" min="120" max="4000" aria-label="Export width">
+          <span style="color:var(--dim2)">×</span>
+          <input type="number" id="ch" value="630" min="120" max="4000" aria-label="Export height">
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Export</h2>
+        <div class="btns">
+          <button id="save" class="primary">Save PNG <span style="opacity:.7">(S)</span></button>
+          <button id="copycss">Copy CSS</button>
+          <button id="copylink">Copy link</button>
+          <button id="flip">Flip card <span style="opacity:.7">(F)</span></button>
+        </div>
+        <div class="btns three" style="margin-top:8px">
+          <button id="reset">Reset</button>
+          <button id="shuffle">Randomise</button>
+          <button id="clear">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view">
+      <div class="perspective">
+        <div class="card" id="card">
+          <div class="face front"><canvas id="art"></canvas></div>
+          <div class="face back">
+            <div class="bk-top">
+              <div>
+                <div class="mark">Morph Covers</div>
+                <div class="name" id="bkname">morph</div>
+              </div>
+              <div class="meta" style="text-align:right">
+                <div><b id="bkvariant">01 · Rings</b></div>
+              </div>
+            </div>
+            <div>
+              <div class="swatches" id="swatches"></div>
+              <div class="meta" style="margin-top:10px">
+                <div>seed <b id="bkseed">morph</b></div>
+                <div>size <b id="bksize">1200 × 630</b></div>
+                <div>brand <b id="bkbrand">#E8623A</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="strip" id="strip"></div>
+      <div class="bar">
+        <div class="dims" id="dimbar">Preview 1200 × 630 · export at the same size</div>
+        <div>S save · R seed · F flip · 1–5 variants · ←/→ scrub</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note">
+      <h3>01 · one field, not two images</h3>
+      <p><b>What it is.</b> Every cover is a single continuous field <span style="font-family:var(--mono)">f(x,y)</span> passed through a cyclic palette. Rings are the contours of a p-norm distance; bands are a rotated linear ramp; chevrons are that ramp pushed by <span style="font-family:var(--mono)">|x|</span>.</p>
+      <p><b>Try it.</b> Drag <em>Frequency</em> — the ring count changes with the palette spacing held constant, because spacing is a property of the field, not the colours.</p>
+    </div>
+    <div class="note">
+      <h3>02 · a real morph</h3>
+      <p><b>What it is.</b> The morph slider interpolates the field's <em>parameters</em> — the p-norm exponent (2 → 1 → 6), the radial↔chevron blend, the chevron amplitude. Nothing cross-fades; each pixel's value slides.</p>
+      <p><b>Try it.</b> Jump 01 → 03 and watch a circle become a square with rounded corners on the way through a diamond.</p>
+      <p><span class="tag">plain JS · no deps</span></p>
+    </div>
+    <div class="note">
+      <h3>03 · deterministic</h3>
+      <p><b>What it is.</b> The seed text is hashed to a 32-bit value that drives every jitter — phase, hue offset, rotation nudge. The same seed and settings reproduce the exact same art at any export size.</p>
+      <p><b>Try it.</b> Change one letter of the seed and refresh — the composition holds, the detail shifts.</p>
+    </div>
+    <div class="note">
+      <h3>04 · ship it</h3>
+      <p><b>What it is.</b> Export a PNG at any preset size, copy a CSS <span style="font-family:var(--mono)">background-image</span> data-URI, or copy the URL — every setting travels in the hash.</p>
+      <p><b>Try it.</b> Copy CSS, paste it as a <span style="font-family:var(--mono)">background-image</span> on a Webflow card, and set <span style="font-family:var(--mono)">background-size:cover</span>.</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================ colour maths (OKLCH) ============================ */
+const RGB2LMS=[[0.4122214708,0.5363325363,0.0514459929],[0.2119034982,0.6806995451,0.1073969566],[0.0883024619,0.2817188376,0.6299787005]];
+const LMS2RGB=[[4.0767416621,-3.3077115913,0.2309699292],[-1.2684380046,2.6097574011,-0.3413193965],[-0.0041960863,-0.7034186147,1.7076147010]];
+const LMSP2OKLAB=[[0.2104542553,0.7936177850,-0.0040720468],[1.9779984951,-2.4285922050,0.4505937099],[0.0259040371,0.7827717662,-0.8086757660]];
+const OKLAB2LMSP=[[1.0000000000,0.3963377774,0.2158037573],[1.0000000000,-0.1055613458,-0.0638541728],[1.0000000000,-0.0894841775,-1.2914855480]];
+const s2l=c=>{c/=255;return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4);};
+const l2s=c=>c<=0.0031308?c*12.92*255:(1.055*Math.pow(c,1/2.4)-0.055)*255;
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+
+function rgbToOklch(r,g,b){
+  const rl=s2l(r),gl=s2l(g),bl=s2l(b);
+  const L=RGB2LMS[0][0]*rl+RGB2LMS[0][1]*gl+RGB2LMS[0][2]*bl;
+  const M=RGB2LMS[1][0]*rl+RGB2LMS[1][1]*gl+RGB2LMS[1][2]*bl;
+  const S=RGB2LMS[2][0]*rl+RGB2LMS[2][1]*gl+RGB2LMS[2][2]*bl;
+  const Lp=Math.cbrt(L),Mp=Math.cbrt(M),Sp=Math.cbrt(S);
+  const oL=LMSP2OKLAB[0][0]*Lp+LMSP2OKLAB[0][1]*Mp+LMSP2OKLAB[0][2]*Sp;
+  const oa=LMSP2OKLAB[1][0]*Lp+LMSP2OKLAB[1][1]*Mp+LMSP2OKLAB[1][2]*Sp;
+  const ob=LMSP2OKLAB[2][0]*Lp+LMSP2OKLAB[2][1]*Mp+LMSP2OKLAB[2][2]*Sp;
+  let H=Math.atan2(ob,oa)*180/Math.PI; if(H<0)H+=360;
+  return {l:oL,c:Math.sqrt(oa*oa+ob*ob),h:H};
+}
+function oklchToRgb(l,c,h){
+  const hr=h*Math.PI/180, oa=c*Math.cos(hr), ob=c*Math.sin(hr);
+  const Lp=OKLAB2LMSP[0][0]*l+OKLAB2LMSP[0][1]*oa+OKLAB2LMSP[0][2]*ob;
+  const Mp=OKLAB2LMSP[1][0]*l+OKLAB2LMSP[1][1]*oa+OKLAB2LMSP[1][2]*ob;
+  const Sp=OKLAB2LMSP[2][0]*l+OKLAB2LMSP[2][1]*oa+OKLAB2LMSP[2][2]*ob;
+  const L=Lp*Lp*Lp,M=Mp*Mp*Mp,S=Sp*Sp*Sp;
+  const rl=LMS2RGB[0][0]*L+LMS2RGB[0][1]*M+LMS2RGB[0][2]*S;
+  const gl=LMS2RGB[1][0]*L+LMS2RGB[1][1]*M+LMS2RGB[1][2]*S;
+  const bl=LMS2RGB[2][0]*L+LMS2RGB[2][1]*M+LMS2RGB[2][2]*S;
+  return [clamp(Math.round(l2s(rl)),0,255),clamp(Math.round(l2s(gl)),0,255),clamp(Math.round(l2s(bl)),0,255)];
+}
+function hexToRgb(h){
+  h=(h||'').trim().replace(/^#/,'');
+  if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  if(!/^[0-9a-fA-F]{6}$/.test(h))return null;
+  return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
+}
+const normHex=h=>{const r=hexToRgb(h);return r?'#'+r.map(v=>v.toString(16).padStart(2,'0')).join('').toUpperCase():null;};
+const rgbHex=r=>'#'+r.map(v=>v.toString(16).padStart(2,'0')).join('').toUpperCase();
+
+/* ============================ deterministic RNG ============================ */
+function hash32(str){
+  let h=2166136261>>>0;
+  for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
+  return h>>>0;
+}
+function mulberry32(a){
+  return function(){
+    a|=0;a=a+0x6D2B79F5|0;
+    let t=Math.imul(a^a>>>15,1|a);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return ((t^t>>>14)>>>0)/4294967296;
+  };
+}
+
+/* ============================ the field ============================ */
+/* Five families. Morphing interpolates (p, struct, amp) — parameters of the
+   same continuous field — so shapes slide between families instead of fading. */
+const VARIANTS=[
+  {name:'Rings',    p:2, struct:0, amp:0.6},
+  {name:'Diamonds', p:1, struct:0, amp:0.6},
+  {name:'Squares',  p:6, struct:0, amp:0.6},
+  {name:'Chevrons', p:2, struct:1, amp:0.75},
+  {name:'Bands',    p:2, struct:1, amp:0.0}
+];
+function paramsAt(m){
+  m=clamp(m,0,VARIANTS.length-1);
+  const i=Math.min(Math.floor(m),VARIANTS.length-2), t=m-i;
+  const a=VARIANTS[i], b=VARIANTS[i+1];
+  return {p:a.p+(b.p-a.p)*t, struct:a.struct+(b.struct-a.struct)*t, amp:a.amp+(b.amp-a.amp)*t};
+}
+const variantLabel=m=>{
+  const i=Math.round(clamp(m,0,4));
+  return String(i+1).padStart(2,'0')+' · '+VARIANTS[i].name;
+};
+
+/* ============================ state ============================ */
+const ASPECTS=[
+  {k:'og',    label:'OG',    w:1200,h:630},
+  {k:'square',label:'Square',w:1080,h:1080},
+  {k:'wide',  label:'Wide',  w:1600,h:900},
+  {k:'port',  label:'Portrait',w:1080,h:1350},
+  {k:'story', label:'Story', w:1080,h:1920}
+];
+const DEFAULTS={seed:'morph',brand:'#E8623A',morph:0,freq:4,angle:0,chroma:0.15,hueRange:120,contrast:0.22,phase:0,aspect:'og'};
+const S=Object.assign({},DEFAULTS,{cw:1200,ch:630});
+
+/* ============================ palette ============================ */
+let PAL=new Uint8Array(2048*3), PAL_STOPS=[];
+function buildPalette(){
+  const rgb=hexToRgb(S.brand)||[232,98,58];
+  const base=rgbToOklch(rgb[0],rgb[1],rgb[2]);
+  const rnd=mulberry32(hash32(S.seed));
+  const phase=rnd()*Math.PI*2;
+  const hueOff=(rnd()*2-1)*22;           /* seed nudges the starting hue */
+  const N=16, stops=[];
+  for(let i=0;i<N;i++){
+    const t=i/N;
+    /* Sinusoidal hue excursion — wraps seamlessly at t=0/1, and keeps the
+       ramp near the brand hue instead of sweeping a flat rainbow. */
+    const h=(base.h+hueOff+S.hueRange*0.5*Math.sin(2*Math.PI*t)+360)%360;
+    const l=clamp(0.66 + S.contrast*Math.sin(phase+t*Math.PI*2), 0.16, 0.96);
+    const c=clamp(S.chroma*(1 + 0.35*Math.sin(phase*1.7+t*Math.PI*4)), 0.015, 0.34);
+    stops.push(oklchToRgb(l,c,h));
+  }
+  PAL_STOPS=stops;
+  const L=PAL.length/3;
+  for(let i=0;i<L;i++){
+    const f=i/L*N, i0=Math.floor(f)%N, i1=(i0+1)%N, t=f-Math.floor(f);
+    for(let k=0;k<3;k++){
+      PAL[i*3+k]=Math.round(stops[i0][k]*(1-t)+stops[i1][k]*t);
+    }
+  }
+}
+function swatchColors(n){
+  const out=[];
+  for(let i=0;i<n;i++){
+    const idx=Math.round(i/n*(PAL.length/3))%(PAL.length/3);
+    out.push(rgbHex([PAL[idx*3],PAL[idx*3+1],PAL[idx*3+2]]));
+  }
+  return out;
+}
+
+/* ============================ renderer ============================ */
+function renderField(ctx,w,h,morphOverride){
+  const P=paramsAt(morphOverride===undefined?morphCur:morphOverride);
+  const rnd=mulberry32(hash32(S.seed));
+  rnd(); /* consume: phase */
+  const jitter=(rnd()*2-1)*0.35;
+  const offset=S.phase+jitter;
+  const a=S.angle*Math.PI/180, ca=Math.cos(a), sa=Math.sin(a);
+  const cx=w/2, cy=h/2, hh=Math.max(1,h/2);
+  const freq=S.freq, p=P.p, struct=P.struct, amp=P.amp, invp=1/p;
+  const img=ctx.createImageData(w,h), d=img.data;
+  const L=PAL.length/3;
+  let i=0;
+  for(let py=0;py<h;py++){
+    const ny=(py-cy)/hh;
+    for(let px=0;px<w;px++){
+      const nx=(px-cx)/hh;
+      const xr=nx*ca-ny*sa, yr=nx*sa+ny*ca;
+      const ax=Math.abs(xr), ay=Math.abs(yr);
+      const rr=Math.pow(Math.pow(ax,p)+Math.pow(ay,p),invp);
+      const chev=yr+amp*ax;
+      const g=rr*(1-struct)+chev*struct;
+      let v=g*freq+offset; v-=Math.floor(v);
+      let k=(v*L)|0; if(k>=L)k=L-1;
+      const c=k*3;
+      d[i++]=PAL[c]; d[i++]=PAL[c+1]; d[i++]=PAL[c+2]; d[i++]=255;
+    }
+  }
+  ctx.putImageData(img,0,0);
+}
+function renderAt(canvas,w,h,morphOverride){
+  canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  renderField(ctx,w,h,morphOverride);
+}
+
+/* ============================ preview ============================ */
+const art=document.getElementById('art');
+const strip=document.getElementById('strip');
+let morphCur=S.morph, tween=null, miniCanvases=[];
+
+function previewScale(animating){
+  const cssW=art.parentElement.clientWidth||700;
+  const capIdle=Math.min(window.devicePixelRatio||1,1.75);
+  const idle=Math.max(0.4,Math.min(capIdle,1000/cssW));
+  return animating?idle*0.55:idle;
+}
+function drawPreview(animating){
+  const cssW=art.parentElement.clientWidth||700;
+  const cssH=art.parentElement.clientHeight||Math.round(cssW*630/1200);
+  const s=previewScale(animating);
+  renderAt(art,Math.max(8,Math.round(cssW*s)),Math.max(8,Math.round(cssH*s)),morphCur);
+}
+function drawStrip(){
+  miniCanvases.forEach((cv,i)=>{
+    const w=cv.clientWidth||110, h=cv.clientHeight||58;
+    renderAt(cv,Math.max(8,Math.round(w*(window.devicePixelRatio>1?1.5:1))),Math.max(8,Math.round(h*(window.devicePixelRatio>1?1.5:1))),i);
+  });
+}
+function renderAll(animating){
+  buildPalette();
+  drawPreview(animating);
+  drawStrip();
+  paintSwatches();
+  updateBack();
+}
+
+/* morph tween */
+const ease=t=>t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+function animateTo(target){
+  const from=morphCur, t0=performance.now(), dur=Math.max(180,Math.min(620,Math.abs(target-from)*190));
+  cancelAnimationFrame(tween);
+  const step=now=>{
+    const k=clamp((now-t0)/dur,0,1);
+    morphCur=from+(target-from)*ease(k);
+    drawPreview(true);
+    if(k<1){ tween=requestAnimationFrame(step); }
+    else { morphCur=target; drawPreview(false); paintChips(); }
+  };
+  tween=requestAnimationFrame(step);
+}
+
+/* ============================ UI ============================ */
+const $=id=>document.getElementById(id);
+const toastEl=$('toast');
+let toastT=null;
+function toast(msg){
+  toastEl.textContent=msg; toastEl.classList.add('on');
+  clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('on'),1900);
+}
+function paintChips(){
+  const i=Math.round(clamp(morphCur,0,4));
+  [...$('variants').children].forEach((b,k)=>b.setAttribute('aria-pressed',k===i?'true':'false'));
+  [...strip.children].forEach((b,k)=>b.setAttribute('aria-pressed',k===i?'true':'false'));
+  $('morphv').textContent=variantLabel(morphCur);
+}
+function paintSwatches(){
+  const box=$('swatches');
+  const cols=swatchColors(9);
+  box.innerHTML=cols.map(c=>'<i style="background:'+c+'"></i>').join('');
+}
+function updateBack(){
+  $('bkseed').textContent=S.seed;
+  $('bkname').textContent=S.seed;
+  $('bkbrand').textContent=S.brand;
+  $('bkvariant').textContent=variantLabel(morphCur);
+  $('bksize').textContent=S.cw+' × '+S.ch;
+  $('dimbar').textContent='Preview '+(S.cw||1200)+' × '+(S.ch||630)+' · export at the same size';
+}
+
+function buildVariantChips(){
+  const box=$('variants'); box.innerHTML='';
+  VARIANTS.forEach((v,i)=>{
+    const b=document.createElement('button');
+    b.className='chip'; b.textContent=String(i+1).padStart(2,'0')+' '+v.name;
+    b.setAttribute('aria-pressed','false');
+    b.addEventListener('click',()=>selectVariant(i,true));
+    box.appendChild(b);
+  });
+}
+function buildStrip(){
+  strip.innerHTML=''; miniCanvases=[];
+  VARIANTS.forEach((v,i)=>{
+    const b=document.createElement('button');
+    b.className='thumb'; b.setAttribute('aria-pressed','false');
+    b.title='Morph to '+v.name;
+    const cv=document.createElement('canvas'); b.appendChild(cv);
+    const sp=document.createElement('span'); sp.textContent=String(i+1).padStart(2,'0')+' '+v.name; b.appendChild(sp);
+    b.addEventListener('click',()=>selectVariant(i,true));
+    strip.appendChild(b); miniCanvases.push(cv);
+  });
+}
+function buildAspectChips(){
+  const box=$('aspects'); box.innerHTML='';
+  ASPECTS.forEach(a=>{
+    const b=document.createElement('button');
+    b.className='chip'; b.textContent=a.label+' '+a.w+'×'+a.h;
+    b.dataset.k=a.k; b.setAttribute('aria-pressed',a.k===S.aspect?'true':'false');
+    b.addEventListener('click',()=>setAspect(a.k));
+    box.appendChild(b);
+  });
+}
+function setAspect(k){
+  const a=ASPECTS.find(x=>x.k===k);
+  if(a){S.aspect=a.k;S.cw=a.w;S.ch=a.h;$('cw').value=a.w;$('ch').value=a.h;}
+  [...$('aspects').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===S.aspect?'true':'false'));
+  const front=document.querySelector('.face.front');
+  front.style.aspectRatio=S.cw+'/'+S.ch;
+  document.querySelector('.face.back').style.aspectRatio=S.cw+'/'+S.ch;
+  updateBack(); requestAnimationFrame(()=>drawPreview(false));
+}
+function selectVariant(i,anim){
+  morphCur=morphCur; /* keep for label */
+  $('morph').value=i;
+  paintChips();
+  if(anim){ animateTo(i); } else { morphCur=i; drawPreview(false); paintChips(); }
+}
+
+/* control wiring */
+function bindRange(id,key,fmt,after){
+  const el=$(id+''), out=$(id+'v');
+  const upd=()=>{
+    const v=parseFloat(el.value); S[key]=v;
+    if(out)out.textContent=fmt(v);
+    renderAll(true);
+    scheduleSettle();
+    if(after)after(v);
+  };
+  el.addEventListener('input',upd);
+  el.addEventListener('change',upd);
+  return upd;
+}
+let settleT=null;
+function scheduleSettle(){
+  clearTimeout(settleT);
+  settleT=setTimeout(()=>{ drawPreview(false); drawStrip(); },160);
+}
+const updFreq=bindRange('freq','freq',v=>v.toFixed(1));
+const updAngle=bindRange('angle','angle',v=>Math.round(v)+'°');
+const updChroma=bindRange('chroma','chroma',v=>v.toFixed(3));
+const updHue=bindRange('hueRange','hueRange',v=>Math.round(v)+'°',v=>{S.hueRange=v;});
+const updContrast=bindRange('contrast','contrast',v=>v.toFixed(2));
+const updPhase=bindRange('phase','phase',v=>v.toFixed(2));
+
+const morphEl=$('morph');
+morphEl.addEventListener('input',()=>{
+  cancelAnimationFrame(tween);
+  morphCur=parseFloat(morphEl.value);
+  drawPreview(true); paintChips(); scheduleSettle();
+});
+morphEl.addEventListener('change',()=>{ morphCur=parseFloat(morphEl.value); drawPreview(false); paintChips(); });
+
+$('seed').addEventListener('input',e=>{ S.seed=e.target.value||'morph'; $('seedv').textContent=S.seed; renderAll(true); scheduleSettle(); writeHash(); });
+$('brand').addEventListener('input',e=>{ setBrand(e.target.value,false); });
+$('brandhex').addEventListener('change',e=>{ const n=normHex(e.target.value); if(n) setBrand(n,true); else e.target.value=S.brand; });
+function setBrand(hex,echo){
+  const n=normHex(hex); if(!n)return;
+  S.brand=n;
+  $('brand').value=n; $('brandhex').value=n; $('brandv').textContent=n;
+  renderAll(true); scheduleSettle(); writeHash();
+}
+$('cw').addEventListener('change',e=>{ S.cw=clamp(parseInt(e.target.value)||1200,120,4000); e.target.value=S.cw; S.aspect='custom'; [...$('aspects').children].forEach(b=>b.setAttribute('aria-pressed','false')); updateBack(); });
+$('ch').addEventListener('change',e=>{ S.ch=clamp(parseInt(e.target.value)||630,120,4000); e.target.value=S.ch; S.aspect='custom'; [...$('aspects').children].forEach(b=>b.setAttribute('aria-pressed','false')); updateBack(); });
+
+$('dice').addEventListener('click',randomiseSeed);
+$('shuffle').addEventListener('click',()=>{ randomiseSeed(); $('morph').value=(Math.random()*4).toFixed(2); selectVariant(parseFloat($('morph').value),true); S.freq=2+Math.random()*7; $('freq').value=S.freq; $('freqv').textContent=S.freq.toFixed(1); S.angle=Math.round(Math.random()*360); $('angle').value=S.angle; $('anglev').textContent=S.angle+'°'; renderAll(true); scheduleSettle(); writeHash(); });
+$('reset').addEventListener('click',reset);
+$('clear').addEventListener('click',clear);
+
+function randomiseSeed(){
+  const words=['morph','veil','ridge','ember','quartz','harbour','atlas','lumen','delta','onyx','prism','sable','cobalt','aurora','tidal','flux'];
+  const s=words[Math.floor(Math.random()*words.length)]+'-'+Math.floor(Math.random()*9000+1000);
+  S.seed=s; $('seed').value=s; $('seedv').textContent=s; renderAll(true); scheduleSettle(); writeHash();
+  toast('seed → '+s);
+}
+function applyState(st){
+  Object.assign(S,st);
+  $('seed').value=S.seed; $('seedv').textContent=S.seed;
+  $('brand').value=S.brand; $('brandhex').value=S.brand; $('brandv').textContent=S.brand;
+  $('freq').value=S.freq; $('freqv').textContent=(+S.freq).toFixed(1);
+  $('angle').value=S.angle; $('anglev').textContent=Math.round(S.angle)+'°';
+  $('chroma').value=S.chroma; $('chromav').textContent=(+S.chroma).toFixed(3);
+  $('hueRange').value=S.hueRange; $('hueRangev').textContent=Math.round(S.hueRange)+'°';
+  $('contrast').value=S.contrast; $('contrastv').textContent=(+S.contrast).toFixed(2);
+  $('phase').value=S.phase; $('phasev').textContent=(+S.phase).toFixed(2);
+  $('morph').value=S.morph;
+  morphCur=S.morph;
+  $('cw').value=S.cw; $('ch').value=S.ch;
+  setAspect(S.aspect||'custom');
+}
+function reset(){
+  Object.assign(S,DEFAULTS,{cw:1200,ch:630});
+  applyState(S); renderAll(true); scheduleSettle(); writeHash(); toast('reset');
+}
+function clear(){
+  S.seed=''; $('seed').value=''; $('seedv').textContent='';
+  S.chroma=0; $('chroma').value=0.02; $('chromav').textContent='0.020';
+  S.hueRange=0; $('hueRange').value=0; $('hueRangev').textContent='0°';
+  S.contrast=0.04; $('contrast').value=0.04; $('contrastv').textContent='0.04';
+  renderAll(true); scheduleSettle(); writeHash(); toast('cleared — flat field');
+}
+
+/* ============================ flip ============================ */
+const card=$('card');
+$('flip').addEventListener('click',()=>{ card.classList.toggle('flipped'); });
+
+/* ============================ export ============================ */
+function exportCanvas(w,h){
+  const c=document.createElement('canvas');
+  renderAt(c,w,h,morphCur);
+  return c;
+}
+function savePNG(){
+  const c=exportCanvas(S.cw,S.ch);
+  c.toBlob(b=>{
+    if(!b){toast('export failed');return;}
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(b);
+    a.download=('morph-'+S.seed.replace(/[^a-z0-9\-_]+/gi,'-').slice(0,32)||'cover')+'-'+S.cw+'x'+S.ch+'.png';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
+    toast('saved '+S.cw+'×'+S.ch+' PNG');
+  },'image/png');
+}
+async function copyCSS(){
+  const c=exportCanvas(600,Math.round(600*S.ch/S.cw));
+  const url=c.toDataURL('image/png');
+  const css='background-image:url("'+url+'");\nbackground-size:cover;\nbackground-position:center;';
+  try{ await navigator.clipboard.writeText(css); toast('CSS copied (600px data-URI)'); }
+  catch(e){ toast('clipboard blocked — use Save PNG'); }
+}
+async function copyLink(){
+  writeHash();
+  const url=location.href;
+  try{ await navigator.clipboard.writeText(url); toast('link copied'); }
+  catch(e){ toast(url); }
+}
+$('save').addEventListener('click',savePNG);
+$('copycss').addEventListener('click',copyCSS);
+$('copylink').addEventListener('click',copyLink);
+
+/* ============================ URL hash ============================ */
+function writeHash(){
+  const p=new URLSearchParams();
+  p.set('s',S.seed); p.set('b',S.brand.replace('#',''));
+  p.set('m',(+morphCur).toFixed(2)); p.set('f',(+S.freq).toFixed(1));
+  p.set('a',Math.round(S.angle)); p.set('c',(+S.chroma).toFixed(3));
+  p.set('k',(+S.contrast).toFixed(2)); p.set('p',(+S.phase).toFixed(2));
+  p.set('u',Math.round(S.hueRange));
+  p.set('w',S.cw); p.set('h',S.ch);
+  history.replaceState(null,'','#'+p.toString());
+}
+function readHash(){
+  if(!location.hash)return;
+  const p=new URLSearchParams(location.hash.slice(1));
+  const g=(k,d)=>{const v=p.get(k);return v===null||v===''?d:v;};
+  const st={
+    seed:g('s',DEFAULTS.seed),
+    brand:normHex(g('b',DEFAULTS.brand.slice(1)))||DEFAULTS.brand,
+    morph:clamp(parseFloat(g('m',0))||0,0,4),
+    freq:clamp(parseFloat(g('f',4))||4,1,14),
+    angle:clamp(parseFloat(g('a',0))||0,0,360),
+    chroma:clamp(parseFloat(g('c',0.15))||0.15,0.02,0.3),
+    hueRange:clamp(parseFloat(g('u',120)),0,360),
+    contrast:clamp(parseFloat(g('k',0.22))||0.22,0.04,0.4),
+    phase:clamp(parseFloat(g('p',0))||0,0,1),
+    cw:clamp(parseInt(g('w',1200))||1200,120,4000),
+    ch:clamp(parseInt(g('h',630))||630,120,4000),
+    aspect:'custom'
+  };
+  const m=ASPECTS.find(a=>a.w===st.cw&&a.h===st.ch); st.aspect=m?m.k:'custom';
+  applyState(st);
+}
+
+/* ============================ keyboard ============================ */
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea'))return;
+  const k=e.key.toLowerCase();
+  if(k==='s'){e.preventDefault();savePNG();}
+  else if(k==='r'){randomiseSeed();}
+  else if(k==='f'){card.classList.toggle('flipped');}
+  else if(k>='1'&&k<='5'){selectVariant(parseInt(k)-1,true);}
+  else if(k==='arrowleft'||k==='arrowright'){
+    e.preventDefault();
+    const t=clamp(morphCur+(k==='arrowright'?0.25:-0.25),0,4);
+    morphEl.value=t; selectVariant(t,true);
+  }
+});
+
+/* ============================ verification hook ============================ */
+/* Synchronous apply — backgrounded tabs clamp timers, so verification drives
+   painting through this instead of dispatching input events. */
+window.__morph={
+  state:S,
+  apply(over){
+    if(over)Object.assign(S,over);
+    morphCur=S.morph;
+    renderAll(false);
+    writeHash();
+    return {seed:S.seed,brand:S.brand,morph:morphCur,variant:variantLabel(morphCur),size:[S.cw,S.ch]};
+  },
+  fieldAt(x,y,m){ /* x,y in -1..1 */
+    const P=paramsAt(m===undefined?morphCur:m);
+    const a=S.angle*Math.PI/180, ca=Math.cos(a), sa=Math.sin(a);
+    const xr=x*ca-y*sa, yr=x*sa+y*ca;
+    const rr=Math.pow(Math.pow(Math.abs(xr),P.p)+Math.pow(Math.abs(yr),P.p),1/P.p);
+    const chev=yr+P.amp*Math.abs(xr);
+    return rr*(1-P.struct)+chev*P.struct;
+  },
+  palette(){ return swatchColors(6); },
+  frameTo(canvas,w,h,morph){ renderAt(canvas,w,h,morph===undefined?morphCur:morph); return true; },
+  exportBlob(w,h){
+    const c=exportCanvas(w||S.cw,h||S.ch);
+    return new Promise(res=>c.toBlob(b=>{
+      res(b?{ok:true,size:b.size,type:b.type,w:c.width,h:c.height}:{ok:false});
+    },'image/png'));
+  },
+  signature(){
+    const c=document.createElement('canvas');
+    renderAt(c,96,96,morphCur);
+    const d=c.getContext('2d').getImageData(0,0,96,96).data;
+    let h=2166136261>>>0;
+    for(let i=0;i<d.length;i+=4){ h^=d[i]; h=Math.imul(h,16777619)>>>0; h^=d[i+1]; h=Math.imul(h,16777619)>>>0; h^=d[i+2]; h=Math.imul(h,16777619)>>>0; }
+    return h>>>0;
+  },
+  version:1
+};
+
+/* ============================ boot ============================ */
+buildVariantChips(); buildStrip(); buildAspectChips();
+readHash();
+setAspect(S.aspect);
+renderAll(false);
+paintChips();
+window.addEventListener('resize',()=>{ drawPreview(false); drawStrip(); });
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{drawPreview(false);});
+</script>
+</body>
+</html>

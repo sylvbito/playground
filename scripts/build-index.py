@@ -57,6 +57,7 @@ FAMILIES = [
             ("fluid-scale-studio", "Fluid Scale Studio", "exact fluid type & space scales · live viewport scrub"),
             ("token-debt-audit", "Token Debt Audit", "paste a stylesheet → OKLab colour clustering · off-grid space · token sheet"),
             ("seedscape", "Seedscape", "text seed → deterministic particle-hill landscape · export PNG"),
+            ("morph-covers", "Morph Covers", "brand hex + seed → cover art · one slider morphs rings → diamonds → squares → chevrons → bands · PNG/CSS/URL export"),
         ],
     ),
     (
