@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gamut Ramp Lab — a brand colour is one point; a ramp has to fit a display</title>
+<meta name="description" content="Brand hex → OKLCH ramp, then resolve every out-of-gamut stop three ways — naïve clipping vs CSS Color 4 gamut mapping — with the sRGB / Display P3 / Rec.2020 boundary plotted and the cost of clipping measured in ΔEok, hue degrees and lost steps.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <p class="kicker">Playground · colour tooling</p>
+    <h1>Gamut Ramp Lab</h1>
+    <p class="sub">A brand colour is a single point. A ramp is that point's hue held while lightness sweeps
+      from a pale stop to a dark one — and the pale and dark ends are exactly where sRGB runs out.
+      This tool builds the ramp, shows where the display's edge is, and measures what each way of
+      resolving the overflow actually costs.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ─────────────────────────── 01 ─────────────────────────── -->
+  <section class="panel" id="panel-01">
+    <h2><span class="num">01</span> The ramp</h2>
+    <div class="explain">
+      <p><b>What it is.</b> The brand colour converted to OKLCH (lightness 0–1, chroma 0–0.4, hue in degrees),
+        then spread across N stops with the hue held fixed and lightness swept. Chroma is the variable everybody
+        argues about, and it is the one that breaks ramps: hold it flat and the near-white and near-black stops
+        sit outside anything sRGB can print.</p>
+      <p><b>What to try.</b> Start with <code>#e6318e</code> and drag <em>Chroma ×</em>. At ×0.6 the ramp is
+        almost polite; at ×1.4 every one of the 16 stops is outside sRGB and panel 02 changes its verdict.
+        Then switch the target to <em>Display P3</em> and watch stops come back inside.</p>
+      <p><b>Support.</b> <code>oklch()</code> — Chrome 111+, Safari 15.4+, Firefox 113+.</p>
+    </div>
+
+    <div class="controls">
+      <div class="control">
+        <label for="hex">Brand colour</label>
+        <div class="row-tight">
+          <input id="hex" type="text" value="#e6318e" spellcheck="false" autocomplete="off" inputmode="text" aria-label="Brand colour hex">
+          <input id="picker" type="color" value="#e6318e" aria-label="Brand colour picker">
+        </div>
+        <div class="presets" id="presets" role="group" aria-label="Preset colours"></div>
+        <p class="hint" id="baseInfo">—</p>
+      </div>
+
+      <div class="control">
+        <label for="stops">Stops <output id="stopsOut">16</output></label>
+        <input id="stops" type="range" min="4" max="24" step="1" value="16">
+        <label for="lMax">Lightest stop <output id="lMaxOut">0.95</output></label>
+        <input id="lMax" type="range" min="0.6" max="0.99" step="0.005" value="0.95">
+        <label for="lMin">Darkest stop <output id="lMinOut">0.28</output></label>
+        <input id="lMin" type="range" min="0.05" max="0.6" step="0.005" value="0.28">
+        <label for="chroma">Chroma × <output id="chromaOut">1.0</output></label>
+        <input id="chroma" type="range" min="0.2" max="1.6" step="0.05" value="1">
+      </div>
+
+      <div class="control">
+        <span class="group-label">Chroma profile</span>
+        <div class="radios" id="profiles" role="radiogroup" aria-label="Chroma profile">
+          <label><input type="radio" name="profile" value="flat" checked> Flat</label>
+          <label><input type="radio" name="profile" value="arc"> Arc</label>
+        </div>
+        <span class="group-label">Target gamut</span>
+        <div class="radios" id="spaces" role="radiogroup" aria-label="Target gamut">
+          <label><input type="radio" name="space" value="srgb" checked> sRGB</label>
+          <label><input type="radio" name="space" value="p3"> Display P3</label>
+          <label><input type="radio" name="space" value="rec2020"> Rec.2020</label>
+        </div>
+        <div class="btn-row">
+          <button id="reset" class="btn" type="button">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="sub-head">Intended ramp — and what the browser paints for it <span class="tag" id="intendedTag">16 stops</span></h3>
+    <p class="hint">Each swatch is painted from the raw <code>oklch()</code> string you see printed under it, so
+      where a stop is outside the gamut the <em>browser</em> decides what shows. Measured in panel 05, that paint
+      path clips rather than gamut-maps — which is why these pale stops already look like the clipped strip in
+      panel 04. The <code>oklch()</code> label is the value you asked for; the badge means the browser could not
+      give it to you.</p>
+    <div class="strip" id="intendedStrip" aria-label="Intended ramp"></div>
+  </section>
+
+  <!-- ─────────────────────────── 02 ─────────────────────────── -->
+  <section class="panel" id="panel-02">
+    <h2><span class="num">02</span> What clipping costs</h2>
+    <div class="explain">
+      <p><b>What it is.</b> Three ways to resolve a stop that will not fit. <em>Naïve clip</em> clamps each
+        channel in the destination space (one line of code, and the origin of most "the ramp turned a different
+        colour halfway down" bugs). <em>Clamp chroma</em> binary-searches chroma down until the colour fits,
+        keeping lightness and hue exactly. <em>CSS Color 4</em> is the spec algorithm: the same search with a
+        ΔEok ≈ 0.02 tolerance, so it keeps more chroma than a strict fit while staying within one
+        just-noticeable difference.</p>
+      <p><b>What to try.</b> Read the three columns for a blue — <code>#3898ec</code> at Chroma ×1.4 clips
+        every stop, bends hue by tens of degrees and slides lightness by a fifth of the scale, which is what
+        makes the pale end of a clipped ramp look like a different colour rather than a lighter one. Then note
+        that clipping is not always the worst by raw distance: it is the hue and lightness damage that shows.</p>
+      <p><b>Support.</b> ΔEok with a 0.02 JND is the threshold CSS uses; <code>color-mix()</code> and
+        <code>oklch()</code> both gamut-map with this algorithm in current Chrome and Safari.</p>
+    </div>
+
+    <div class="verdict" id="verdict"></div>
+    <div class="table-wrap">
+      <table class="data" id="methodTable">
+        <thead><tr><th>Method</th><th>Out of gamut</th><th>Max ΔEok</th><th>× JND</th><th>Max hue shift</th><th>Max ΔL</th><th>Collapsed pairs</th><th>Distinct stops</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="hint" id="tableNote"></p>
+
+    <details class="per-stop">
+      <summary>Per-stop table — every stop, every method</summary>
+      <div class="table-wrap">
+        <table class="data" id="stopTable">
+          <thead><tr><th>#</th><th>L</th><th>C</th><th>In gamut</th><th>clip ΔEok</th><th>clip hue</th><th>clamp ΔEok</th><th>css ΔEok</th><th>css hue</th><th>clip → clamp → css</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <!-- ─────────────────────────── 03 ─────────────────────────── -->
+  <section class="panel" id="panel-03">
+    <h2><span class="num">03</span> Where the gamut ends</h2>
+    <div class="explain">
+      <p><b>What it is.</b> A gamut is not a box in OKLCH — it is a lobed shape. This is the slice through it at
+        the ramp's hue: for every lightness, the most chromatic colour each display can actually show. Inside
+        the sRGB fill is safe everywhere; the bands beyond it need P3 or Rec.2020 panels.</p>
+      <p><b>What to try.</b> Paste a yellow-green and watch the sRGB boundary collapse — the green primary
+        reaches its chroma peak at a lower lightness, so a flat-chroma ramp shoots straight out of the shape.
+        The pale end is the trap: at L 0.95 sRGB holds between 0.024 and 0.107 chroma depending on hue
+        (0.028 for this pink, 0.107 for the yellow-greens), against the 0.2+ a saturated brand colour carries —
+        so a light tint built from a saturated brand colour is outside the gamut before you touch it.</p>
+      <p><b>Support.</b> <code>color(display-p3 …)</code> — Chrome 111+, Safari 10.1+, Firefox 113+;
+        <code>color(rec2020 …)</code> — Chrome 111+. Canvas readback (<code>getImageData</code>) is 8-bit sRGB.</p>
+    </div>
+    <div class="plot-head">
+      <span class="legend"><i class="sw sw-srgb"></i>sRGB</span>
+      <span class="legend"><i class="sw sw-p3"></i>Display P3</span>
+      <span class="legend"><i class="sw sw-2020"></i>Rec.2020</span>
+      <span class="legend"><i class="dot dot-intended"></i>intended</span>
+      <span class="legend"><i class="dot dot-clip"></i>clipped</span>
+      <span class="legend"><i class="dot dot-mapped"></i>gamut-mapped</span>
+    </div>
+    <div class="radios plot-method" id="plotMethod" role="radiogroup" aria-label="Which resolution to show in the plot">
+      <span class="group-label">Resolve the ramp with</span>
+      <label><input type="radio" name="plotMethod" value="clip"> naïve clip</label>
+      <label><input type="radio" name="plotMethod" value="clamp"> clamp chroma</label>
+      <label><input type="radio" name="plotMethod" value="css" checked> CSS Color 4</label>
+    </div>
+    <canvas id="plot" height="380" aria-label="Gamut boundary at the ramp hue"></canvas>
+    <p class="hint" id="plotNote">—</p>
+  </section>
+
+  <!-- ─────────────────────────── 04 ─────────────────────────── -->
+  <section class="panel" id="panel-04">
+    <h2><span class="num">04</span> The three ramps, and what to ship</h2>
+    <div class="explain">
+      <p><b>What it is.</b> The same intended ramp resolved by each method, side by side, with the CSS to take
+        away. Targets other than sRGB also get a <code>@supports</code> ladder so an sRGB-only screen gets a
+        usable fallback instead of a mangled colour.</p>
+      <p><b>What to try.</b> Run the intended strip against the three resolved strips and look for the pale
+        stops: clipped ones lose their relationship to the brand hue, chroma-clamped ones keep the hue and read
+        as greyer siblings, CSS-mapped ones keep the most colour of the three. Then press <kbd>S</kbd> to save
+        the stylesheet.</p>
+      <p><b>Support.</b> Custom properties + <code>@supports</code> — every browser shipping <code>oklch()</code>;
+        the fallback value is a plain hex, so nothing dark-launches.</p>
+    </div>
+    <div id="methodStrips"></div>
+    <div class="btn-row">
+      <button id="copyCss" class="btn" type="button">Copy CSS</button>
+      <button id="copyJson" class="btn" type="button">Copy JSON</button>
+      <button id="saveCss" class="btn" type="button">Save .css <kbd>S</kbd></button>
+      <button id="savePng" class="btn" type="button">Save plot PNG</button>
+    </div>
+    <p class="hint" id="exportNote">—</p>
+    <pre class="code" id="cssPreview" aria-label="Generated CSS"></pre>
+  </section>
+
+  <!-- ─────────────────────────── 05 ─────────────────────────── -->
+  <section class="panel" id="panel-05">
+    <h2><span class="num">05</span> Oracles — what the browser actually paints</h2>
+    <div class="explain">
+      <p><b>What it is.</b> A colour tool is only worth what it can be checked against, so this panel does the
+        checking in the open. The canvas oracle paints each out-of-gamut <code>oklch()</code> string into a 1×1
+        canvas and reads the rendered bytes back with <code>getImageData</code>, then compares them with this
+        page's naïve-clip and CSS-mapping results. The culori button loads
+        <a href="https://culorijs.org/">culori</a> from a CDN on demand — an independent implementation of the
+        same spec algorithm — and diffs its sRGB output against this page's.</p>
+      <p><b>What to try.</b> Run the canvas oracle first, then culori. The result to expect on current Chrome is
+        the finding this whole tool is built around: painting an out-of-gamut <code>oklch()</code> gets you the
+        <em>clipped</em> bytes, not the spec's gamut-mapped ones — the two differ by tens of 255ths. Declaring a
+        colour in a wide gamut does not get you gamut mapping; you have to compute it and ship in-gamut values,
+        which is what panel 04 does. (The same check against a real CSS background, screenshotted and sampled
+        during the build, gave byte-identical clipped output.)</p>
+      <p><b>Support.</b> Canvas accepts CSS Color 4 syntax in Chrome 111+, Safari 16.4+, Firefox 113+; a browser
+        that cannot parse the string is reported as unsupported rather than silently passed. The reverse OKLab
+        matrices here are computed as exact inverses of Ottosson's forward matrices rather than copied from the
+        paper's rounded table, which otherwise costs ≈1e-7 over a round trip.</p>
+    </div>
+    <div class="btn-row">
+      <button id="runBrowser" class="btn" type="button">Run canvas oracle</button>
+      <button id="runCulori" class="btn" type="button">Compare against culori</button>
+    </div>
+    <div class="verdict-line" id="oracleVerdict" hidden></div>
+    <div class="table-wrap" id="oracleWrap" hidden>
+      <table class="data" id="oracleTable">
+        <thead><tr><th>Stop</th><th>Intended oklch()</th><th>Browser paints</th><th>Mapped here</th><th>Δ bytes</th><th>Clipped here</th><th>Δ bytes</th><th>Culori Δ</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="hint" id="oracleNote">Not run yet.</p>
+  </section>
+
+  <footer class="foot">
+    <p id="selfTest" class="selftest">—</p>
+    <p>Method: OKLab/OKLCH after Björn Ottosson; gamut mapping per <a href="https://www.w3.org/TR/css-color-4/#css-gamut-mapping">CSS Color 4 §13</a>,
+      which is what <code>culori</code>'s <code>toGamut()</code> and <code>colorjs.io</code> implement; P3 and Rec.2020 matrices derived from
+      the CIE primaries at D65. Everything runs in one page, no build step, no dependencies.</p>
+    <p class="foot-nav"><a href="../">← all playground builds</a></p>
+  </footer>
+
+</main>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
