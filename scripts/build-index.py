@@ -55,6 +55,7 @@ FAMILIES = [
             ("css-native-ui", "CSS Native UI", "copy-paste patterns built on native CSS APIs"),
             ("anchor-positioning-playground", "CSS Anchor Positioning Playground", "declarative tooltips, popovers, dropdowns"),
             ("fluid-scale-studio", "Fluid Scale Studio", "exact fluid type & space scales · live viewport scrub"),
+            ("type-line-audit", "Type Line Audit", "paste copy → every rendered line box in ch · widows, stubs, measure, fragile reflow · its text-wrap fix is re-measured, not asserted"),
             ("token-debt-audit", "Token Debt Audit", "paste a stylesheet → OKLab colour clustering · off-grid space · token sheet"),
             ("seedscape", "Seedscape", "text seed → deterministic particle-hill landscape · export PNG"),
             ("gamut-ramp-lab", "Gamut Ramp Lab", "brand hex → OKLCH ramp · CSS Color 4 gamut mapping vs naïve clipping, cost measured in ΔEok"),

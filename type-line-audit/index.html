@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Type Line Audit — read a paragraph line by line</title>
+<meta name="description" content="Measures the rendered line boxes of real copy — per-line width, character measure and word counts — flags widows, stub lines, out-of-range measure and fragile reflow, then applies text-wrap: pretty or balance and re-measures the result.">
+<style>
+/* ============================================
+   TOKENS
+   ============================================ */
+:root {
+  --paper: oklch(0.988 0.004 85);
+  --paper2: oklch(0.966 0.006 85);
+  --surface: oklch(1 0 0);
+  --ink: oklch(0.20 0.012 60);
+  --ink2: oklch(0.44 0.012 60);
+  --ink3: oklch(0.62 0.010 60);
+  --rule: oklch(0.90 0.006 85);
+  --rule2: oklch(0.83 0.008 85);
+  --accent: oklch(0.52 0.17 258);
+  --bad: oklch(0.55 0.20 25);
+  --bad-soft: oklch(0.94 0.045 25);
+  --warn: oklch(0.62 0.14 70);
+  --warn-soft: oklch(0.95 0.04 80);
+  --good: oklch(0.53 0.14 155);
+  --good-soft: oklch(0.94 0.045 155);
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --r: 8px;
+  --gutter: 66px;
+  --pad-l: max(24px, 3vw);
+  --shadow: 0 1px 2px oklch(0 0 0 / 0.05), 0 8px 24px oklch(0 0 0 / 0.05);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 15px/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { margin: 0; font-weight: 600; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ============================================
+   SHELL
+   ============================================ */
+.wrap { max-width: 1560px; margin: 0 auto; padding: 28px 20px 72px; }
+
+header.masthead {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 20px;
+  padding-bottom: 16px; margin-bottom: 22px;
+  border-bottom: 2px solid var(--ink);
+}
+.masthead h1 { font: 600 27px/1.1 var(--sans); letter-spacing: -0.02em; }
+.masthead .sub { font: 400 14px/1.45 var(--sans); color: var(--ink2); max-width: 64ch; }
+.masthead .tag {
+  font: 500 11px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink2); border: 1px solid var(--rule2); border-radius: 999px;
+  padding: 5px 10px; white-space: nowrap;
+}
+.masthead .spacer { flex: 1 1 40px; }
+
+.app {
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr) minmax(300px, 350px);
+  gap: 20px;
+  align-items: start;
+}
+/* below this the stage needs the whole row — the column width slider is the point of the page */
+@media (max-width: 1520px) {
+  .app { grid-template-columns: 258px minmax(0, 1fr); }
+  .col-read {
+    grid-column: 1 / -1;
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px; align-items: start;
+  }
+  .col-read .panel { margin-bottom: 0; }
+}
+@media (max-width: 1000px) { .col-read { grid-template-columns: minmax(0, 1fr); } .col-read .panel { margin-bottom: 16px; } }
+@media (max-width: 860px)  { .app { grid-template-columns: minmax(0, 1fr); } .col-read { grid-column: auto; } }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.panel:last-child { margin-bottom: 0; }
+.panel > .hd {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 11px 13px; border-bottom: 1px solid var(--rule);
+  background: linear-gradient(var(--surface), var(--paper2));
+}
+.panel > .hd .num { font: 600 11px/1 var(--mono); color: var(--ink3); }
+.panel > .hd h2 { font: 600 13.5px/1.3 var(--sans); letter-spacing: -0.01em; }
+.panel > .hd .pill { margin-left: auto; }
+.panel > .bd { padding: 13px; }
+
+.note { font: 400 12.5px/1.5 var(--sans); color: var(--ink2); margin: 10px 0 0; }
+.note b { color: var(--ink); font-weight: 600; }
+.note .sup {
+  display: inline-block; margin-top: 6px; font: 500 11px/1.5 var(--mono);
+  color: var(--ink3); border-top: 1px dotted var(--rule2); padding-top: 5px;
+}
+.note code { font: 400 11.5px/1 var(--mono); background: var(--paper2); padding: 1px 4px; border-radius: 3px; }
+
+.pill {
+  font: 500 10.5px/1 var(--mono); letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 4px 7px; border-radius: 999px;
+  background: var(--paper2); color: var(--ink2); border: 1px solid var(--rule);
+}
+.pill.ok { background: var(--good-soft); color: oklch(0.36 0.10 155); border-color: oklch(0.86 0.06 155); }
+.pill.bad { background: var(--bad-soft); color: oklch(0.40 0.15 25); border-color: oklch(0.86 0.07 25); }
+.pill.warn { background: var(--warn-soft); color: oklch(0.42 0.10 70); border-color: oklch(0.88 0.06 80); }
+
+/* ============================================
+   CONTROLS
+   ============================================ */
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.field > label, .field > .lab {
+  display: block; font: 600 11px/1 var(--mono); letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink3); margin-bottom: 6px;
+}
+.row { display: flex; gap: 6px; flex-wrap: wrap; }
+.row.tight { gap: 4px; }
+
+.btn {
+  background: var(--surface); border: 1px solid var(--rule2); border-radius: 6px;
+  padding: 6px 9px; font: 500 12px/1 var(--sans); color: var(--ink2); cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+.btn:hover { background: var(--paper2); border-color: var(--ink3); color: var(--ink); }
+.btn[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+.btn.primary:hover { background: oklch(0.46 0.17 258); border-color: oklch(0.46 0.17 258); color: white; }
+.btn.sm { padding: 4px 7px; font-size: 11px; }
+
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+select, textarea {
+  width: 100%; background: var(--surface); border: 1px solid var(--rule2);
+  border-radius: 6px; padding: 6px 8px; font-size: 13px;
+}
+textarea { min-height: 112px; resize: vertical; font: 400 12.5px/1.5 var(--mono); }
+.val { font: 600 12px/1 var(--mono); color: var(--ink); }
+.lab-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.lab-row .lab { margin: 0; }
+
+.sw { display: flex; align-items: center; gap: 9px; padding: 5px 0; cursor: pointer; }
+.sw input { position: absolute; opacity: 0; width: 0; height: 0; }
+.sw .track {
+  position: relative; flex: 0 0 auto; width: 32px; height: 18px; border-radius: 999px;
+  background: var(--rule2); transition: background 140ms;
+}
+.sw .track::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px oklch(0 0 0 / 0.25);
+  transition: transform 140ms;
+}
+.sw input:checked + .track { background: var(--accent); }
+.sw input:checked + .track::after { transform: translateX(14px); }
+.sw input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sw .txt { font: 400 12.5px/1.3 var(--sans); color: var(--ink2); }
+.sw .txt b { color: var(--ink); font-weight: 600; }
+
+/* ============================================
+   STAGE
+   ============================================ */
+.stage { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
+.stage-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 9px 12px; border-bottom: 1px solid var(--rule);
+  background: linear-gradient(var(--surface), var(--paper2));
+}
+.stage-bar .meta { font: 500 11.5px/1.4 var(--mono); color: var(--ink2); }
+.stage-bar .grow { flex: 1 1 16px; }
+
+/* ruler is aligned to the column, not the sheet */
+.ruler {
+  position: relative; height: 22px; overflow: hidden; border-bottom: 1px solid var(--rule);
+  background: var(--paper); padding: 0 var(--gutter) 0 var(--pad-l);
+}
+.ruler-inner { position: relative; height: 100%; width: min(var(--col, 660px), 100%); border-right: 2px solid oklch(0.32 0.012 60); }
+.ruler .band { position: absolute; top: 0; bottom: 0; background: var(--good-soft); border-left: 1px dashed oklch(0.80 0.07 155); border-right: 1px dashed oklch(0.80 0.07 155); }
+.ruler .tick { position: absolute; bottom: 0; width: 1px; height: 6px; background: var(--rule2); }
+.ruler .tick.major { height: 10px; background: var(--ink3); }
+.ruler .tlab { position: absolute; top: 3px; font: 500 9.5px/1 var(--mono); color: var(--ink3); transform: translateX(3px); }
+.ruler .over { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, oklch(0.55 0.20 25 / 0.10) 0 4px, transparent 4px 8px); }
+
+.sheet { padding: 26px var(--gutter) 40px var(--pad-l); background: var(--surface); }
+.sheet-inner { position: relative; width: min(var(--col, 660px), 100%); }
+.sheet .kicker {
+  font: 500 10.5px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink3); margin-bottom: 10px;
+}
+.sheet h3.head {
+  font: 600 clamp(22px, 3.2vw, 34px)/1.16 var(--sans); letter-spacing: -0.022em;
+  margin-bottom: 12px; color: var(--ink);
+}
+.sheet p.body {
+  font: 400 17px/1.62 var(--serif); color: oklch(0.26 0.012 60); margin: 0;
+}
+.byline { font: 400 12px/1.4 var(--mono); color: var(--ink3); margin-top: 14px; }
+
+.ovl { position: absolute; inset: 0; pointer-events: none; }
+.ovl-box {
+  position: absolute; border: 1px solid oklch(0.52 0.17 258 / 0.55);
+  border-radius: 2px; background: oklch(0.52 0.17 258 / 0.05);
+}
+.ovl-box.bad { border-color: oklch(0.55 0.20 25 / 0.85); background: oklch(0.55 0.20 25 / 0.10); }
+.ovl-box.warn { border-color: oklch(0.62 0.14 70 / 0.85); background: oklch(0.62 0.14 70 / 0.10); }
+.ovl-num {
+  position: absolute; transform: translateY(-50%);
+  font: 500 9.5px/1 var(--mono); color: oklch(0.44 0.14 258);
+  border-left: 1px solid oklch(0.52 0.17 258 / 0.45); padding: 1px 0 1px 5px;
+  white-space: nowrap;
+}
+.ovl-num.bad { color: oklch(0.46 0.16 25); border-left-color: oklch(0.55 0.20 25 / 0.7); }
+.ovl-num.warn { color: oklch(0.47 0.11 70); border-left-color: oklch(0.62 0.14 70 / 0.7); }
+.ovl-bar { position: absolute; height: 3px; border-radius: 2px; background: oklch(0.52 0.17 258 / 0.30); }
+.ovl-bar.bad { background: oklch(0.55 0.20 25 / 0.45); }
+.ovl-bar.warn { background: oklch(0.62 0.14 70 / 0.45); }
+.ovl-flag {
+  position: absolute; font: 600 9px/1 var(--mono); letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 2px 4px; border-radius: 3px; white-space: nowrap;
+  background: var(--bad); color: white;
+}
+.ovl-flag.warn { background: var(--warn); color: oklch(0.20 0.02 70); }
+
+.after { border-top: 1px dashed var(--rule2); margin-top: 26px; padding-top: 20px; background: linear-gradient(oklch(0.53 0.14 155 / 0.05), transparent 110px); }
+.after[hidden] { display: none; }
+.after .tagline {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;
+  font: 500 11px/1.4 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: oklch(0.40 0.10 155);
+}
+.after .tagline .rule { flex: 1 1 24px; height: 1px; background: oklch(0.86 0.06 155); }
+.after .tagline .why { text-transform: none; letter-spacing: 0; color: var(--ink2); font-family: var(--sans); font-weight: 400; }
+
+/* ============================================
+   READOUT
+   ============================================ */
+.score { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.score .n { font: 600 34px/1 var(--sans); letter-spacing: -0.03em; }
+.score .n.ok { color: oklch(0.45 0.12 155); }
+.score .n.bad { color: oklch(0.50 0.18 25); }
+.score .t { font: 400 12.5px/1.4 var(--sans); color: var(--ink2); }
+
+.defs { list-style: none; margin: 8px 0 0; padding: 0; }
+.defs li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 9px; padding: 9px 0; border-top: 1px solid var(--rule); }
+.defs li:first-child { border-top: 0; }
+.defs .line-no { font: 600 11px/1.5 var(--mono); color: var(--ink2); text-align: right; }
+.defs .what { font: 600 12.5px/1.35 var(--sans); }
+.defs .why { font: 400 12px/1.45 var(--sans); color: var(--ink2); margin-top: 2px; }
+.defs .where { font: 500 10.5px/1.4 var(--mono); color: var(--ink3); margin-top: 3px; }
+.defs .sev { font: 500 10px/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; margin-left: 6px; }
+.defs li.bad .what { color: oklch(0.45 0.16 25); }
+.defs li.warn .what { color: oklch(0.45 0.11 70); }
+.defs li.ok .what { color: oklch(0.42 0.11 155); }
+
+.table-wrap { overflow-x: auto; margin: 0 -13px; padding: 0 13px; }
+table.lines { border-collapse: collapse; width: 100%; font: 400 12px/1.4 var(--mono); }
+table.lines th, table.lines td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+table.lines th { font-weight: 600; color: var(--ink3); font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; }
+table.lines td:first-child, table.lines th:first-child { text-align: left; }
+table.lines tr.bad td { background: var(--bad-soft); }
+table.lines tr.warn td { background: var(--warn-soft); }
+table.lines td.ex { max-width: 92px; overflow: hidden; text-overflow: ellipsis; color: var(--ink2); }
+
+pre.code {
+  margin: 0; padding: 11px 12px; border-radius: 6px; background: oklch(0.24 0.012 60);
+  color: oklch(0.93 0.01 85); font: 400 12px/1.55 var(--mono); overflow-x: auto;
+}
+pre.code .k { color: oklch(0.80 0.13 200); }
+pre.code .v { color: oklch(0.86 0.13 95); }
+pre.code .c { color: oklch(0.72 0.03 85); }
+
+.ba { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 5px 9px; align-items: baseline; font: 400 12px/1.5 var(--sans); }
+.ba .k { color: var(--ink2); }
+.ba .v { font: 600 12px/1.5 var(--mono); }
+.ba .arrow { color: var(--ink3); text-align: center; }
+.sect-lab { font: 600 11px/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink3); margin: 16px 0 8px; }
+.sect-lab:first-child { margin-top: 0; }
+.status { font: 400 12px/1.4 var(--sans); color: var(--ink2); min-height: 18px; }
+.status.good { color: oklch(0.42 0.11 155); }
+
+footer.foot { margin-top: 34px; padding-top: 14px; border-top: 1px solid var(--rule); font: 400 12.5px/1.6 var(--sans); color: var(--ink2); }
+footer.foot code { font: 400 12px/1 var(--mono); background: var(--paper2); padding: 1px 4px; border-radius: 3px; }
+
+@media (max-width: 760px) {
+  :root { --gutter: 18px; --pad-l: 18px; }
+  .ovl-num, .ovl-flag { display: none; }
+  .sheet { padding: 20px 18px 28px; }
+  .wrap { padding: 18px 12px 56px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div>
+    <h1>Type Line Audit</h1>
+    <p class="sub">Point a browser at real copy and it reports what the layout engine actually did — every line box, its width in characters, and the widows and stubs you can't see until a client does.</p>
+  </div>
+  <div class="spacer"></div>
+  <span class="tag">press S · export audit</span>
+</header>
+
+<div class="app">
+
+  <!-- ============ COL 1 — CONTROLS ============ -->
+  <div class="col-ctl">
+
+    <section class="panel">
+      <div class="hd"><span class="num">01</span><h2>The copy</h2></div>
+      <div class="bd">
+        <div class="field">
+          <span class="lab">Sample</span>
+          <div class="row tight" id="samples">
+            <button class="btn sm" data-sample="0">Case study</button>
+            <button class="btn sm" data-sample="1">Product</button>
+            <button class="btn sm" data-sample="2">Long lead</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="headIn">Heading</label>
+          <textarea id="headIn" style="min-height:58px"></textarea>
+        </div>
+        <div class="field">
+          <label for="bodyIn">Body copy</label>
+          <textarea id="bodyIn"></textarea>
+        </div>
+        <p class="note">
+          <b>What it is.</b> Paste the copy as it will actually ship. It is reflowed in a real column and measured — no word counts, no estimation.
+          <span class="sup">Runs entirely on this page. Nothing is uploaded.</span>
+        </p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="hd"><span class="num">02</span><h2>The column</h2></div>
+      <div class="bd">
+        <div class="field">
+          <div class="lab-row"><label class="lab" for="colIn">Column width</label><span class="val" id="colOut">660px</span></div>
+          <input type="range" id="colIn" min="300" max="1080" step="4" value="660">
+        </div>
+        <div class="field">
+          <div class="lab-row"><label class="lab" for="sizeIn">Body size</label><span class="val" id="sizeOut">17px</span></div>
+          <input type="range" id="sizeIn" min="14" max="24" step="1" value="17">
+        </div>
+        <div class="field">
+          <label for="paraWrap">Body text-wrap</label>
+          <select id="paraWrap">
+            <option value="wrap">wrap — default</option>
+            <option value="pretty">pretty — kill the widow</option>
+            <option value="balance">balance — even lines</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="headWrap">Heading text-wrap</label>
+          <select id="headWrap">
+            <option value="wrap">wrap — default</option>
+            <option value="balance">balance — even lines</option>
+            <option value="pretty">pretty</option>
+          </select>
+        </div>
+        <p class="note">
+          <b>Drag the width.</b> Type quality is a function of measure: the same sentence is clean at 660px and a widow factory at 520px. Watch the audit change as you scrub.
+        </p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="hd"><span class="num">03</span><h2>Overlays</h2></div>
+      <div class="bd">
+        <label class="sw"><input type="checkbox" id="ovBoxes" checked><span class="track"></span><span class="txt"><b>Line boxes</b> — each line's real extent</span></label>
+        <label class="sw"><input type="checkbox" id="ovMeasure"><span class="track"></span><span class="txt"><b>Measure bars</b> — length in ch</span></label>
+        <label class="sw"><input type="checkbox" id="ovFlags" checked><span class="track"></span><span class="txt"><b>Flag defects</b> — widows, stubs</span></label>
+        <label class="sw"><input type="checkbox" id="ovAfter" checked><span class="track"></span><span class="txt"><b>Recommended preview</b> — the fix, live</span></label>
+        <p class="note">
+          <b>What to try.</b> Turn on measure bars and drag the width — the shaded band on the ruler is 45–75 characters, the range long-form body copy reads best in.
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ COL 2 — STAGE ============ -->
+  <div class="col-stage">
+    <div class="stage">
+      <div class="stage-bar">
+        <span class="meta" id="stageMeta">measuring…</span>
+        <span class="grow"></span>
+        <button class="btn sm" id="reBtn">Re-measure</button>
+        <button class="btn sm" id="resetBtn">Reset</button>
+      </div>
+      <div class="ruler" id="ruler"><div class="ruler-inner" id="rulerInner"></div></div>
+      <div class="sheet" id="sheet">
+        <div class="sheet-inner" id="inner">
+          <div class="kicker" id="kicker">Case study · 2026</div>
+          <h3 class="head" id="headEl"></h3>
+          <p class="body" id="bodyEl"></p>
+          <p class="byline">Measured in the browser, in the font this page actually ships.</p>
+          <div class="ovl" id="ovl"></div>
+        </div>
+        <div class="after" id="afterWrap" hidden>
+          <div class="tagline">
+            <span>After · recommended applied</span><span class="rule"></span>
+            <span class="why" id="afterNote"></span>
+          </div>
+          <div class="sheet-inner" id="inner2">
+            <h3 class="head" id="headEl2"></h3>
+            <p class="body" id="bodyEl2"></p>
+            <div class="ovl" id="ovl2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COL 3 — READOUT ============ -->
+  <div class="col-read">
+    <section class="panel">
+      <div class="hd"><span class="num">04</span><h2>The audit</h2><span class="pill" id="verdictPill">—</span></div>
+      <div class="bd">
+        <div class="score">
+          <span class="n" id="scoreN">0</span>
+          <span class="t" id="scoreT">issues across heading and body</span>
+        </div>
+        <ul class="defs" id="defs"></ul>
+        <p class="note">
+          <b>What it is.</b> Seven measured checks: a widowed last line; a stub line under 15% of the widest; a last line under 33%; a mean line outside 45–75ch; a hard cap past 90ch; an unbalanced two-line heading; and reflow that breaks when the column narrows 15%.
+        </p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="hd"><span class="num">05</span><h2>Line by line</h2></div>
+      <div class="bd">
+        <div class="table-wrap">
+          <table class="lines" id="lineTable">
+            <thead>
+              <tr><th>#</th><th>chars</th><th>ch</th><th>px</th><th>words</th><th>ends with</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="note">
+          <b>Why it matters.</b> This is the table a word processor never gives you: what each line actually contains after the browser broke it, and where the ragged edge lands.
+        </p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="hd"><span class="num">06</span><h2>The fix</h2><span class="pill" id="fixPill">—</span></div>
+      <div class="bd">
+        <div class="sect-lab">Before → after</div>
+        <div class="ba" id="ba">
+          <span class="k">Lines</span><span class="v" id="baLines">—</span><span class="arrow">→</span><span class="v" id="baLines2">—</span>
+          <span class="k">Issues</span><span class="v" id="baIssues">—</span><span class="arrow">→</span><span class="v" id="baIssues2">—</span>
+          <span class="k">Last line</span><span class="v" id="baLast">—</span><span class="arrow">→</span><span class="v" id="baLast2">—</span>
+          <span class="k">Mean</span><span class="v" id="baMean">—</span><span class="arrow">→</span><span class="v" id="baMean2">—</span>
+        </div>
+        <div class="sect-lab">Ship this</div>
+        <pre class="code" id="snippet"></pre>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="applyBtn">Apply to preview</button>
+          <button class="btn primary" id="copyBtn">Copy CSS</button>
+          <button class="btn" id="exportBtn">Export audit (S)</button>
+        </div>
+        <div class="status" id="status" style="margin-top:8px"></div>
+        <p class="note">
+          <b>Browser support.</b> <code>text-wrap: balance</code> — Chrome 114, Firefox 121, Safari 17.5. <code>pretty</code> — Chrome 117, Firefox 134, Safari 26. Both are capped by the browser, not by this page: Chromium honours <i>balance</i> on six lines or fewer and applies <i>pretty</i> to a paragraph's last four lines. That is why every suggestion here is measured on your copy rather than asserted — the tool tells you when the browser shrugs.
+        </p>
+        <p class="note">
+          <b>Nothing here is suggested on principle.</b> Each candidate — <code>pretty</code>, a 68ch cap, a balanced heading — is re-measured offscreen on this copy before it is offered, and only appears if it actually removes a defect. When none of them do, the panel says so and points at the width instead.
+        </p>
+      </div>
+    </section>
+  </div>
+</div>
+
+<footer class="foot">
+  Every number here comes from <code>Range.getClientRects()</code> on the live layout — one rect per word, clustered into line boxes — so hyphenation, letter-spacing and font fallbacks are all included, because they are what the reader sees. Character measure is the real <code>ch</code> unit of the shipping font: measured once at a hundred em-zeroes and divided. The recommended <code>text-wrap</code> values are applied to a live clone of the same column, never simulated — if this browser can't do it, the preview shows that too.
+</footer>
+
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------------------------------------------------------------- samples
+  const SAMPLES = [
+    {
+      kicker: "Case study · retail replatform",
+      head: "Cutting a checkout from nine steps to three without losing the audit trail",
+      body: "The brief looked like a redesign and turned out to be a permissions problem. Six teams had write access to the same order object, so every new field arrived with its own approval step appended to the end of the flow. We mapped who touched the object and when, moved four of those approvals to an asynchronous review queue, and the visible checkout collapsed to three screens. Conversion lifted eleven per cent against the control, but the number the client cared about was different: the audit trail got longer, not shorter, because every decision now writes its own record instead of being inferred from a status change."
+    },
+    {
+      kicker: "Product · release notes",
+      head: "Anchor positioning lands in the design system",
+      body: "Tooltips, menus and dropdowns used to ship with a positioning library bolted to every component. The browser now understands the relationship between a trigger and the thing it opens, which means edge detection, scroll offsets and fallback placement are layout-time concerns rather than a JavaScript subscription. We removed four hundred lines of dependency from the library and kept the API identical, so nothing downstream had to change."
+    },
+    {
+      kicker: "Essay · on craft",
+      head: "The details you can't see are the ones clients notice first",
+      body: "Nobody has ever looked at a website and said the rag was uneven. They say it feels cheap, or rushed, or not quite finished, and then someone spends a week arguing about the hero image. Typographic quality works the way a floor level does: invisible at the moment of inspection, unmistakable in the aggregate. Which is why the useful question is never whether a paragraph looks good, but whether it still looks good at the width the copy will actually be read at, in the font that actually loads, on the device with the smallest screen in the room. Answer that one honestly and the rest of the page tends to follow."
+    }
+  ];
+
+  // ---------------------------------------------------------------- elements
+  const $ = (id) => document.getElementById(id);
+  const sheet = $("sheet"), inner = $("inner"), headEl = $("headEl"), bodyEl = $("bodyEl");
+  const ovl = $("ovl"), tbl = $("lineTable").querySelector("tbody");
+  const colIn = $("colIn"), sizeIn = $("sizeIn"), paraWrap = $("paraWrap"), headWrap = $("headWrap");
+  const ovBoxes = $("ovBoxes"), ovMeasure = $("ovMeasure"), ovFlags = $("ovFlags"), ovAfter = $("ovAfter");
+  const afterWrap = $("afterWrap"), inner2 = $("inner2"), headEl2 = $("headEl2"), bodyEl2 = $("bodyEl2"), ovl2 = $("ovl2");
+  const status = $("status");
+
+  const state = { sample: 0, ch: 10 };
+  const TARGET_MIN = 45, TARGET_MAX = 75, HARD_MAX = 90, HARD_MIN = 38;
+
+  // ---------------------------------------------------------------- measure
+  // One rect per word via Range.getClientRects, clustered into line boxes by top.
+  function linesOf(root, el) {
+    const rr = root.getBoundingClientRect();
+    const words = [];
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      const text = node.nodeValue;
+      if (!text || !text.trim()) continue;
+      const re = /\S+/g;
+      let m;
+      while ((m = re.exec(text))) {
+        const r = document.createRange();
+        try { r.setStart(node, m.index); r.setEnd(node, m.index + m[0].length); } catch (e) { continue; }
+        for (const rc of r.getClientRects()) {
+          if (!rc.width && !rc.height) continue;
+          words.push({ w: m[0], top: rc.top, left: rc.left, right: rc.right, bottom: rc.bottom });
+        }
+      }
+    }
+    if (!words.length) return [];
+    words.sort((a, b) => a.top - b.top || a.left - b.left);
+    const groups = [];
+    let cur = null;
+    for (const w of words) {
+      if (!cur || Math.abs(w.top - cur.top) > 3) {
+        cur = { top: w.top, bottom: w.bottom, left: w.left, right: w.right, words: [] };
+        groups.push(cur);
+      }
+      cur.words.push(w);
+      cur.top = Math.min(cur.top, w.top);
+      cur.bottom = Math.max(cur.bottom, w.bottom);
+      cur.left = Math.min(cur.left, w.left);
+      cur.right = Math.max(cur.right, w.right);
+    }
+    return groups.map((g, i) => {
+      const text = g.words.map((w) => w.w).join(" ");
+      return {
+        i: i + 1,
+        top: g.top - rr.top,
+        left: g.left - rr.left,
+        right: g.right - rr.left,
+        bottom: g.bottom - rr.top,
+        height: g.bottom - g.top,
+        words: g.words.length,
+        chars: text.length,
+        px: g.right - g.left,
+        text: text,
+        endsWith: g.words[g.words.length - 1].w
+      };
+    });
+  }
+
+  function chOf(el) {
+    const probe = document.createElement("span");
+    probe.setAttribute("aria-hidden", "true");
+    probe.style.cssText = "position:absolute;left:-99999px;top:0;white-space:pre;visibility:hidden";
+    const cs = getComputedStyle(el);
+    probe.style.fontFamily = cs.fontFamily;
+    probe.style.fontSize = cs.fontSize;
+    probe.style.fontWeight = cs.fontWeight;
+    probe.style.fontStyle = cs.fontStyle;
+    probe.style.letterSpacing = cs.letterSpacing;
+    probe.textContent = "0".repeat(100);
+    document.body.appendChild(probe);
+    const w = probe.getBoundingClientRect().width / 100;
+    probe.remove();
+    return w || 8;
+  }
+
+  // ---------------------------------------------------------------- checks
+  // `ch` is the live ch width of the font being measured — every length check runs in ch.
+  function audit(lines, ch) {
+    if (lines.length < 2) {
+      return { defects: [], lines, widestCh: 0, meanCh: 0, last: lines[0] || null };
+    }
+    const chs = lines.map((l) => l.px / ch);
+    const widestCh = Math.max(...chs);
+    const meanCh = chs.reduce((a, b) => a + b, 0) / chs.length;
+    const chars = lines.map((l) => l.chars);
+    const maxChars = Math.max(...chars);
+    const last = lines[lines.length - 1];
+    const d = [];
+
+    // 1–3 · the closing lines
+    if (last.words === 1) {
+      d.push({ sev: "bad", line: last.i, what: "Widow", why: "The final line holds a single word — the first thing a copy review catches, and it reads as an accident." });
+    } else if (last.chars / maxChars <= 0.15) {
+      d.push({ sev: "bad", line: last.i, what: "Stub line", why: "The last line is " + Math.round((last.chars / maxChars) * 100) + "% of the widest, under the 15% floor. A stub is worse than a short line: it looks like a mistake." });
+    } else if (last.chars / maxChars <= 0.33) {
+      d.push({ sev: "warn", line: last.i, what: "Short last line", why: "The last line is " + Math.round((last.chars / maxChars) * 100) + "% of the widest. Acceptable, but it is the case text-wrap: pretty exists to fix." });
+    }
+
+    // 4–6 · measure
+    const widestLine = chs.indexOf(widestCh) + 1;
+    if (widestCh > HARD_MAX) {
+      d.push({ sev: "bad", line: widestLine, what: "Measure past the hard cap", why: "A line runs " + widestCh.toFixed(0) + "ch. Past " + HARD_MAX + "ch the eye loses the return sweep and re-reads lines." });
+    } else if (widestCh > TARGET_MAX) {
+      d.push({ sev: "warn", line: widestLine, what: "Measure over target", why: "The widest line is " + widestCh.toFixed(0) + "ch, above the 75ch comfort limit for long-form body copy." });
+    } else if (meanCh < TARGET_MIN && lines.length >= 3) {
+      d.push({ sev: "bad", line: 1, what: "Measure under 45ch", why: "The mean line is " + meanCh.toFixed(0) + "ch. Under 45ch the rag turns violent and hyphenation becomes the only way to hold it." });
+    } else if (widestCh < HARD_MIN && lines.length >= 3) {
+      d.push({ sev: "bad", line: 1, what: "Measure far too short", why: "The widest line is " + widestCh.toFixed(0) + "ch — this column is a phone and a newspaper at once." });
+    }
+
+    return { defects: d, lines, widestCh, meanCh, last };
+  }
+
+  function auditHeading(lines) {
+    if (lines.length !== 2) return [];
+    const a = lines[0].chars, b = lines[1].chars;
+    if (b / a < 0.35) {
+      return [{ sev: "warn", line: 2, what: "Heading unbalanced", why: "Two lines, the second only " + Math.round((b / a) * 100) + "% of the first — text-wrap: balance exists for exactly this shape." }];
+    }
+    return [];
+  }
+
+  // ---------------------------------------------------------------- offscreen probe
+  // Clones the live heading and paragraph into an offscreen column of the same CSS
+  // class, so a probe measures exactly the geometry the preview will render —
+  // including clamp()'d heading sizes and any inline style currently applied.
+  function probeAt(widthPx, headWrapV, paraWrapV) {
+    const host = document.createElement("div");
+    host.className = "sheet";
+    host.style.cssText = "position:absolute;left:-30000px;top:0;visibility:hidden;padding:0;width:" + widthPx + "px";
+    const inn = document.createElement("div");
+    inn.className = "sheet-inner";
+    inn.style.setProperty("--col", widthPx + "px");
+
+    const h = headEl.cloneNode(true);
+    h.removeAttribute("id");
+    h.style.textWrap = headWrapV;
+    const p = bodyEl.cloneNode(true);
+    p.removeAttribute("id");
+    p.style.textWrap = paraWrapV;
+
+    inn.appendChild(h); inn.appendChild(p);
+    host.appendChild(inn);
+    document.body.appendChild(host);
+
+    const ch = chOf(p);
+    const bLines = linesOf(inn, p);
+    const res = audit(bLines, ch);
+    const hLines = linesOf(inn, h);
+    host.remove();
+    return { bLines, res, hLines, ch };
+  }
+
+  // ---------------------------------------------------------------- render
+  function paint(lines, ovlEl, o) {
+    ovlEl.innerHTML = "";
+    const badSet = new Map();
+    for (const d of o.defects) if (!badSet.has(d.line) || d.sev === "bad") badSet.set(d.line, d.sev);
+    const maxChars = Math.max(...lines.map((l) => l.chars), 1);
+    const rootW = o.rootW;
+
+    for (const l of lines) {
+      const sev = badSet.get(l.i) || "";
+      if (o.boxes) {
+        const b = document.createElement("div");
+        b.className = "ovl-box" + (sev ? " " + sev : "");
+        b.style.left = l.left + "px";
+        b.style.top = l.top + "px";
+        b.style.width = l.px + "px";
+        b.style.height = Math.max(l.height, 12) + "px";
+        ovlEl.appendChild(b);
+      }
+      if (o.measure) {
+        const bar = document.createElement("div");
+        bar.className = "ovl-bar" + (sev ? " " + sev : "");
+        bar.style.left = l.left + "px";
+        bar.style.top = (l.bottom + 2) + "px";
+        bar.style.width = Math.max(l.px * (l.chars / maxChars), 2) + "px";
+        ovlEl.appendChild(bar);
+      }
+      if (!o.labels) continue;
+      // flagged lines trade their measure label for a defect chip — both live in
+      // the right gutter so neither ever sits on top of the glyphs
+      if (o.flags && sev) {
+        const flag = document.createElement("div");
+        flag.className = "ovl-flag" + (sev === "warn" ? " warn" : "");
+        flag.style.left = (rootW + 8) + "px";
+        flag.style.top = (l.top + Math.max(l.height, 12) / 2) + "px";
+        flag.style.transform = "translateY(-50%)";
+        flag.textContent = sev === "bad" ? "defect" : "review";
+        ovlEl.appendChild(flag);
+        continue;
+      }
+      const label = document.createElement("div");
+      label.className = "ovl-num";
+      label.style.top = (l.top + Math.max(l.height, 12) / 2) + "px";
+      label.style.left = (Math.min(l.left + l.px, rootW) + 7) + "px";
+      label.textContent = l.i + "·" + Math.round(l.px / o.ch) + "ch";
+      ovlEl.appendChild(label);
+    }
+  }
+
+  function table(lines, ch) {
+    tbl.innerHTML = "";
+    const maxChars = Math.max(...lines.map((l) => l.chars), 1);
+    for (const l of lines) {
+      const tr = document.createElement("tr");
+      const ratio = l.chars / maxChars;
+      if (l.i === lines.length && ratio <= 0.15) tr.className = "bad";
+      else if (l.i === lines.length && ratio <= 0.33) tr.className = "warn";
+      tr.innerHTML = "<td>" + l.i + "</td><td>" + l.chars + "</td><td>" + Math.round(l.px / ch) +
+        "</td><td>" + Math.round(l.px) + "</td><td>" + l.words +
+        "</td><td class='ex'>…" + esc(l.endsWith) + "</td>";
+      tbl.appendChild(tr);
+    }
+  }
+
+  function renderDefs(body, head, narrow) {
+    const ul = $("defs");
+    ul.innerHTML = "";
+    const all = [];
+    for (const d of body.defects) all.push({ ...d, where: "body · line " + d.line });
+    for (const d of head) all.push({ ...d, where: "heading · line " + d.line });
+    if (narrow) all.push({ ...narrow, where: "body · at " + narrow.at + "px" });
+
+    if (!all.length) {
+      ul.innerHTML = "<li class='ok'><span class='line-no'>✓</span><div><div class='what'>No defects at this width</div>" +
+        "<div class='why'>Every line sits inside the target measure, the paragraph closes cleanly, and the copy survives a 15% narrower column.</div></div></li>";
+      return all;
+    }
+    for (const d of all) {
+      const li = document.createElement("li");
+      li.className = d.sev;
+      li.innerHTML = "<span class='line-no'>" + d.line + "</span><div><div class='what'>" + esc(d.what) +
+        "<span class='sev'>· " + d.sev + "</span></div><div class='why'>" + esc(d.why) +
+        "</div><div class='where'>" + esc(d.where) + "</div></div>";
+      ul.appendChild(li);
+    }
+    return all;
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // ---------------------------------------------------------------- recommend
+  // Every candidate is re-measured offscreen before it is offered: a suggestion
+  // only appears in the panel if applying it actually removes a defect.
+  function probeWrap(widthPx, headW, paraW) {
+    const p = probeAt(widthPx, headW, paraW);
+    return {
+      res: p.res,
+      bLines: p.bLines,
+      hLines: p.hLines,
+      hDefects: auditHeading(p.hLines),
+      total: p.res.defects.length + auditHeading(p.hLines).length
+    };
+  }
+
+  function plan(bodyRes, headDefects, narrowDefect, eff) {
+    const base = bodyRes.defects.length + headDefects.length;
+    const p = { para: null, head: null, maxCh: null, notes: [], base, result: base, capPx: null };
+    let best = base;
+
+    const ph = headWrap.value, pw = paraWrap.value;
+    const capPx = Math.round(68 * state.ch);
+
+    // 1 · what actually fixes the closing lines — pretty first, balance if that
+    //     does more. Both are measured; on a tie pretty wins, being the calmer change.
+    if (bodyRes.defects.some((d) => /Widow|Stub line|Short last line/.test(d.what))) {
+      const tp = probeWrap(eff, ph, "pretty");
+      const tb = probeWrap(eff, ph, "balance");
+      if (tb.total < tp.total && tb.total < best) {
+        p.para = "balance"; best = tb.total;
+        p.notes.push("balance evens every line and clears the weak last line (the browser honours it on paragraphs of six lines or fewer)");
+      } else if (tp.total < best) {
+        p.para = "pretty"; best = tp.total;
+        p.notes.push("pretty removes the weak closing line");
+      }
+    }
+
+    // 2 · a 68ch cap when the column runs long
+    if (capPx < eff - 4 && bodyRes.widestCh > TARGET_MAX) {
+      const t = probeWrap(capPx, ph, p.para || pw);
+      if (t.total < best) {
+        p.maxCh = 68; p.capPx = capPx; best = t.total;
+        p.notes.push("a 68ch cap (" + capPx + "px) reads cleaner than " + bodyRes.widestCh.toFixed(0) + "ch");
+      }
+    }
+
+    // 3 · balance the heading
+    if (headDefects.some((d) => d.what === "Heading unbalanced")) {
+      const t = probeWrap(p.maxCh ? capPx : eff, "balance", p.para || pw);
+      if (t.total < best) { p.head = "balance"; best = t.total; p.notes.push("balance evens the two heading lines"); }
+    }
+
+    // 4 · re-measure the finished combination, and name whatever survives
+    const fin = probeWrap(p.maxCh ? capPx : eff, p.head || ph, p.para || pw);
+    p.result = fin.total;
+    if (fin.total > 0) {
+      const names = fin.res.defects.concat(fin.hDefects).map((d) => d.what).join(", ");
+      if (fin.total >= base) {
+        const effCh = eff / state.ch;
+        p.notes.push(effCh >= TARGET_MIN && effCh <= TARGET_MAX
+          ? "no CSS change removes these — the column is already inside 45–75ch, so this one is a copy edit or a different break width"
+          : "no CSS change removes these — it is a width problem: " + Math.round(TARGET_MIN * state.ch) + "–" + Math.round(TARGET_MAX * state.ch) + "px suits this copy");
+      } else {
+        p.notes.push("still standing after the fix: " + names + " — width, not wrap");
+      }
+    }
+    if (narrowDefect) {
+      p.narrow = true;
+      p.notes.push(fin.total < base
+        ? "still fragile 15% narrower — test that breakpoint before shipping"
+        : "clean here, but it breaks 15% narrower — test that breakpoint");
+    }
+    return p;
+  }
+
+  function snippetPlain(rec) {
+    const out = [];
+    if (rec.para) out.push(".body-copy { text-wrap: " + rec.para + "; }");
+    if (rec.head) out.push(".heading   { text-wrap: " + rec.head + "; }");
+    if (rec.maxCh) out.push(".prose-column { max-inline-size: " + rec.maxCh + "ch; }");
+    if (!out.length) {
+      if (rec.base > 0) {
+        const effCh = (lastRun ? lastRun.rootW : Number(colIn.value)) / state.ch;
+        out.push(effCh >= TARGET_MIN && effCh <= TARGET_MAX
+          ? "/* already inside 45–75ch — no CSS change helps; this is a copy edit or a different break width */"
+          : "/* no CSS change helps at this width — set the column to " +
+            Math.round(TARGET_MIN * state.ch) + "–" + Math.round(TARGET_MAX * state.ch) + "px */");
+      } else {
+        out.push(rec.narrow
+          ? "/* clean at this width — but it breaks 15% narrower: test the responsive breakpoint */"
+          : "/* clean at " + Math.round(colIn.value) + "px — no change needed */");
+      }
+    }
+    return out.join("\n");
+  }
+
+  function snippetHtml(rec) {
+    return snippetPlain(rec).split("\n").map((line) =>
+      line.replace(/(text-wrap|max-inline-size)/g, "<span class='k'>$1</span>")
+          .replace(/(pretty|balance|\d+ch)/g, "<span class='v'>$1</span>")
+          .replace(/(\/\*.*?\*\/)/g, "<span class='c'>$1</span>")
+    ).join("\n");
+  }
+
+  // ---------------------------------------------------------------- after-preview
+  function measureAfter(bodyRes, headDefects, rec) {
+    if (!ovAfter.checked) { afterWrap.hidden = true; return null; }
+    afterWrap.hidden = false;
+    headEl2.textContent = headEl.textContent;
+    bodyEl2.textContent = bodyEl.textContent;
+    inner2.style.setProperty("--col", (rec.maxCh ? rec.capPx : colIn.value) + "px");
+    bodyEl2.style.fontSize = sizeIn.value + "px";
+    headEl2.style.textWrap = rec.head || "wrap";
+    bodyEl2.style.textWrap = rec.para || "wrap";
+    bodyEl2.style.maxInlineSize = "";
+
+    const ch2 = chOf(bodyEl2);
+    const hLines2 = linesOf(inner2, headEl2);
+    const bLines2 = linesOf(inner2, bodyEl2);
+    const res2 = audit(bLines2, ch2);
+    const h2 = auditHeading(hLines2);
+    paint(bLines2, ovl2, {
+      boxes: ovBoxes.checked, measure: false, flags: true, labels: false,
+      defects: res2.defects, ch: ch2, rootW: inner2.getBoundingClientRect().width
+    });
+    $("afterNote").textContent = rec.notes.length ? rec.notes.join(" · ") : "nothing to change at this width";
+
+    const lastCh = (arr) => (arr.length ? Math.round(arr[arr.length - 1].px / ch2) : 0);
+    $("baLines").textContent = bodyRes.lines.length;
+    $("baLines2").textContent = bLines2.length;
+    $("baIssues").textContent = bodyRes.defects.length + headDefects.length;
+    $("baIssues2").textContent = res2.defects.length + h2.length;
+    $("baLast").textContent = lastCh(bodyRes.lines) + "ch";
+    $("baLast2").textContent = lastCh(bLines2) + "ch";
+    $("baMean").textContent = Math.round(bodyRes.meanCh) + "ch";
+    $("baMean2").textContent = Math.round(res2.meanCh) + "ch";
+
+    const offered = rec.para || rec.head || rec.maxCh;
+    $("fixPill").textContent = offered ? "improves" : (rec.base > 0 ? "width" : (rec.narrow ? "fragile" : "clean"));
+    $("fixPill").className = "pill " + (offered || rec.base === 0 && !rec.narrow ? "ok" : "warn");
+    return { lines: bLines2, res: res2, ch: ch2, hLines: hLines2, h2, issues: res2.defects.length + h2.length };
+  }
+
+  function blankAfter() {
+    afterWrap.hidden = true;
+    $("baLines").textContent = "—"; $("baLines2").textContent = "—";
+    $("baIssues").textContent = "—"; $("baIssues2").textContent = "—";
+    $("baLast").textContent = "—"; $("baLast2").textContent = "—";
+    $("baMean").textContent = "—"; $("baMean2").textContent = "—";
+  }
+
+  // ---------------------------------------------------------------- ruler
+  function ruler() {
+    const r = $("rulerInner");
+    r.innerHTML = "";
+    const w = Math.max(r.getBoundingClientRect().width, 1);
+    const maxCh = Math.ceil(w / state.ch / 5) * 5 + 5;
+    for (let c = 5; c <= maxCh; c += 5) {
+      const x = c * state.ch;
+      if (x > w) break;
+      const t = document.createElement("div");
+      t.className = "tick" + (c % 25 === 0 ? " major" : "");
+      t.style.left = x + "px";
+      r.appendChild(t);
+      if (c % 25 === 0) {
+        const lab = document.createElement("div");
+        lab.className = "tlab";
+        lab.style.left = x + "px";
+        lab.textContent = c + "ch";
+        r.appendChild(lab);
+      }
+    }
+    const band = document.createElement("div");
+    band.className = "band";
+    band.style.left = (TARGET_MIN * state.ch) + "px";
+    band.style.width = ((TARGET_MAX - TARGET_MIN) * state.ch) + "px";
+    r.appendChild(band);
+    if (w > HARD_MAX * state.ch) {
+      const over = document.createElement("div");
+      over.className = "over";
+      over.style.left = (HARD_MAX * state.ch) + "px";
+      over.style.width = (w - HARD_MAX * state.ch) + "px";
+      r.appendChild(over);
+    }
+  }
+
+  // ---------------------------------------------------------------- main pass
+  let lastRun = null;
+
+  function run() {
+    headEl.textContent = $("headIn").value;
+    bodyEl.textContent = $("bodyIn").value;
+    inner.style.setProperty("--col", colIn.value + "px");
+    inner2.style.setProperty("--col", colIn.value + "px");
+    $("rulerInner").style.setProperty("--col", colIn.value + "px");
+    bodyEl.style.fontSize = sizeIn.value + "px";
+    headEl.style.textWrap = headWrap.value;
+    bodyEl.style.textWrap = paraWrap.value;
+
+    state.ch = chOf(bodyEl);
+    const rootW = inner.getBoundingClientRect().width;
+    const hLines = linesOf(inner, headEl);
+    const bLines = linesOf(inner, bodyEl);
+    const bodyRes = audit(bLines, state.ch);
+    const headDefects = auditHeading(hLines);
+
+    // fragility: does the same copy pick up defects in a 15% narrower column?
+    const eff = rootW;
+    let narrowDefect = null;
+    const narrowW = Math.round(eff * 0.85);
+    if (narrowW >= 240) {
+      const probe = probeAt(narrowW, headWrap.value, paraWrap.value);
+      if (probe.res.defects.length > bodyRes.defects.length) {
+        narrowDefect = {
+          sev: "warn", line: 1, at: narrowW,
+          what: "Fragile at narrow widths",
+          why: "At 85% of this column the copy picks up " + (probe.res.defects.length - bodyRes.defects.length) +
+               " more defect(s) — the same paragraph breaks when the viewport shrinks."
+        };
+      }
+    }
+
+    paint(bLines, ovl, {
+      boxes: ovBoxes.checked, measure: ovMeasure.checked, flags: ovFlags.checked, labels: true,
+      defects: bodyRes.defects, ch: state.ch, rootW: rootW
+    });
+
+    const all = renderDefs(bodyRes, headDefects, narrowDefect);
+    table(bLines, state.ch);
+    ruler();
+
+    const issues = all.length;
+    $("scoreN").textContent = issues;
+    $("scoreN").className = "n " + (issues ? "bad" : "ok");
+    $("scoreT").textContent = issues
+      ? (issues === 1 ? "issue across heading and body copy" : "issues across heading and body copy")
+      : "no typographic defects at this width";
+    $("verdictPill").textContent = issues ? "review" : "clean";
+    $("verdictPill").className = "pill " + (issues ? "bad" : "ok");
+
+    const rec = plan(bodyRes, headDefects, !!narrowDefect, eff);
+    $("snippet").innerHTML = snippetHtml(rec);
+    $("stageMeta").textContent = bLines.length + " body lines · " + hLines.length + " heading · " +
+      Math.round(rootW) + "px column" +
+      (Math.round(rootW) !== Number(colIn.value) ? " (slider " + colIn.value + "px)" : "") +
+      " · " + state.ch.toFixed(2) + "px/ch";
+
+    const after = measureAfter(bodyRes, headDefects, rec);
+    if (!after) blankAfter();
+    lastRun = { hLines, bLines, bodyRes, headDefects, rec, narrowDefect, rootW, issues, after, ch: state.ch };
+  }
+
+  // ---------------------------------------------------------------- export
+  function stamp() {
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+
+  function report() {
+    if (!lastRun) return "";
+    const r = lastRun;
+    const L = [];
+    L.push("TYPE LINE AUDIT");
+    L.push(stamp());
+    L.push("");
+    L.push("SETTINGS");
+    L.push("  column        " + Math.round(r.rootW) + "px effective (slider " + colIn.value + "px)");
+    L.push("  body size     " + sizeIn.value + "px   ch = " + r.ch.toFixed(2) + "px");
+    L.push("  body wrap     " + paraWrap.value);
+    L.push("  heading wrap  " + headWrap.value);
+    L.push("");
+    L.push("VERDICT  " + r.issues + " issue(s)");
+    L.push("");
+    L.push("DEFECTS");
+    if (!r.bodyRes.defects.length && !r.headDefects.length && !r.narrowDefect) L.push("  none");
+    for (const d of r.bodyRes.defects) L.push("  [" + d.sev.toUpperCase() + "] body line " + d.line + " · " + d.what + " — " + d.why);
+    for (const d of r.headDefects) L.push("  [" + d.sev.toUpperCase() + "] heading line " + d.line + " · " + d.what + " — " + d.why);
+    if (r.narrowDefect) L.push("  [" + r.narrowDefect.sev.toUpperCase() + "] " + r.narrowDefect.what + " (at " + r.narrowDefect.at + "px) — " + r.narrowDefect.why);
+    L.push("");
+    L.push("BODY LINES       widest " + r.bodyRes.widestCh.toFixed(0) + "ch   mean " + r.bodyRes.meanCh.toFixed(0) + "ch");
+    L.push("  #   chars    ch    px   words  ends with");
+    for (const l of r.bLines) {
+      L.push("  " + String(l.i).padStart(2) + "  " + String(l.chars).padStart(6) + "  " +
+        String(Math.round(l.px / r.ch)).padStart(4) + "  " + String(Math.round(l.px)).padStart(4) + "  " +
+        String(l.words).padStart(6) + "  " + l.endsWith);
+    }
+    L.push("");
+    L.push("RECOMMENDED");
+    L.push(snippetPlain(r.rec).split("\n").map((s) => "  " + s).join("\n"));
+    if (r.after) {
+      const lastCh = (arr) => (arr.length ? Math.round(arr[arr.length - 1].px / r.ch) : 0);
+      L.push("");
+      L.push("AFTER APPLYING IT");
+      L.push("  lines      " + r.bodyRes.lines.length + " -> " + r.after.lines.length);
+      L.push("  issues     " + (r.bodyRes.defects.length + r.headDefects.length) + " -> " + r.after.issues);
+      L.push("  last line  " + lastCh(r.bodyRes.lines) + "ch -> " + lastCh(r.after.lines) + "ch");
+      L.push("  mean       " + r.bodyRes.meanCh.toFixed(0) + "ch -> " + r.after.res.meanCh.toFixed(0) + "ch");
+      if (r.rec.notes.length) L.push("  notes      " + r.rec.notes.join("; "));
+    }
+    return L.join("\n");
+  }
+
+  function download(name, text) {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  function say(msg, good) {
+    status.textContent = msg;
+    status.className = "status" + (good ? " good" : "");
+  }
+
+  // ---------------------------------------------------------------- wiring
+  let raf = null;
+  function schedule() {
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => { raf = null; run(); });
+  }
+
+  colIn.addEventListener("input", () => { $("colOut").textContent = colIn.value + "px"; schedule(); });
+  sizeIn.addEventListener("input", () => { $("sizeOut").textContent = sizeIn.value + "px"; schedule(); });
+  paraWrap.addEventListener("change", () => { say(""); schedule(); });
+  headWrap.addEventListener("change", () => { say(""); schedule(); });
+  for (const cb of [ovBoxes, ovMeasure, ovFlags, ovAfter]) cb.addEventListener("change", schedule);
+  $("headIn").addEventListener("input", schedule);
+  $("bodyIn").addEventListener("input", schedule);
+  $("reBtn").addEventListener("click", () => { run(); say("Re-measured at " + Math.round(inner.getBoundingClientRect().width) + "px.", true); });
+
+  function loadSample(i) {
+    state.sample = i;
+    const s = SAMPLES[i];
+    $("kicker").textContent = s.kicker;
+    $("headIn").value = s.head;
+    $("bodyIn").value = s.body;
+    [...$("samples").children].forEach((b, j) => b.setAttribute("aria-pressed", String(j === i)));
+    run();
+  }
+
+  $("samples").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-sample]");
+    if (!b) return;
+    loadSample(Number(b.dataset.sample));
+    say("Loaded sample — now drag the column width.", true);
+  });
+
+  $("resetBtn").addEventListener("click", () => {
+    colIn.value = 660; sizeIn.value = 17; paraWrap.value = "wrap"; headWrap.value = "wrap";
+    ovBoxes.checked = true; ovMeasure.checked = false; ovFlags.checked = true; ovAfter.checked = true;
+    $("colOut").textContent = "660px"; $("sizeOut").textContent = "17px";
+    loadSample(state.sample);
+    say("Reset to defaults.", true);
+  });
+
+  $("applyBtn").addEventListener("click", () => {
+    if (!lastRun) return;
+    const rec = lastRun.rec;
+    if (rec.maxCh) {
+      const target = Math.max(300, Math.min(1080, Math.round(rec.maxCh * state.ch)));
+      colIn.value = String(target);
+      $("colOut").textContent = colIn.value + "px";
+    }
+    if (rec.para) paraWrap.value = rec.para;
+    if (rec.head) headWrap.value = rec.head;
+    run();
+    say("Applied — the audit above is now the live result.", true);
+  });
+
+  $("copyBtn").addEventListener("click", async () => {
+    const txt = lastRun ? snippetPlain(lastRun.rec) : "";
+    try {
+      await navigator.clipboard.writeText(txt);
+      say("CSS copied to the clipboard.", true);
+    } catch (err) {
+      say("Clipboard is blocked here — drag-select the snippet above, or press S to export the whole audit.");
+    }
+  });
+
+  function exportReport() {
+    const txt = report();
+    if (!txt) return;
+    download("type-line-audit-" + Date.now() + ".txt", txt);
+    say("Audit exported — settings, every line box, defects and the recommendation.", true);
+  }
+  $("exportBtn").addEventListener("click", exportReport);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "s" && e.key !== "S") return;
+    const t = e.target;
+    if (t && t.matches && t.matches("input, textarea, select")) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    e.preventDefault();
+    exportReport();
+  });
+
+  let rz = null;
+  window.addEventListener("resize", () => { if (rz) cancelAnimationFrame(rz); rz = requestAnimationFrame(() => { rz = null; run(); }); });
+
+  // Synchronous verification hook. Background tabs clamp timers, so a dispatched
+  // input event would repaint late and read stale — cron checks call this instead.
+  window.__typeLineAudit = {
+    apply: () => { run(); return report(); },
+    state: () => ({
+      ch: state.ch,
+      colPx: lastRun ? Math.round(lastRun.rootW) : 0,
+      bodyLines: lastRun ? lastRun.bLines.length : 0,
+      headLines: lastRun ? lastRun.hLines.length : 0,
+      issues: lastRun ? lastRun.issues : 0,
+      widestCh: lastRun ? Number(lastRun.bodyRes.widestCh.toFixed(1)) : 0,
+      meanCh: lastRun ? Number(lastRun.bodyRes.meanCh.toFixed(1)) : 0,
+      narrowDefect: lastRun ? !!lastRun.narrowDefect : false,
+      afterLines: lastRun && lastRun.after ? lastRun.after.lines.length : null,
+      afterIssues: lastRun && lastRun.after ? lastRun.after.res.defects.length : null,
+      snippet: lastRun ? snippetPlain(lastRun.rec) : "",
+      lines: lastRun ? lastRun.bLines.map((l) => ({ i: l.i, chars: l.chars, ch: Math.round(l.px / lastRun.ch), words: l.words })) : [],
+      defects: lastRun ? lastRun.bodyRes.defects.concat(lastRun.headDefects).map((d) => d.sev + ":" + d.what) : []
+    }),
+    setColumn: (px) => { colIn.value = String(px); run(); return window.__typeLineAudit.state(); },
+    setWrap: (p) => { paraWrap.value = p; run(); return window.__typeLineAudit.state(); }
+  };
+
+  loadSample(0);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+})();
+</script>
+</body>
+</html>
